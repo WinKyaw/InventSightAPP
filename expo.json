@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "POS App",
+    "slug": "pos-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "pos-app",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pos.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#3B82F6"
+      },
+      "package": "com.pos.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
