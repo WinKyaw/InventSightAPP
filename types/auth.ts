@@ -10,6 +10,7 @@ export interface SignupCredentials {
   email: string;
   password: string;
   confirmPassword?: string;
+  acceptedTerms?: boolean;
 }
 
 export interface AuthUser {
