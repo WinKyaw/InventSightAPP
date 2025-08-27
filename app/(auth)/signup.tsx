@@ -130,6 +130,8 @@ export default function SignUpScreen() {
               onPress={handleSignUp} 
               color="#10B981" 
               disabled={isSubmitting}
+              accessibilityLabel={isSubmitting ? "Creating account, please wait" : "Create account"}
+              accessibilityHint="Register a new account with the provided information"
             />
             
             <View style={styles.linkContainer}>
@@ -137,6 +139,9 @@ export default function SignUpScreen() {
               <TouchableOpacity 
                 onPress={() => router.push('/(auth)/login')}
                 disabled={isSubmitting}
+                accessibilityRole="button"
+                accessibilityLabel="Go to sign in"
+                accessibilityHint="Navigate to the sign in screen"
               >
                 <Text style={[styles.link, { color: '#10B981' }]}>Sign In</Text>
               </TouchableOpacity>

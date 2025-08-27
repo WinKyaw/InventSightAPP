@@ -8,6 +8,8 @@ interface ButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export function Button({ 
@@ -16,7 +18,9 @@ export function Button({
   color = '#3B82F6', 
   style, 
   textStyle,
-  disabled = false 
+  disabled = false,
+  accessibilityLabel,
+  accessibilityHint,
 }: ButtonProps) {
   return (
     <TouchableOpacity 
@@ -27,6 +31,10 @@ export function Button({
       ]} 
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled }}
     >
       {disabled && title.includes("...") ? (
         <ActivityIndicator size="small" color="white" />

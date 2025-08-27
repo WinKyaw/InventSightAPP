@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { DemoInfo } from '../../components/ui/DemoInfo';
 import { styles } from '../../constants/Styles';
 import { validateLoginForm, getFieldError } from '../../utils/validation';
 import { LoginCredentials } from '../../types/auth';
@@ -118,6 +119,8 @@ export default function LoginScreen() {
               title={isSubmitting ? "Signing In..." : "Sign In"} 
               onPress={handleLogin} 
               disabled={isSubmitting}
+              accessibilityLabel={isSubmitting ? "Signing in, please wait" : "Sign in"}
+              accessibilityHint="Authenticate with your email and password"
             />
             
             <View style={styles.linkContainer}>
@@ -125,10 +128,15 @@ export default function LoginScreen() {
               <TouchableOpacity 
                 onPress={() => router.push('/(auth)/signup')}
                 disabled={isSubmitting}
+                accessibilityRole="button"
+                accessibilityLabel="Go to sign up"
+                accessibilityHint="Navigate to the sign up screen"
               >
                 <Text style={styles.link}>Sign Up</Text>
               </TouchableOpacity>
             </View>
+            
+            <DemoInfo />
           </View>
         </View>
       </KeyboardAvoidingView>

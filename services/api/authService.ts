@@ -7,8 +7,34 @@ import {
   AuthApiResponse 
 } from '../../types/auth';
 import { httpClient } from './httpClient';
-import { API_ENDPOINTS } from './config';
+import { API_ENDPOINTS, API_CONFIG } from './config';
 import { tokenManager } from '../../utils/tokenManager';
+
+// Demo mode configuration
+const DEMO_MODE = process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL;
+
+// Mock data for demo mode
+const DEMO_USERS = {
+  'winkyaw@example.com': {
+    id: '1',
+    email: 'winkyaw@example.com',
+    name: 'WinKyaw',
+    role: 'admin',
+  },
+  'demo@example.com': {
+    id: '2',
+    email: 'demo@example.com',
+    name: 'Demo User',
+    role: 'user',
+  },
+};
+
+const generateMockToken = (user: AuthUser) => ({
+  accessToken: `mock_access_token_${user.id}_${Date.now()}`,
+  refreshToken: `mock_refresh_token_${user.id}_${Date.now()}`,
+  expiresIn: 3600, // 1 hour
+  tokenType: 'Bearer',
+});
 
 /**
  * Authentication Service
@@ -32,6 +58,11 @@ class AuthService {
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
       console.log('🔐 AuthService: Attempting login for:', credentials.email);
+      
+      // Demo mode - use mock authentication
+      if (DEMO_MODE) {
+        return this.mockLogin(credentials);
+      }
       
       const response = await httpClient.post<LoginResponse>(
         API_ENDPOINTS.AUTH.LOGIN,
@@ -67,11 +98,51 @@ class AuthService {
   }
 
   /**
+   * Mock login for demo mode
+   */
+  private async mockLogin(credentials: LoginCredentials): Promise<LoginResponse> {
+    console.log('🔐 AuthService: Using demo mode for login');
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const user = DEMO_USERS[credentials.email as keyof typeof DEMO_USERS];
+    
+    if (!user) {
+      throw new Error('Invalid email or password');
+    }
+    
+    // For demo, accept any password with minimum 6 characters
+    if (credentials.password.length < 6) {
+      throw new Error('Invalid email or password');
+    }
+    
+    const tokens = generateMockToken(user);
+    
+    // Store tokens and user data
+    await tokenManager.storeTokens(tokens);
+    await tokenManager.storeUser(user);
+    
+    console.log('✅ AuthService: Demo login successful for user:', user.email);
+    
+    return {
+      user,
+      tokens,
+      message: 'Demo login successful',
+    };
+  }
+
+  /**
    * Register new user
    */
   async signup(credentials: SignupCredentials): Promise<LoginResponse> {
     try {
       console.log('🔐 AuthService: Attempting signup for:', credentials.email);
+      
+      // Demo mode - use mock authentication
+      if (DEMO_MODE) {
+        return this.mockSignup(credentials);
+      }
       
       const response = await httpClient.post<LoginResponse>(
         API_ENDPOINTS.AUTH.SIGNUP,
@@ -105,6 +176,43 @@ class AuthService {
         throw new Error('Signup failed. Please check your connection and try again');
       }
     }
+  }
+
+  /**
+   * Mock signup for demo mode
+   */
+  private async mockSignup(credentials: SignupCredentials): Promise<LoginResponse> {
+    console.log('🔐 AuthService: Using demo mode for signup');
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Check if user already exists in demo users
+    if (DEMO_USERS[credentials.email as keyof typeof DEMO_USERS]) {
+      throw new Error('An account with this email already exists');
+    }
+    
+    // Create new mock user
+    const user: AuthUser = {
+      id: `demo_${Date.now()}`,
+      email: credentials.email.toLowerCase().trim(),
+      name: credentials.name.trim(),
+      role: 'user',
+    };
+    
+    const tokens = generateMockToken(user);
+    
+    // Store tokens and user data
+    await tokenManager.storeTokens(tokens);
+    await tokenManager.storeUser(user);
+    
+    console.log('✅ AuthService: Demo signup successful for user:', user.email);
+    
+    return {
+      user,
+      tokens,
+      message: 'Demo signup successful',
+    };
   }
 
   /**
