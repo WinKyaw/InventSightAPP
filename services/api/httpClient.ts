@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { API_CONFIG, getSessionInfo, ApiResponse } from './config';
+import { API_CONFIG, getSessionInfo, getAuthHeaders, ApiResponse } from './config';
 
 // Create axios instance with base configuration
 const createHttpClient = (): AxiosInstance => {
@@ -16,17 +16,26 @@ const createHttpClient = (): AxiosInstance => {
   client.interceptors.request.use(
     (config) => {
       const sessionInfo = getSessionInfo();
+      const authHeaders = getAuthHeaders();
       
       // Add session headers
       if (config.headers) {
         config.headers['X-User-Login'] = sessionInfo.userLogin;
         config.headers['X-Request-Timestamp'] = sessionInfo.timestamp;
+        
+        // Add authentication headers
+        Object.assign(config.headers, authHeaders);
       }
 
       // Log request according to specified format
       console.log(`🔄 InventSightApp API Request: ${config.method?.toUpperCase()} ${config.url}`);
       console.log(`📅 Current Date and Time (UTC): ${sessionInfo.timestamp}`);
       console.log(`👤 Current User's Login: ${sessionInfo.userLogin}`);
+      
+      // Log authentication method (but not sensitive data)
+      if (Object.keys(authHeaders).length > 0) {
+        console.log(`🔐 Authentication: ${API_CONFIG.AUTH_TYPE.toUpperCase()} method`);
+      }
       
       // Log request data if present
       if (config.data && __DEV__) {
@@ -64,6 +73,14 @@ const createHttpClient = (): AxiosInstance => {
         console.error(`❌ InventSightApp API Error: ${error.response.status} - ${error.config?.url}`);
         console.error(`📅 Current Date and Time (UTC): ${sessionInfo.timestamp}`);
         console.error(`👤 Current User's Login: ${sessionInfo.userLogin}`);
+        
+        // Enhanced authentication error handling
+        if (error.response.status === 401) {
+          console.error('🚫 Authentication Error: Invalid or missing credentials');
+          console.error('💡 Check API authentication configuration in environment variables');
+        } else if (error.response.status === 403) {
+          console.error('🚫 Authorization Error: Insufficient permissions');
+        }
         
         if (__DEV__ && error.response.data) {
           console.error('📥 Error Response Data:', JSON.stringify(error.response.data, null, 2));
