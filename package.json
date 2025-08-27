@@ -6,10 +6,12 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test:api": "node scripts/test-api-integration.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
+    "axios": "^1.11.0",
     "expo": "~53.0.22",
     "expo-constants": "~17.1.7",
     "expo-linking": "~7.1.7",
