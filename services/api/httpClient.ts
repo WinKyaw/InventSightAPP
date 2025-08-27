@@ -1,5 +1,25 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { API_CONFIG, getSessionInfo, getAuthHeaders, ApiResponse } from './config';
+import { tokenManager } from '../../utils/tokenManager';
+
+// Track if we're currently refreshing token to avoid multiple refresh calls
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token!);
+    }
+  });
+  
+  failedQueue = [];
+};
 
 // Create axios instance with base configuration
 const createHttpClient = (): AxiosInstance => {
@@ -14,7 +34,7 @@ const createHttpClient = (): AxiosInstance => {
 
   // Request interceptor for logging and adding common headers
   client.interceptors.request.use(
-    (config) => {
+    async (config) => {
       const sessionInfo = getSessionInfo();
       const authHeaders = getAuthHeaders();
       
@@ -23,8 +43,17 @@ const createHttpClient = (): AxiosInstance => {
         config.headers['X-User-Login'] = sessionInfo.userLogin;
         config.headers['X-Request-Timestamp'] = sessionInfo.timestamp;
         
-        // Add authentication headers
+        // Add authentication headers from environment (if any)
         Object.assign(config.headers, authHeaders);
+        
+        // Add JWT token if available and not a login/signup request
+        const isAuthRequest = config.url?.includes('/auth/login') || config.url?.includes('/auth/signup');
+        if (!isAuthRequest) {
+          const accessToken = await tokenManager.getAccessToken();
+          if (accessToken) {
+            config.headers['Authorization'] = `Bearer ${accessToken}`;
+          }
+        }
       }
 
       // Log request according to specified format
@@ -65,7 +94,8 @@ const createHttpClient = (): AxiosInstance => {
 
       return response;
     },
-    (error: AxiosError) => {
+    async (error: AxiosError) => {
+      const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
       const sessionInfo = getSessionInfo();
       
       // Log error response
@@ -73,6 +103,73 @@ const createHttpClient = (): AxiosInstance => {
         console.error(`❌ InventSightApp API Error: ${error.response.status} - ${error.config?.url}`);
         console.error(`📅 Current Date and Time (UTC): ${sessionInfo.timestamp}`);
         console.error(`👤 Current User's Login: ${sessionInfo.userLogin}`);
+        
+        // Handle token refresh for 401 errors
+        if (error.response.status === 401 && !originalRequest._retry) {
+          const isRefreshRequest = error.config?.url?.includes('/auth/refresh');
+          const isLoginRequest = error.config?.url?.includes('/auth/login');
+          const isSignupRequest = error.config?.url?.includes('/auth/signup');
+          
+          // Don't retry refresh, login, or signup requests
+          if (isRefreshRequest || isLoginRequest || isSignupRequest) {
+            return Promise.reject(error);
+          }
+
+          // Check if we have a refresh token
+          const refreshToken = await tokenManager.getRefreshToken();
+          if (!refreshToken) {
+            console.error('🚫 No refresh token available - redirecting to login');
+            await tokenManager.clearAuthData();
+            return Promise.reject(error);
+          }
+
+          originalRequest._retry = true;
+
+          if (isRefreshing) {
+            // If refresh is in progress, queue this request
+            return new Promise((resolve, reject) => {
+              failedQueue.push({ resolve, reject });
+            }).then((token) => {
+              if (originalRequest.headers) {
+                originalRequest.headers['Authorization'] = `Bearer ${token}`;
+              }
+              return client(originalRequest);
+            }).catch((err) => {
+              return Promise.reject(err);
+            });
+          }
+
+          isRefreshing = true;
+
+          try {
+            // Attempt token refresh
+            console.log('🔄 Attempting to refresh token...');
+            const refreshResponse = await client.post('/auth/refresh', { refreshToken });
+            const { accessToken, expiresIn } = refreshResponse.data;
+            
+            // Update stored token
+            await tokenManager.updateAccessToken(accessToken, expiresIn);
+            
+            // Update the failed request and process queue
+            if (originalRequest.headers) {
+              originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
+            }
+            
+            processQueue(null, accessToken);
+            isRefreshing = false;
+            
+            console.log('✅ Token refresh successful');
+            return client(originalRequest);
+          } catch (refreshError) {
+            console.error('❌ Token refresh failed:', refreshError);
+            processQueue(refreshError, null);
+            isRefreshing = false;
+            
+            // Clear all auth data and redirect to login
+            await tokenManager.clearAuthData();
+            return Promise.reject(error);
+          }
+        }
         
         // Enhanced authentication error handling
         if (error.response.status === 401) {
