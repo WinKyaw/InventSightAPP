@@ -71,8 +71,15 @@ export const validateName = (name: string): ValidationError | null => {
 };
 
 /**
- * Validate password confirmation
+ * Validate terms acceptance
  */
+export const validateTermsAcceptance = (accepted: boolean): ValidationError | null => {
+  if (!accepted) {
+    return { field: 'acceptedTerms', message: 'You must accept the terms of service to continue' };
+  }
+  
+  return null;
+};
 export const validatePasswordConfirmation = (password: string, confirmPassword: string): ValidationError | null => {
   if (!confirmPassword) {
     return { field: 'confirmPassword', message: 'Please confirm your password' };
@@ -121,6 +128,11 @@ export const validateSignupForm = (credentials: SignupCredentials): FormValidati
   if (credentials.confirmPassword !== undefined) {
     const confirmPasswordError = validatePasswordConfirmation(credentials.password, credentials.confirmPassword);
     if (confirmPasswordError) errors.push(confirmPasswordError);
+  }
+
+  if (credentials.acceptedTerms !== undefined) {
+    const termsError = validateTermsAcceptance(credentials.acceptedTerms);
+    if (termsError) errors.push(termsError);
   }
   
   return {
