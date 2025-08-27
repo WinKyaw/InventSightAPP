@@ -5,45 +5,75 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { DemoInfo } from '../../components/ui/DemoInfo';
 import { styles } from '../../constants/Styles';
+import { validateLoginForm, getFieldError } from '../../utils/validation';
+import { LoginCredentials } from '../../types/auth';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [credentials, setCredentials] = useState<LoginCredentials>({
+    email: '',
+    password: '',
+  });
+  const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user, login } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && !isSubmitting) {
+    if (isAuthenticated && user && !isSubmitting) {
       const timer = setTimeout(() => {
         router.replace('/(tabs)/dashboard');
       }, 500);
       
       return () => clearTimeout(timer);
     }
-  }, [user, isSubmitting, router]);
+  }, [isAuthenticated, user, isSubmitting, router]);
+
+  const handleInputChange = (field: keyof LoginCredentials, value: string) => {
+    setCredentials(prev => ({ ...prev, [field]: value }));
+    
+    // Clear validation errors for this field when user starts typing
+    if (validationErrors.length > 0) {
+      setValidationErrors(prev => prev.filter(error => error.field !== field));
+    }
+  };
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both email and password');
-      return;
-    }
-
-    setIsSubmitting(true);
-    
     try {
-      await login(email.trim(), password.trim());
-    } catch (error) {
-      Alert.alert(
-        'Login Failed', 
-        error instanceof Error ? error.message : 'Please try again.',
-        [{ text: 'OK' }]
-      );
+      // Validate form
+      const validation = validateLoginForm(credentials);
+      
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        Alert.alert('Validation Error', 'Please correct the errors below');
+        return;
+      }
+
+      setIsSubmitting(true);
+      setValidationErrors([]);
+      
+      await login(credentials);
+      
+      // Success is handled by useEffect above
+      
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Login Failed', errorMessage, [{ text: 'OK' }]);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const emailError = getFieldError(validationErrors, 'email');
+  const passwordError = getFieldError(validationErrors, 'password');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -64,25 +94,33 @@ export default function LoginScreen() {
           <View style={styles.inputContainer}>
             <Input
               placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
+              value={credentials.email}
+              onChangeText={(value) => handleInputChange('email', value)}
               keyboardType="email-address"
               autoCapitalize="none"
               editable={!isSubmitting}
+              error={emailError}
+              accessibilityLabel="Email address"
+              accessibilityHint="Enter your email address"
             />
             
             <Input
               placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
+              value={credentials.password}
+              onChangeText={(value) => handleInputChange('password', value)}
               secureTextEntry
               editable={!isSubmitting}
+              error={passwordError}
+              accessibilityLabel="Password"
+              accessibilityHint="Enter your password"
             />
             
             <Button 
               title={isSubmitting ? "Signing In..." : "Sign In"} 
               onPress={handleLogin} 
               disabled={isSubmitting}
+              accessibilityLabel={isSubmitting ? "Signing in, please wait" : "Sign in"}
+              accessibilityHint="Authenticate with your email and password"
             />
             
             <View style={styles.linkContainer}>
@@ -90,10 +128,15 @@ export default function LoginScreen() {
               <TouchableOpacity 
                 onPress={() => router.push('/(auth)/signup')}
                 disabled={isSubmitting}
+                accessibilityRole="button"
+                accessibilityLabel="Go to sign up"
+                accessibilityHint="Navigate to the sign up screen"
               >
                 <Text style={styles.link}>Sign Up</Text>
               </TouchableOpacity>
             </View>
+            
+            <DemoInfo />
           </View>
         </View>
       </KeyboardAvoidingView>

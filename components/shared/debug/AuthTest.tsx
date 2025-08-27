@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import { useRouter } from 'expo-router';
 
 export function AuthTest() {
@@ -9,7 +9,7 @@ export function AuthTest() {
 
   const testLogin = async () => {
     try {
-      await login('test@example.com', 'password123');
+      await login({ email: 'test@example.com', password: 'password123' });
       console.log('Test login successful');
     } catch (error) {
       console.error('Test login failed:', error);

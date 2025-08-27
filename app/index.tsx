@@ -5,14 +5,18 @@ import { useAuth } from '../context/AuthContext';
 import { Colors } from '../constants/Colors';
 
 export default function IndexPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isInitialized } = useAuth();
   const router = useRouter();
   const [hasNavigated, setHasNavigated] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !hasNavigated) {
+    if (!isInitialized || isLoading) {
+      return; // Still initializing, don't navigate yet
+    }
+
+    if (!hasNavigated) {
       const navigate = () => {
-        if (user) {
+        if (isAuthenticated && user) {
           setHasNavigated(true);
           router.replace('/(tabs)/dashboard');
         } else {
@@ -24,7 +28,7 @@ export default function IndexPage() {
       const timer = setTimeout(navigate, 100);
       return () => clearTimeout(timer);
     }
-  }, [user, isLoading, hasNavigated, router]);
+  }, [isAuthenticated, user, isLoading, isInitialized, hasNavigated, router]);
 
   useEffect(() => {
     if (hasNavigated) {
