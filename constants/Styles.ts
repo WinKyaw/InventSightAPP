@@ -300,9 +300,20 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
   },
+  itemActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginLeft: 8,
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
   deleteButton: {
     padding: 8,
-    marginLeft: 8,
     borderRadius: 6,
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
@@ -410,10 +421,6 @@ export const styles = StyleSheet.create({
   employeeTitle: {
     fontSize: 14,
     color: Colors.textSecondary,
-  },
-  employeeStats: {
-    flexDirection: 'row',
-    gap: 12,
   },
   employeeStat: {
     alignItems: 'center',

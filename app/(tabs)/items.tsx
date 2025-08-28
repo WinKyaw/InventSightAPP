@@ -6,9 +6,11 @@ import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
 import { FilterSortBar } from '../../components/shared/FilterSortBar';
 import { AddItemModal } from '../../components/modals/AddItemModal';
+import { EditItemModal } from '../../components/modals/EditItemModal';
 import { FilterModal } from '../../components/modals/FilterModal';
 import { SortModal } from '../../components/modals/SortModal';
 import { productToItem } from '../../utils/productUtils';
+import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
 
 export default function ItemsScreen() {
@@ -35,9 +37,11 @@ export default function ItemsScreen() {
   } = useItemsApi();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Convert products to items for UI compatibility
   const items = products.map(productToItem);
@@ -74,6 +78,11 @@ export default function ItemsScreen() {
         }
       ]
     );
+  };
+
+  const handleEditPress = (product: Product) => {
+    setEditingProduct(product);
+    setShowEditModal(true);
   };
 
   const handleLoadMore = () => {
@@ -203,12 +212,20 @@ export default function ItemsScreen() {
                         ${item.total.toFixed(2)}
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeletePress(item.id, item.name)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                    </TouchableOpacity>
+                    <View style={styles.itemActions}>
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => handleEditPress(products.find(p => p.id === item.id)!)}
+                      >
+                        <Ionicons name="create-outline" size={18} color="#3B82F6" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => handleDeletePress(item.id, item.name)}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
                   </TouchableOpacity>
                   
                   {expandedItems.has(item.id) && (
@@ -245,7 +262,7 @@ export default function ItemsScreen() {
                           </Text>
                         </View>
                         {item.description && (
-                          <View style={[styles.itemExpandedItem, { gridColumn: 'span 2' }]}>
+                          <View style={[styles.itemExpandedItem, { width: '100%' }]}>
                             <Text style={styles.itemExpandedLabel}>Description:</Text>
                             <Text style={styles.itemExpandedValue}>{item.description}</Text>
                           </View>
@@ -276,6 +293,15 @@ export default function ItemsScreen() {
       <AddItemModal 
         visible={showAddModal} 
         onClose={() => setShowAddModal(false)} 
+      />
+
+      <EditItemModal
+        visible={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingProduct(null);
+        }}
+        product={editingProduct}
       />
       
       <FilterModal

@@ -49,7 +49,7 @@ export function SortModal({
             >
               <View style={styles.sortOptionLeft}>
                 <Ionicons 
-                  name={option.icon} 
+                  name={option.icon as any} 
                   size={20} 
                   color={sortBy === option.key ? '#10B981' : '#6B7280'} 
                 />

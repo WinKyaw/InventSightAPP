@@ -290,7 +290,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
   // Reload products when search/filter/sort changes
   useEffect(() => {
     if (searchQuery || selectedCategoryId) {
-      searchProducts(searchQuery, { categoryId: selectedCategoryId });
+      searchProducts(searchQuery, { categoryId: selectedCategoryId || undefined });
     } else {
       loadProducts(1, true);
     }
