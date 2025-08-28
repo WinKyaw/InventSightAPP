@@ -482,12 +482,15 @@ export interface ActivitySummary {
   description: string;
   timestamp: string;
   amount?: number;
+  icon?: string; // Add this for compatibility with existing UI
+  time?: string; // Add this for compatibility with existing UI
 }
 
 export interface TopItemSummary {
   name: string;
   quantity: number;
   revenue: number;
+  sales: number; // Add this for compatibility with existing UI
 }
 
 export interface EventsListResponse {
