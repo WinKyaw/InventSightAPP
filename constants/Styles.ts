@@ -300,6 +300,105 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
   },
+  itemActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginLeft: 8,
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+
+  // Stock Management Styles
+  stockInfoCard: {
+    backgroundColor: '#F9FAFB',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  stockInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  stockInfoItem: {
+    flex: 1,
+  },
+  stockInfoLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  stockInfoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  stockPreview: {
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  stockPreviewLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  stockPreviewValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  lowStockWarning: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 4,
+  },
+  operationSelector: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  operationOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  operationOption: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: Colors.white,
+  },
+  operationOptionSelected: {
+    backgroundColor: '#F9FAFB',
+  },
+  operationOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
+    color: '#6B7280',
+  },
   itemSeparator: {
     height: 1,
     backgroundColor: '#F3F4F6',
@@ -324,6 +423,31 @@ export const styles = StyleSheet.create({
   itemExpandedValue: {
     fontSize: 14,
     fontWeight: '600',
+    color: Colors.text,
+  },
+  expandedActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
     color: Colors.text,
   },
 
@@ -402,10 +526,6 @@ export const styles = StyleSheet.create({
   employeeTitle: {
     fontSize: 14,
     color: Colors.textSecondary,
-  },
-  employeeStats: {
-    flexDirection: 'row',
-    gap: 12,
   },
   employeeStat: {
     alignItems: 'center',

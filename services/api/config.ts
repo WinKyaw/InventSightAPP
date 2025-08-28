@@ -42,6 +42,9 @@ export const API_ENDPOINTS = {
     CREATE: '/api/products',
     UPDATE: (id: string | number) => `/api/products/${id}`,
     DELETE: (id: string | number) => `/api/products/${id}`,
+    SEARCH: '/api/products/search',
+    BY_CATEGORY: (categoryId: string | number) => `/api/products/category/${categoryId}`,
+    UPDATE_STOCK: (id: string | number) => `/api/products/${id}/stock`,
   },
   // Category endpoints
   CATEGORIES: {
@@ -222,6 +225,89 @@ export interface ApiResponse<T> {
   status: number;
   message?: string;
   timestamp: string;
+}
+
+// Product API interfaces
+export interface Product {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  category: string;
+  description?: string;
+  sku?: string;
+  minStock?: number;
+  maxStock?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateProductRequest {
+  name: string;
+  price: number;
+  quantity: number;
+  category: string;
+  description?: string;
+  sku?: string;
+  minStock?: number;
+  maxStock?: number;
+}
+
+export interface UpdateProductRequest {
+  name?: string;
+  price?: number;
+  quantity?: number;
+  category?: string;
+  description?: string;
+  sku?: string;
+  minStock?: number;
+  maxStock?: number;
+}
+
+export interface UpdateStockRequest {
+  quantity: number;
+  operation: 'SET' | 'ADD' | 'SUBTRACT';
+  reason?: string;
+}
+
+export interface ProductsListResponse {
+  products: Product[];
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface SearchProductsParams {
+  query?: string;
+  categoryId?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  lowStock?: boolean;
+  page?: number;
+  limit?: number;
+  sortBy?: 'name' | 'price' | 'quantity' | 'createdAt' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ProductSearchResponse {
+  products: Product[];
+  totalCount: number;
+  searchQuery?: string;
+  appliedFilters?: SearchProductsParams;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  description?: string;
+  productCount?: number;
+}
+
+export interface CategoriesResponse {
+  categories: Category[];
+  totalCount: number;
 }
 
 // Employee-related interfaces (extending from types/index.ts)

@@ -5,17 +5,18 @@ import { useItemsApi } from '../../context/ItemsApiContext';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { itemToCreateProductRequest } from '../../utils/productUtils';
+import { Product, UpdateProductRequest } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
 
-interface AddItemModalProps {
+interface EditItemModalProps {
   visible: boolean;
   onClose: () => void;
+  product: Product | null;
 }
 
-export function AddItemModal({ visible, onClose }: AddItemModalProps) {
-  const { createProduct, categories, loading } = useItemsApi();
-  const [newItem, setNewItem] = useState({
+export function EditItemModal({ visible, onClose, product }: EditItemModalProps) {
+  const { updateProduct, categories, loading } = useItemsApi();
+  const [editItem, setEditItem] = useState({
     name: '',
     price: '',
     quantity: '',
@@ -25,13 +26,23 @@ export function AddItemModal({ visible, onClose }: AddItemModalProps) {
     minStock: '',
     maxStock: ''
   });
-  const [showScanOption, setShowScanOption] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset form when modal closes
+  // Reset form when modal opens or product changes
   useEffect(() => {
-    if (!visible) {
-      setNewItem({
+    if (visible && product) {
+      setEditItem({
+        name: product.name,
+        price: product.price.toString(),
+        quantity: product.quantity.toString(),
+        category: product.category,
+        description: product.description || '',
+        sku: product.sku || '',
+        minStock: product.minStock?.toString() || '',
+        maxStock: product.maxStock?.toString() || ''
+      });
+    } else if (!visible) {
+      setEditItem({
         name: '',
         price: '',
         quantity: '',
@@ -41,20 +52,21 @@ export function AddItemModal({ visible, onClose }: AddItemModalProps) {
         minStock: '',
         maxStock: ''
       });
-      setShowScanOption(false);
     }
-  }, [visible]);
+  }, [visible, product]);
 
-  const handleAddItem = async () => {
-    if (!newItem.name || !newItem.price || !newItem.quantity) {
+  const handleUpdateItem = async () => {
+    if (!product) return;
+
+    if (!editItem.name || !editItem.price || !editItem.quantity) {
       Alert.alert('Error', 'Please fill in all required fields (Name, Price, Quantity)');
       return;
     }
 
-    const price = parseFloat(newItem.price);
-    const quantity = parseInt(newItem.quantity);
-    const minStock = newItem.minStock ? parseInt(newItem.minStock) : undefined;
-    const maxStock = newItem.maxStock ? parseInt(newItem.maxStock) : undefined;
+    const price = parseFloat(editItem.price);
+    const quantity = parseInt(editItem.quantity);
+    const minStock = editItem.minStock ? parseInt(editItem.minStock) : undefined;
+    const maxStock = editItem.maxStock ? parseInt(editItem.maxStock) : undefined;
 
     if (isNaN(price) || price <= 0) {
       Alert.alert('Error', 'Please enter a valid price');
@@ -84,40 +96,33 @@ export function AddItemModal({ visible, onClose }: AddItemModalProps) {
     try {
       setIsSubmitting(true);
 
-      const productData = itemToCreateProductRequest({
-        name: newItem.name,
-        price: price,
-        quantity: quantity,
-        category: newItem.category,
-        description: newItem.description || undefined,
-        sku: newItem.sku || undefined,
-        minStock: minStock,
-        maxStock: maxStock,
-      });
+      const updateData: UpdateProductRequest = {
+        name: editItem.name !== product.name ? editItem.name : undefined,
+        price: price !== product.price ? price : undefined,
+        quantity: quantity !== product.quantity ? quantity : undefined,
+        category: editItem.category !== product.category ? editItem.category : undefined,
+        description: editItem.description !== (product.description || '') ? editItem.description || undefined : undefined,
+        sku: editItem.sku !== (product.sku || '') ? editItem.sku || undefined : undefined,
+        minStock: minStock !== product.minStock ? minStock : undefined,
+        maxStock: maxStock !== product.maxStock ? maxStock : undefined,
+      };
 
-      await createProduct(productData);
+      // Only send fields that have changed
+      const hasChanges = Object.values(updateData).some(value => value !== undefined);
+      if (!hasChanges) {
+        Alert.alert('No Changes', 'No changes were made to the product.');
+        onClose();
+        return;
+      }
+
+      await updateProduct(product.id, updateData);
       onClose();
     } catch (error) {
-      console.error('Failed to add product:', error);
+      console.error('Failed to update product:', error);
       // Error alert is handled in the context
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleScanBarcode = () => {
-    const mockBarcodeData = {
-      name: 'Scanned Product',
-      price: '12.99',
-      sku: 'SKU-' + Date.now()
-    };
-    setNewItem({
-      ...newItem,
-      name: mockBarcodeData.name,
-      price: mockBarcodeData.price,
-      sku: mockBarcodeData.sku
-    });
-    setShowScanOption(false);
   };
 
   // Get available categories
@@ -125,39 +130,21 @@ export function AddItemModal({ visible, onClose }: AddItemModalProps) {
     ? categories.map(cat => cat.name)
     : ['Beverages', 'Food', 'Bakery'];
 
-  return (
-    <Modal visible={visible} onClose={onClose} title="Add New Product">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <TouchableOpacity 
-          style={styles.scanButton} 
-          onPress={() => setShowScanOption(!showScanOption)}
-        >
-          <Ionicons name="camera" size={16} color="#3B82F6" />
-          <Text style={styles.scanButtonText}>Scan Barcode</Text>
-        </TouchableOpacity>
+  if (!product) return null;
 
-        {showScanOption && (
-          <View style={styles.scanContainer}>
-            <View style={styles.scanContent}>
-              <Ionicons name="camera" size={48} color="#3B82F6" />
-              <Text style={styles.scanText}>Point camera at barcode to scan product</Text>
-              <TouchableOpacity style={styles.scanSimulateButton} onPress={handleScanBarcode}>
-                <Text style={styles.scanSimulateButtonText}>Simulate Scan</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        
+  return (
+    <Modal visible={visible} onClose={onClose} title="Edit Product">
+      <ScrollView showsVerticalScrollIndicator={false}>
         <Input
           placeholder="Product Name *"
-          value={newItem.name}
-          onChangeText={(text) => setNewItem({...newItem, name: text})}
+          value={editItem.name}
+          onChangeText={(text) => setEditItem({...editItem, name: text})}
         />
 
         <Input
           placeholder="SKU (Optional)"
-          value={newItem.sku}
-          onChangeText={(text) => setNewItem({...newItem, sku: text})}
+          value={editItem.sku}
+          onChangeText={(text) => setEditItem({...editItem, sku: text})}
         />
         
         <View style={styles.pickerContainer}>
@@ -167,10 +154,10 @@ export function AddItemModal({ visible, onClose }: AddItemModalProps) {
               {availableCategories.map((category) => (
                 <TouchableOpacity
                   key={category}
-                  style={[styles.pickerOption, newItem.category === category && styles.pickerOptionSelected]}
-                  onPress={() => setNewItem({...newItem, category})}
+                  style={[styles.pickerOption, editItem.category === category && styles.pickerOptionSelected]}
+                  onPress={() => setEditItem({...editItem, category})}
                 >
-                  <Text style={[styles.pickerOptionText, newItem.category === category && styles.pickerOptionTextSelected]}>
+                  <Text style={[styles.pickerOptionText, editItem.category === category && styles.pickerOptionTextSelected]}>
                     {category}
                   </Text>
                 </TouchableOpacity>
@@ -181,36 +168,36 @@ export function AddItemModal({ visible, onClose }: AddItemModalProps) {
         
         <Input
           placeholder="Price *"
-          value={newItem.price}
-          onChangeText={(text) => setNewItem({...newItem, price: text})}
+          value={editItem.price}
+          onChangeText={(text) => setEditItem({...editItem, price: text})}
           keyboardType="numeric"
         />
         
         <Input
           placeholder="Quantity *"
-          value={newItem.quantity}
-          onChangeText={(text) => setNewItem({...newItem, quantity: text})}
+          value={editItem.quantity}
+          onChangeText={(text) => setEditItem({...editItem, quantity: text})}
           keyboardType="numeric"
         />
 
         <Input
           placeholder="Minimum Stock (Optional)"
-          value={newItem.minStock}
-          onChangeText={(text) => setNewItem({...newItem, minStock: text})}
+          value={editItem.minStock}
+          onChangeText={(text) => setEditItem({...editItem, minStock: text})}
           keyboardType="numeric"
         />
 
         <Input
           placeholder="Maximum Stock (Optional)"
-          value={newItem.maxStock}
-          onChangeText={(text) => setNewItem({...newItem, maxStock: text})}
+          value={editItem.maxStock}
+          onChangeText={(text) => setEditItem({...editItem, maxStock: text})}
           keyboardType="numeric"
         />
 
         <Input
           placeholder="Description (Optional)"
-          value={newItem.description}
-          onChangeText={(text) => setNewItem({...newItem, description: text})}
+          value={editItem.description}
+          onChangeText={(text) => setEditItem({...editItem, description: text})}
           multiline={true}
           numberOfLines={3}
           style={{ height: 80, textAlignVertical: 'top' }}
@@ -226,8 +213,8 @@ export function AddItemModal({ visible, onClose }: AddItemModalProps) {
             disabled={isSubmitting}
           />
           <Button 
-            title={isSubmitting ? '' : 'Add Product'}
-            onPress={handleAddItem} 
+            title={isSubmitting ? '' : 'Update Product'}
+            onPress={handleUpdateItem} 
             style={{ flex: 1, marginLeft: 6 }}
             disabled={isSubmitting}
             leftIcon={isSubmitting ? 
