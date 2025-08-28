@@ -1,21 +1,16 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { ReportService, BusinessIntelligenceData, DailyReportData, WeeklyReportData, InventoryReportData } from '../services';
-import { useMultipleApi } from '../hooks';
+import { ReportService, DashboardService, BusinessIntelligenceData, DailyReportData, WeeklyReportData, InventoryReportData } from '../services';
+import { useApi } from '../hooks';
+import type { ComprehensiveDashboardData } from '../services/api/dashboardService';
 
 interface ReportsContextType {
-  // Dashboard data
-  dashboardData: {
-    daily?: DailyReportData;
-    weekly?: WeeklyReportData;
-    inventory?: InventoryReportData;
-    businessIntelligence?: BusinessIntelligenceData;
-  };
+  // Comprehensive dashboard data (always from API)
+  dashboardData: ComprehensiveDashboardData | null;
   loading: boolean;
   error: string | null;
-  loadingStates: Record<string, boolean>;
   
   // Methods
-  refreshDashboardData: () => Promise<any>;
+  refreshDashboardData: () => Promise<ComprehensiveDashboardData>;
   getDailyReport: (date?: string) => Promise<DailyReportData>;
   getWeeklyReport: (startDate?: string, endDate?: string) => Promise<WeeklyReportData>;
   getBusinessIntelligence: () => Promise<BusinessIntelligenceData>;
@@ -40,32 +35,29 @@ interface ReportsContextType {
 const ReportsContext = createContext<ReportsContextType | undefined>(undefined);
 
 export function ReportsProvider({ children }: { children: ReactNode }) {
-  // Use multiple API calls for dashboard data
+  // Use comprehensive dashboard data API
   const {
     data: dashboardData,
     loading,
     error,
-    loadingStates,
     execute: refreshDashboardData,
-  } = useMultipleApi(
-    {
-      daily: ReportService.getDailyReport,
-      weekly: ReportService.getWeeklyReport,
-      inventory: ReportService.getInventoryReport,
-      businessIntelligence: ReportService.getBusinessIntelligence,
-    },
+  } = useApi(
+    DashboardService.getComprehensiveDashboardData,
     {
       immediate: false, // Don't auto-load, let components control when to fetch
       onSuccess: (data) => {
-        console.log('📊 Dashboard data loaded successfully:', Object.keys(data));
+        console.log('📊 Comprehensive dashboard data loaded successfully');
+        if (data.isEmpty) {
+          console.log('📊 Database appears to be empty - showing zero states');
+        }
       },
       onError: (error) => {
-        console.error('📊 Failed to load dashboard data:', error);
+        console.error('📊 Failed to load comprehensive dashboard data:', error);
       },
     }
   );
 
-  // Individual report methods
+  // Individual report methods (for backward compatibility)
   const getDailyReport = async (date?: string): Promise<DailyReportData> => {
     return await ReportService.getDailyReport(date);
   };
@@ -83,19 +75,31 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
   };
 
   const getTopItems = async (limit: number = 10) => {
-    return await ReportService.getTopItems(limit);
+    return await DashboardService.getTopItems(limit);
   };
 
   const getKPIs = async () => {
+    // Extract KPIs from comprehensive dashboard data if available
+    if (dashboardData) {
+      return {
+        totalRevenue: dashboardData.totalRevenue,
+        totalOrders: dashboardData.totalOrders,
+        avgOrderValue: dashboardData.avgOrderValue,
+        customerSatisfaction: dashboardData.customerSatisfaction,
+        revenueGrowth: dashboardData.revenueGrowth,
+        orderGrowth: dashboardData.orderGrowth,
+      };
+    }
+    
+    // Fallback to ReportService
     return await ReportService.getKPIs();
   };
 
   return (
     <ReportsContext.Provider value={{
-      dashboardData: dashboardData || {},
+      dashboardData,
       loading,
       error,
-      loadingStates: loadingStates || {},
       refreshDashboardData,
       getDailyReport,
       getWeeklyReport,

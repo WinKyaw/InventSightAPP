@@ -195,7 +195,7 @@ export function useMultipleApi<T extends Record<string, any>>(
     try {
       const results = await Promise.allSettled(
         Object.entries(apiCalls).map(([key, apiCall]) => 
-          apiCall().then(data => ({ key, data }))
+          apiCall().then((data: any) => ({ key, data }))
         )
       );
 

@@ -1,6 +1,10 @@
 // API Services
 export { default as EmployeeService } from './api/employeeService';
 export { default as ReportService } from './api/reportService';
+export { default as ProductService } from './api/productService';
+export { default as CategoryService } from './api/categoryService';
+export { default as ActivityService } from './api/activityService';
+export { default as DashboardService } from './api/dashboardService';
 export { httpClient } from './api/httpClient';
 
 // API Configuration and Types
