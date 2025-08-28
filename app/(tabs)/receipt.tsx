@@ -13,19 +13,47 @@ export default function ReceiptScreen() {
   const { 
     receiptItems, 
     customerName, 
+    loading,
+    error,
+    submitting,
     setCustomerName,
     updateReceiptItemQuantity, 
     removeItemFromReceipt,
     calculateTotal,
     calculateTax,
-    handleSubmitReceipt 
+    handleSubmitReceipt,
+    useApiIntegration,
+    setUseApiIntegration
   } = useReceipt();
   
   const [showAddToReceipt, setShowAddToReceipt] = useState(false);
+  const [customerNameError, setCustomerNameError] = useState('');
 
   const subtotal = calculateTotal();
   const tax = calculateTax(subtotal);
   const total = subtotal + tax;
+
+  const validateCustomerName = (name: string): boolean => {
+    if (name.length > 50) {
+      setCustomerNameError('Customer name must be less than 50 characters');
+      return false;
+    }
+    if (name.trim() !== name) {
+      setCustomerNameError('Customer name cannot start or end with spaces');
+      return false;
+    }
+    setCustomerNameError('');
+    return true;
+  };
+
+  const handleCustomerNameChange = (name: string) => {
+    setCustomerName(name);
+    if (name.length > 0) {
+      validateCustomerName(name);
+    } else {
+      setCustomerNameError('');
+    }
+  };
 
   const getCurrentDateTime = () => {
     return '2025-08-25 01:34:29';
@@ -64,9 +92,16 @@ export default function ReceiptScreen() {
             <Input
               placeholder="Enter customer name or leave blank for walk-in"
               value={customerName}
-              onChangeText={setCustomerName}
+              onChangeText={handleCustomerNameChange}
               style={styles.customerInput}
+              maxLength={50}
             />
+            {customerNameError ? (
+              <View style={styles.fieldErrorContainer}>
+                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                <Text style={styles.fieldErrorText}>{customerNameError}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -136,11 +171,32 @@ export default function ReceiptScreen() {
             </View>
 
             <Button
-              title="Complete Transaction"
+              title={submitting ? "Processing..." : "Complete Transaction"}
               onPress={handleSubmitReceipt}
+              disabled={submitting || receiptItems.length === 0}
               color="#10B981"
               style={styles.submitReceiptButton}
             />
+
+            {/* API Integration Toggle for Development */}
+            {__DEV__ && (
+              <TouchableOpacity 
+                style={styles.apiToggleButton}
+                onPress={() => setUseApiIntegration(!useApiIntegration)}
+              >
+                <Text style={styles.apiToggleText}>
+                  API Integration: {useApiIntegration ? 'ON' : 'OFF'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
           </View>
         )}
 

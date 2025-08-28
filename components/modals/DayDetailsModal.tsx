@@ -60,7 +60,7 @@ export function DayDetailsModal() {
                 <Text style={styles.dayTopItemName}>{item.name}</Text>
               </View>
               <View style={styles.dayTopItemRight}>
-                <Text style={styles.dayTopItemSales}>${item.sales}</Text>
+                <Text style={styles.dayTopItemSales}>${item.revenue}</Text>
                 <Text style={styles.dayTopItemQuantity}>{item.quantity} sold</Text>
               </View>
             </View>
@@ -71,12 +71,25 @@ export function DayDetailsModal() {
         <View style={styles.dayActivitiesCard}>
           <Text style={styles.dayActivitiesTitle}>📝 Daily Activities</Text>
           {selectedDayData.activities.map((activity, index) => (
-            <View key={index} style={styles.dayActivity}>
+            <View key={activity.id || index} style={styles.dayActivity}>
               <View style={styles.dayActivityLeft}>
-                <Ionicons name={activity.icon} size={20} color="#F59E0B" />
+                <Ionicons 
+                  name={activity.type === 'sale' ? 'cash-outline' : 
+                        activity.type === 'restock' ? 'cube-outline' : 
+                        activity.type === 'adjustment' ? 'build-outline' : 'return-up-back-outline'} 
+                  size={20} 
+                  color="#F59E0B" 
+                />
                 <View style={styles.dayActivityInfo}>
-                  <Text style={styles.dayActivityTime}>{activity.time}</Text>
-                  <Text style={styles.dayActivityDescription}>{activity.description}</Text>
+                  <Text style={styles.dayActivityTime}>
+                    {new Date(activity.timestamp).toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </Text>
+                  <Text style={styles.dayActivityDescription}>
+                    {activity.productName} - {activity.notes || `${activity.type} operation`}
+                  </Text>
                 </View>
               </View>
             </View>

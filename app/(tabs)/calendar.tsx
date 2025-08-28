@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCalendar } from '../../context/CalendarContext';
 import { Header } from '../../components/shared/Header';
 import { CalendarView } from '../../components/calendar/CalendarView';
@@ -8,7 +9,14 @@ import { DayDetailsModal } from '../../components/modals/DayDetailsModal';
 import { styles } from '../../constants/Styles';
 
 export default function CalendarScreen() {
-  const { reminders } = useCalendar();
+  const { 
+    reminders, 
+    loading, 
+    error, 
+    refreshCalendarData,
+    useApiIntegration,
+    setUseApiIntegration 
+  } = useCalendar();
   const [showAddReminder, setShowAddReminder] = useState(false);
 
   return (
@@ -30,15 +38,59 @@ export default function CalendarScreen() {
       />
 
       <ScrollView style={styles.calendarContainer} showsVerticalScrollIndicator={false}>
+        {/* Loading State */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading calendar data...</Text>
+          </View>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <View style={styles.errorHeader}>
+              <Ionicons name="alert-circle" size={16} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={refreshCalendarData}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* API Integration Toggle for Development */}
+        {__DEV__ && (
+          <TouchableOpacity 
+            style={styles.apiToggleButton}
+            onPress={() => setUseApiIntegration(!useApiIntegration)}
+          >
+            <Text style={styles.apiToggleText}>
+              API Integration: {useApiIntegration ? 'ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <CalendarView />
 
         <View style={styles.calendarCard}>
           <Text style={styles.upcomingTitle}>Upcoming Reminders</Text>
-          {reminders
-            .filter(reminder => reminder.date >= new Date().toISOString().split('T')[0])
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .slice(0, 10)
-            .map(reminder => (
+          {reminders.length === 0 ? (
+            <View style={styles.emptyRemindersContainer}>
+              <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyRemindersTitle}>No Upcoming Reminders</Text>
+              <Text style={styles.emptyRemindersText}>
+                Tap "Add Reminder" to create your first reminder
+              </Text>
+            </View>
+          ) : (
+            reminders
+              .filter(reminder => reminder.date >= new Date().toISOString().split('T')[0])
+              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+              .slice(0, 10)
+              .map(reminder => (
               <View key={reminder.id} style={styles.reminderCard}>
                 <View style={styles.reminderHeader}>
                   <Text style={styles.reminderTitle}>{reminder.title}</Text>
@@ -61,7 +113,8 @@ export default function CalendarScreen() {
                   <Text style={styles.reminderDescription}>{reminder.description}</Text>
                 )}
               </View>
-            ))}
+            ))
+          )}
         </View>
       </ScrollView>
 
