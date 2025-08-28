@@ -33,6 +33,35 @@ export const API_ENDPOINTS = {
     INVENTORY: '/reports/inventory',
     BUSINESS_INTELLIGENCE: '/reports/business-intelligence',
   },
+  // Product endpoints
+  PRODUCTS: {
+    ALL: '/api/products',
+    COUNT: '/api/products/count',
+    LOW_STOCK: '/api/products/low-stock',
+    BY_ID: (id: string | number) => `/api/products/${id}`,
+    CREATE: '/api/products',
+    UPDATE: (id: string | number) => `/api/products/${id}`,
+    DELETE: (id: string | number) => `/api/products/${id}`,
+  },
+  // Category endpoints
+  CATEGORIES: {
+    ALL: '/api/categories',
+    COUNT: '/api/categories/count',
+    BY_ID: (id: string | number) => `/api/categories/${id}`,
+    CREATE: '/api/categories',
+    UPDATE: (id: string | number) => `/api/categories/${id}`,
+    DELETE: (id: string | number) => `/api/categories/${id}`,
+  },
+  // Activity endpoints
+  ACTIVITIES: {
+    ALL: '/api/activities',
+    RECENT: '/api/activities/recent',
+    BY_ID: (id: string | number) => `/api/activities/${id}`,
+  },
+  // Dashboard endpoints
+  DASHBOARD: {
+    SUMMARY: '/api/dashboard/summary',
+  },
   // Employee endpoints
   EMPLOYEES: {
     ALL: '/employees',
@@ -133,6 +162,58 @@ export interface BusinessIntelligenceData {
     quantity: number;
     trend: number;
   }>;
+}
+
+// New API interfaces for dashboard integration
+export interface ProductCountResponse {
+  totalProducts: number;
+}
+
+export interface LowStockProduct {
+  id: number;
+  name: string;
+  category: string;
+  currentStock: number;
+  minStock: number;
+  reorderLevel: number;
+}
+
+export interface LowStockResponse {
+  lowStockItems: LowStockProduct[];
+  count: number;
+}
+
+export interface CategoryCountResponse {
+  totalCategories: number;
+}
+
+export interface ActivityItem {
+  id: number;
+  type: 'sale' | 'restock' | 'adjustment' | 'return';
+  productName: string;
+  quantity: number;
+  timestamp: string;
+  userId?: string;
+  notes?: string;
+}
+
+export interface RecentActivitiesResponse {
+  activities: ActivityItem[];
+  count: number;
+}
+
+export interface DashboardSummary {
+  totalProducts: number;
+  lowStockCount: number;
+  totalCategories: number;
+  recentActivities: ActivityItem[];
+  inventoryValue: number;
+  totalRevenue: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  revenueGrowth: number;
+  orderGrowth: number;
+  lastUpdated: string;
 }
 
 // API Response wrapper
