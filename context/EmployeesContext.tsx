@@ -16,15 +16,13 @@ interface EmployeesContextType {
   refreshEmployees: () => Promise<void>;
   searchEmployees: (query: string) => Promise<Employee[]>;
   getCheckedInEmployees: () => Promise<Employee[]>;
-  useApiIntegration: boolean;
-  setUseApiIntegration: (use: boolean) => void;
+}
 }
 
 const EmployeesContext = createContext<EmployeesContextType | undefined>(undefined);
 
 export function EmployeesProvider({ children }: { children: ReactNode }) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-  const [useApiIntegration, setUseApiIntegration] = useState<boolean>(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   // API integration using useApi hook
   const {
@@ -33,75 +31,47 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
     error,
     execute: fetchEmployees,
     reset,
-  } = useApi(EmployeeService.getAllEmployees);
+  } = useApi(EmployeeService.getAllEmployees, { immediate: true });
 
-  // Effect to sync API data with local state when API integration is enabled
+  // Effect to sync API data with local state
   useEffect(() => {
-    if (useApiIntegration && apiEmployees) {
+    if (apiEmployees) {
       setEmployees(apiEmployees);
-    } else if (!useApiIntegration) {
-      setEmployees(initialEmployees);
     }
-  }, [useApiIntegration, apiEmployees]);
-
-  // Auto-fetch employees when API integration is enabled
-  useEffect(() => {
-    if (useApiIntegration) {
-      fetchEmployees();
+  }, [apiEmployees]);
     }
   }, [useApiIntegration, fetchEmployees]);
 
   const addEmployee = async (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
-    if (useApiIntegration) {
-      try {
-        const createData: CreateEmployeeRequest = {
-          firstName: newEmployee.firstName,
-          lastName: newEmployee.lastName,
-          phone: newEmployee.phone,
-          hourlyRate: newEmployee.hourlyRate,
-          title: newEmployee.title,
-          startDate: newEmployee.startDate,
-          status: newEmployee.status,
-          bonus: newEmployee.bonus,
-        };
-        
-        const createdEmployee = await EmployeeService.createEmployee(createData);
-        setEmployees(prev => [...prev, createdEmployee]);
-      } catch (error) {
-        console.error('Failed to create employee via API:', error);
-        // Fallback to local creation if API fails
-        fallbackAddEmployee(newEmployee);
-      }
-    } else {
-      fallbackAddEmployee(newEmployee);
+    try {
+      const createData: CreateEmployeeRequest = {
+        firstName: newEmployee.firstName,
+        lastName: newEmployee.lastName,
+        phone: newEmployee.phone,
+        hourlyRate: newEmployee.hourlyRate,
+        title: newEmployee.title,
+        startDate: newEmployee.startDate,
+        status: newEmployee.status,
+        bonus: newEmployee.bonus,
+      };
+      
+      const createdEmployee = await EmployeeService.createEmployee(createData);
+      setEmployees(prev => [...prev, createdEmployee]);
+    } catch (error) {
+      console.error('Failed to create employee via API:', error);
+      throw error; // Let the UI handle the error
     }
   };
 
-  const fallbackAddEmployee = (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
-    const employee: Employee = {
-      ...newEmployee,
-      id: Date.now(),
-      expanded: false,
-      totalCompensation: newEmployee.hourlyRate * 2080, // 40 hours * 52 weeks
-    };
-    setEmployees(prev => [...prev, employee]);
-  };
-
   const updateEmployee = async (id: number, updates: Partial<Employee>) => {
-    if (useApiIntegration) {
-      try {
-        const updatedEmployee = await EmployeeService.updateEmployee(id, updates);
-        setEmployees(prev => prev.map(employee => 
-          employee.id === id ? updatedEmployee : employee
-        ));
-      } catch (error) {
-        console.error('Failed to update employee via API:', error);
-        // Fallback to local update if API fails
-        setEmployees(prev => prev.map(employee => 
-          employee.id === id ? { ...employee, ...updates } : employee
-        ));
-      }
-    } else {
+    try {
+      const updatedEmployee = await EmployeeService.updateEmployee(id, updates);
+      setEmployees(prev => prev.map(employee => 
+        employee.id === id ? updatedEmployee : employee
+      ));
+    } catch (error) {
+      console.error('Failed to update employee via API:', error);
+      // Fallback to local update if API fails
       setEmployees(prev => prev.map(employee => 
         employee.id === id ? { ...employee, ...updates } : employee
       ));
@@ -109,41 +79,26 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteEmployee = async (id: number) => {
-    if (useApiIntegration) {
-      try {
-        await EmployeeService.deleteEmployee(id);
-        setEmployees(prev => prev.filter(employee => employee.id !== id));
-      } catch (error) {
-        console.error('Failed to delete employee via API:', error);
-        // Fallback to local deletion if API fails
-        setEmployees(prev => prev.filter(employee => employee.id !== id));
-      }
-    } else {
+    try {
+      await EmployeeService.deleteEmployee(id);
       setEmployees(prev => prev.filter(employee => employee.id !== id));
+    } catch (error) {
+      console.error('Failed to delete employee via API:', error);
+      throw error; // Let the UI handle the error
     }
   };
 
   const refreshEmployees = async (): Promise<void> => {
-    if (useApiIntegration) {
-      await fetchEmployees();
-    }
+    await fetchEmployees();
+  };
   };
 
   const searchEmployees = async (query: string): Promise<Employee[]> => {
-    if (useApiIntegration) {
-      try {
-        return await EmployeeService.searchEmployees({ query });
-      } catch (error) {
-        console.error('Failed to search employees via API:', error);
-        // Fallback to local search
-        return employees.filter(employee => 
-          employee.firstName.toLowerCase().includes(query.toLowerCase()) ||
-          employee.lastName.toLowerCase().includes(query.toLowerCase()) ||
-          employee.title.toLowerCase().includes(query.toLowerCase())
-        );
-      }
-    } else {
-      // Local search
+    try {
+      return await EmployeeService.searchEmployees({ query });
+    } catch (error) {
+      console.error('Failed to search employees via API:', error);
+      // Fallback to local search
       return employees.filter(employee => 
         employee.firstName.toLowerCase().includes(query.toLowerCase()) ||
         employee.lastName.toLowerCase().includes(query.toLowerCase()) ||
@@ -151,19 +106,14 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
       );
     }
   };
+  };
 
   const getCheckedInEmployees = async (): Promise<Employee[]> => {
-    if (useApiIntegration) {
-      try {
-        return await EmployeeService.getCheckedInEmployees();
-      } catch (error) {
-        console.error('Failed to get checked-in employees via API:', error);
-        // Fallback to local filter
-        return employees.filter(employee => 
-          employee.checkInTime !== 'Not checked in'
-        );
-      }
-    } else {
+    try {
+      return await EmployeeService.getCheckedInEmployees();
+    } catch (error) {
+      console.error('Failed to get checked-in employees via API:', error);
+      // Fallback to local filter
       return employees.filter(employee => 
         employee.checkInTime !== 'Not checked in'
       );
@@ -182,8 +132,6 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
       refreshEmployees,
       searchEmployees,
       getCheckedInEmployees,
-      useApiIntegration,
-      setUseApiIntegration,
     }}>
       {children}
     </EmployeesContext.Provider>

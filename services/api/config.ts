@@ -72,6 +72,44 @@ export const API_ENDPOINTS = {
     CHECKED_IN: '/employees/checked-in',
     SEARCH: '/employees/search',
     CREATE: '/employees',
+    UPDATE: (id: string | number) => `/employees/${id}`,
+    DELETE: (id: string | number) => `/employees/${id}`,
+  },
+  // Receipt endpoints
+  RECEIPTS: {
+    ALL: '/api/receipts',
+    BY_ID: (id: string | number) => `/api/receipts/${id}`,
+    CREATE: '/api/receipts',
+    UPDATE: (id: string | number) => `/api/receipts/${id}`,
+    DELETE: (id: string | number) => `/api/receipts/${id}`,
+    SEARCH: '/api/receipts/search',
+    BY_DATE_RANGE: '/api/receipts/by-date-range',
+  },
+  // Calendar/Events endpoints
+  CALENDAR: {
+    EVENTS: '/api/calendar/events',
+    REMINDERS: '/api/calendar/reminders',
+    BY_ID: (id: string | number) => `/api/calendar/events/${id}`,
+    REMINDER_BY_ID: (id: string | number) => `/api/calendar/reminders/${id}`,
+    CREATE_EVENT: '/api/calendar/events',
+    CREATE_REMINDER: '/api/calendar/reminders',
+    UPDATE_EVENT: (id: string | number) => `/api/calendar/events/${id}`,
+    UPDATE_REMINDER: (id: string | number) => `/api/calendar/reminders/${id}`,
+    DELETE_EVENT: (id: string | number) => `/api/calendar/events/${id}`,
+    DELETE_REMINDER: (id: string | number) => `/api/calendar/reminders/${id}`,
+    BY_DATE_RANGE: '/api/calendar/events/by-date-range',
+    ACTIVITIES: '/api/calendar/activities',
+    DAILY_SUMMARY: (date: string) => `/api/calendar/daily-summary/${date}`,
+  },
+  // Profile endpoints
+  PROFILE: {
+    GET: '/api/profile',
+    UPDATE: '/api/profile',
+    CHANGE_PASSWORD: '/api/profile/change-password',
+    UPLOAD_AVATAR: '/api/profile/avatar',
+    DELETE_AVATAR: '/api/profile/avatar',
+    SETTINGS: '/api/profile/settings',
+    UPDATE_SETTINGS: '/api/profile/settings',
   },
 };
 
@@ -328,4 +366,193 @@ export interface CreateEmployeeRequest {
   startDate: string;
   status?: string;
   bonus?: number;
+}
+
+export interface UpdateEmployeeRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  hourlyRate?: number;
+  title?: string;
+  startDate?: string;
+  status?: string;
+  bonus?: number;
+  checkInTime?: string;
+}
+
+// Receipt API interfaces
+export interface CreateReceiptRequest {
+  customerName: string;
+  items: ReceiptItemRequest[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  dateTime: string;
+}
+
+export interface ReceiptItemRequest {
+  productId: number;
+  name: string;
+  price: number;
+  quantity: number;
+  total: number;
+}
+
+export interface UpdateReceiptRequest {
+  customerName?: string;
+  status?: string;
+}
+
+export interface ReceiptSearchParams {
+  customerName?: string;
+  receiptNumber?: string;
+  startDate?: string;
+  endDate?: string;
+  minTotal?: number;
+  maxTotal?: number;
+  status?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: 'receiptNumber' | 'customerName' | 'total' | 'dateTime';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ReceiptsListResponse {
+  receipts: any[]; // Will use Receipt from types/index.ts
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+}
+
+// Calendar/Events API interfaces
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  type: 'meeting' | 'order' | 'maintenance' | 'reminder';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  location?: string;
+  attendees?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateEventRequest {
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  type: 'meeting' | 'order' | 'maintenance' | 'reminder';
+  location?: string;
+  attendees?: string[];
+}
+
+export interface UpdateEventRequest {
+  title?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  type?: 'meeting' | 'order' | 'maintenance' | 'reminder';
+  status?: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  location?: string;
+  attendees?: string[];
+}
+
+export interface DailyActivity {
+  date: string;
+  sales: number;
+  orders: number;
+  customers: number;
+  events: CalendarEvent[];
+  activities: ActivitySummary[];
+  topItems: TopItemSummary[];
+}
+
+export interface ActivitySummary {
+  id: number;
+  type: string;
+  description: string;
+  timestamp: string;
+  amount?: number;
+}
+
+export interface TopItemSummary {
+  name: string;
+  quantity: number;
+  revenue: number;
+}
+
+export interface EventsListResponse {
+  events: CalendarEvent[];
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+}
+
+export interface DateRangeParams {
+  startDate: string;
+  endDate: string;
+  page?: number;
+  limit?: number;
+}
+
+// Profile API interfaces
+export interface UserProfile {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  role: string;
+  department?: string;
+  avatar?: string;
+  settings: ProfileSettings;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfileSettings {
+  language: string;
+  timezone: string;
+  currency: string;
+  notifications: NotificationSettings;
+  theme: 'light' | 'dark' | 'auto';
+}
+
+export interface NotificationSettings {
+  email: boolean;
+  push: boolean;
+  sms: boolean;
+  lowStock: boolean;
+  orderUpdates: boolean;
+  reminders: boolean;
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  department?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface UpdateSettingsRequest {
+  language?: string;
+  timezone?: string;
+  currency?: string;
+  notifications?: Partial<NotificationSettings>;
+  theme?: 'light' | 'dark' | 'auto';
 }

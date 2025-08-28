@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useItems } from './ItemsContext';
 import { Receipt, ReceiptItem, Item } from '../types';
+import { ReceiptService, CreateReceiptRequest } from '../services';
+import { useApi } from '../hooks';
 
 interface ReceiptContextType {
   receiptItems: ReceiptItem[];
@@ -15,6 +17,13 @@ interface ReceiptContextType {
   calculateTax: (subtotal: number) => number;
   handleSubmitReceipt: () => void;
   clearReceipt: () => void;
+  // New API-related properties
+  loading: boolean;
+  error: string | null;
+  refreshReceipts: () => Promise<void>;
+  deleteReceipt: (id: number) => Promise<void>;
+  useApiIntegration: boolean;
+  setUseApiIntegration: (use: boolean) => void;
 }
 
 const ReceiptContext = createContext<ReceiptContextType | undefined>(undefined);
@@ -23,7 +32,52 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [useApiIntegration, setUseApiIntegration] = useState<boolean>(true);
   const { items, setItems } = useItems();
+
+  // API integration using useApi hook
+  const {
+    data: apiReceipts,
+    loading,
+    error,
+    execute: fetchReceipts,
+    reset,
+  } = useApi(() => ReceiptService.getAllReceipts(1, 100));
+
+  // API for creating receipts
+  const {
+    loading: createLoading,
+    execute: createReceiptApi,
+  } = useApi(async () => {
+    // This will be called with data later
+    throw new Error('Use executeCreate instead');
+  });
+
+  // Helper function to create receipt with data
+  const executeCreateReceipt = async (receiptData: CreateReceiptRequest): Promise<Receipt> => {
+    try {
+      return await ReceiptService.createReceipt(receiptData);
+    } catch (error) {
+      console.error('Failed to create receipt:', error);
+      throw error;
+    }
+  };
+
+  // Effect to sync API data with local state when API integration is enabled
+  useEffect(() => {
+    if (useApiIntegration && apiReceipts) {
+      setReceipts(apiReceipts.receipts as Receipt[]);
+    } else if (!useApiIntegration) {
+      setReceipts([]);
+    }
+  }, [useApiIntegration, apiReceipts]);
+
+  // Auto-fetch receipts when API integration is enabled
+  useEffect(() => {
+    if (useApiIntegration) {
+      fetchReceipts().catch(console.error);
+    }
+  }, [useApiIntegration, fetchReceipts]);
 
   const addItemToReceipt = (item: Item, quantity = 1) => {
     if (item.quantity < quantity) {
@@ -88,7 +142,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     return `RCP-${Date.now()}`;
   };
 
-  const handleSubmitReceipt = () => {
+  const handleSubmitReceipt = async () => {
     if (receiptItems.length === 0) {
       Alert.alert('Error', 'Please add items to the receipt');
       return;
@@ -106,44 +160,102 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     const tax = calculateTax(subtotal);
     const total = subtotal + tax;
 
-    const receipt: Receipt = {
-      id: Date.now(),
-      receiptNumber: generateReceiptNumber(),
-      customerName: customerName || 'Walk-in Customer',
-      items: [...receiptItems],
-      subtotal,
-      tax,
-      total,
-      dateTime: '2025-08-25 01:34:29',
-      status: 'completed'
-    };
+    if (useApiIntegration) {
+      try {
+        // Create receipt via API
+        const receiptData: CreateReceiptRequest = {
+          customerName: customerName || 'Walk-in Customer',
+          items: receiptItems.map(item => ({
+            productId: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          })),
+          subtotal,
+          tax,
+          total,
+          dateTime: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        };
 
-    // Update items inventory and sales count
-    setItems(prevItems => 
-      prevItems.map(item => {
-        const soldItem = receiptItems.find(ri => ri.id === item.id);
-        if (soldItem) {
-          const newQuantity = item.quantity - soldItem.quantity;
-          return {
-            ...item,
-            quantity: Math.max(0, newQuantity),
-            total: item.price * Math.max(0, newQuantity),
-            salesCount: item.salesCount + soldItem.quantity
-          };
+        const newReceipt = await executeCreateReceipt(receiptData);
+        
+        // Update local inventory
+        const updatedItems = items.map(item => {
+          const receiptItem = receiptItems.find(ri => ri.id === item.id);
+          if (receiptItem) {
+            return { ...item, quantity: item.quantity - receiptItem.quantity };
+          }
+          return item;
+        });
+        setItems(updatedItems);
+
+        // Add receipt to local state
+        setReceipts(prev => [newReceipt, ...prev]);
+        
+        Alert.alert('Success', 'Receipt created successfully!');
+        clearReceipt();
+        
+      } catch (error) {
+        console.error('Failed to create receipt:', error);
+        Alert.alert('Error', 'Failed to create receipt. Please try again.');
+      }
+    } else {
+      // Fallback to local storage (original implementation)
+      const receipt: Receipt = {
+        id: Date.now(),
+        receiptNumber: generateReceiptNumber(),
+        customerName: customerName || 'Walk-in Customer',
+        items: [...receiptItems],
+        subtotal,
+        tax,
+        total,
+        dateTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        status: 'completed'
+      };
+
+      setReceipts(prev => [receipt, ...prev]);
+
+      const updatedItems = items.map(item => {
+        const receiptItem = receiptItems.find(ri => ri.id === item.id);
+        if (receiptItem) {
+          return { ...item, quantity: item.quantity - receiptItem.quantity };
         }
         return item;
-      })
-    );
+      });
+      setItems(updatedItems);
 
-    setReceipts([receipt, ...receipts]);
-    clearReceipt();
-
-    Alert.alert('Success', 'Transaction completed successfully!');
+      Alert.alert('Success', `Receipt ${receipt.receiptNumber} has been created!`);
+      clearReceipt();
+    }
   };
 
   const clearReceipt = () => {
     setReceiptItems([]);
     setCustomerName('');
+  };
+
+  // New API-related functions
+  const refreshReceipts = async () => {
+    if (useApiIntegration) {
+      await fetchReceipts();
+    }
+  };
+
+  const deleteReceiptFunction = async (id: number) => {
+    if (useApiIntegration) {
+      try {
+        await ReceiptService.deleteReceipt(id);
+        setReceipts(prev => prev.filter(receipt => receipt.id !== id));
+        Alert.alert('Success', 'Receipt deleted successfully');
+      } catch (error) {
+        console.error('Failed to delete receipt:', error);
+        Alert.alert('Error', 'Failed to delete receipt. Please try again.');
+      }
+    } else {
+      setReceipts(prev => prev.filter(receipt => receipt.id !== id));
+      Alert.alert('Success', 'Receipt deleted successfully');
+    }
   };
 
   return (
@@ -158,7 +270,13 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       calculateTotal,
       calculateTax,
       handleSubmitReceipt,
-      clearReceipt
+      clearReceipt,
+      loading: loading,
+      error,
+      refreshReceipts,
+      deleteReceipt: deleteReceiptFunction,
+      useApiIntegration,
+      setUseApiIntegration
     }}>
       {children}
     </ReceiptContext.Provider>
