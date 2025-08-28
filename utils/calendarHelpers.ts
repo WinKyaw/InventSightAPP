@@ -1,3 +1,5 @@
+import { ActivityItem } from '../services/api/config';
+
 // Helper functions for calendar functionality
 export const getSeasonalMultiplier = (month: number) => {
   if (month >= 11 || month <= 1) return 1.2; // Winter - higher sales
@@ -6,64 +8,72 @@ export const getSeasonalMultiplier = (month: number) => {
   return 1.0; // Fall - baseline
 };
 
-export const generateDailyActivities = (date: Date, sales: number, orders: number) => {
-  const activities = [];
-  const dayOfWeek = date.getDay();
+export const generateDailyActivities = (date: Date, sales: number, orders: number): ActivityItem[] => {
+  const activities: ActivityItem[] = [];
+  const dateStr = date.toISOString().split('T')[0];
   
   // Morning activities
   activities.push({
-    time: '08:00',
-    type: 'opening',
-    description: 'Store opened for business',
-    icon: 'storefront-outline'
+    id: Date.now() + Math.random(),
+    type: 'sale',
+    productName: 'Store Opening',
+    quantity: 1,
+    timestamp: `${dateStr} 08:00:00`,
+    userId: 'system',
+    notes: 'Store opened for business'
   });
   
+  const dayOfWeek = date.getDay();
   if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Weekdays
     activities.push({
-      time: '08:30',
-      type: 'delivery',
-      description: 'Fresh bakery items delivered',
-      icon: 'car-outline'
+      id: Date.now() + Math.random(),
+      type: 'restock',
+      productName: 'Fresh Bakery Items',
+      quantity: 20,
+      timestamp: `${dateStr} 08:30:00`,
+      userId: 'system',
+      notes: 'Fresh bakery items delivered'
     });
   }
   
   // Peak hours
   if (orders > 40) {
     activities.push({
-      time: '12:15',
-      type: 'peak',
-      description: 'Lunch rush - high customer volume',
-      icon: 'people-outline'
+      id: Date.now() + Math.random(),
+      type: 'sale',
+      productName: 'Lunch Combo',
+      quantity: Math.floor(orders * 0.3),
+      timestamp: `${dateStr} 12:15:00`,
+      userId: 'system',
+      notes: 'Lunch rush - high customer volume'
     });
   }
   
   // Inventory activities
   if (Math.random() > 0.7) {
     activities.push({
-      time: '14:30',
-      type: 'inventory',
-      description: 'Inventory restocked',
-      icon: 'cube-outline'
+      id: Date.now() + Math.random(),
+      type: 'adjustment',
+      productName: 'Inventory Items',
+      quantity: Math.floor(Math.random() * 50),
+      timestamp: `${dateStr} 14:30:00`,
+      userId: 'system',
+      notes: 'Inventory restocked'
     });
   }
   
   // Special events
   if (dayOfWeek === 5 && Math.random() > 0.6) { // Friday specials
     activities.push({
-      time: '16:00',
-      type: 'promotion',
-      description: 'Friday special promotion launched',
-      icon: 'pricetag-outline'
+      id: Date.now() + Math.random(),
+      type: 'sale',
+      productName: 'Friday Special',
+      quantity: Math.floor(sales * 0.1),
+      timestamp: `${dateStr} 16:00:00`,
+      userId: 'system',
+      notes: 'Friday special promotion launched'
     });
   }
-  
-  // Closing
-  activities.push({
-    time: '20:00',
-    type: 'closing',
-    description: 'Store closed',
-    icon: 'lock-closed-outline'
-  });
   
   return activities;
 };
@@ -72,7 +82,7 @@ export const generateTopItemsForDay = (sales: number) => {
   const baseItems = ['Coffee', 'Sandwich', 'Tea', 'Croissant', 'Muffin', 'Salad'];
   return baseItems.slice(0, 3).map((item, index) => ({
     name: item,
-    sales: Math.floor(sales * (0.3 - index * 0.08)),
+    revenue: Math.floor(sales * (0.3 - index * 0.08)),
     quantity: Math.floor(sales * (0.05 - index * 0.01))
   }));
 };

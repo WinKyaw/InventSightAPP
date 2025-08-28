@@ -334,7 +334,7 @@ const styles = {
     gap: 12,
   },
   statCard: {
-    width: '47%',
+    width: '47%' as const,
     backgroundColor: Colors.white,
     padding: 16,
     borderRadius: 12,

@@ -1,15 +1,22 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Reminder } from '../types';
 import { initialReminders } from '../constants/Data';
 import { getSeasonalMultiplier, generateDailyActivities, generateTopItemsForDay } from '../utils/calendarHelpers';
+import { CalendarService } from '../services';
+import { useApi } from '../hooks/useApi';
+import { ActivityItem } from '../services/api/config';
 
 interface DayActivity {
   date: string;
   sales: number;
   orders: number;
   customers: number;
-  activities: any[];
-  topItems: any[];
+  activities: ActivityItem[];
+  topItems: Array<{
+    name: string;
+    quantity: number;
+    revenue: number;
+  }>;
 }
 
 interface CalendarContextType {
@@ -18,13 +25,18 @@ interface CalendarContextType {
   currentCalendarDate: Date;
   selectedDayData: DayActivity | null;
   showDayModal: boolean;
+  loading: boolean;
+  error: string | null;
   setReminders: React.Dispatch<React.SetStateAction<Reminder[]>>;
   setCurrentCalendarDate: React.Dispatch<React.SetStateAction<Date>>;
   setSelectedDayData: React.Dispatch<React.SetStateAction<DayActivity | null>>;
   setShowDayModal: React.Dispatch<React.SetStateAction<boolean>>;
-  addReminder: (reminder: Omit<Reminder, 'id'>) => void;
+  addReminder: (reminder: Omit<Reminder, 'id'>) => Promise<void>;
   navigateCalendar: (direction: number) => void;
   handleDayPress: (day: number) => void;
+  refreshCalendarData: () => Promise<void>;
+  useApiIntegration: boolean;
+  setUseApiIntegration: (use: boolean) => void;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
@@ -34,9 +46,39 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [selectedDayData, setSelectedDayData] = useState<DayActivity | null>(null);
   const [showDayModal, setShowDayModal] = useState(false);
+  const [useApiIntegration, setUseApiIntegration] = useState<boolean>(false);
 
-  // Generate daily activities data
-  const [dailyActivities] = useState(() => {
+  // API integration for reminders
+  const {
+    data: apiReminders,
+    loading: remindersLoading,
+    error: remindersError,
+    execute: fetchReminders,
+  } = useApi(CalendarService.getReminders);
+
+  // API integration for daily activities
+  const {
+    data: apiActivities,
+    loading: activitiesLoading,
+    error: activitiesError,
+    execute: fetchActivities,
+  } = useApi(() => {
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1); // Get last month
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 1); // Get next month
+    
+    return CalendarService.getDailyActivities(
+      startDate.toISOString().split('T')[0],
+      endDate.toISOString().split('T')[0]
+    );
+  });
+
+  const loading = remindersLoading || activitiesLoading;
+  const error = remindersError || activitiesError;
+
+  // Generate fallback daily activities data
+  const [fallbackDailyActivities] = useState(() => {
     const activities: Record<string, DayActivity> = {};
     const startDate = new Date('2023-08-25');
     const endDate = new Date('2025-08-25');
@@ -65,12 +107,55 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     return activities;
   });
 
-  const addReminder = (newReminder: Omit<Reminder, 'id'>) => {
-    const reminder: Reminder = {
-      ...newReminder,
-      id: Date.now(),
-    };
-    setReminders(prev => [...prev, reminder]);
+  // Use API data when available, otherwise fallback
+  const dailyActivities = (useApiIntegration && apiActivities) ? apiActivities : fallbackDailyActivities;
+
+  // Effect to sync API data with local state when API integration is enabled
+  useEffect(() => {
+    if (useApiIntegration && apiReminders) {
+      setReminders(apiReminders);
+    } else if (!useApiIntegration) {
+      setReminders(initialReminders);
+    }
+  }, [useApiIntegration, apiReminders]);
+
+  // Auto-fetch data when API integration is enabled
+  useEffect(() => {
+    if (useApiIntegration) {
+      fetchReminders();
+      fetchActivities();
+    }
+  }, [useApiIntegration, fetchReminders, fetchActivities]);
+
+  const addReminder = async (newReminder: Omit<Reminder, 'id'>): Promise<void> => {
+    try {
+      if (useApiIntegration) {
+        const reminder = await CalendarService.createReminder({
+          ...newReminder,
+        });
+        setReminders(prev => [...prev, reminder]);
+      } else {
+        const reminder: Reminder = {
+          ...newReminder,
+          id: Date.now(),
+        };
+        setReminders(prev => [...prev, reminder]);
+      }
+    } catch (error) {
+      console.error('Failed to create reminder:', error);
+      // Fallback to local creation
+      const reminder: Reminder = {
+        ...newReminder,
+        id: Date.now(),
+      };
+      setReminders(prev => [...prev, reminder]);
+    }
+  };
+
+  const refreshCalendarData = async (): Promise<void> => {
+    if (useApiIntegration) {
+      await Promise.all([fetchReminders(), fetchActivities()]);
+    }
   };
 
   const navigateCalendar = (direction: number) => {
@@ -100,13 +185,18 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       currentCalendarDate,
       selectedDayData,
       showDayModal,
+      loading,
+      error,
       setReminders,
       setCurrentCalendarDate,
       setSelectedDayData,
       setShowDayModal,
       addReminder,
       navigateCalendar,
-      handleDayPress
+      handleDayPress,
+      refreshCalendarData,
+      useApiIntegration,
+      setUseApiIntegration,
     }}>
       {children}
     </CalendarContext.Provider>
