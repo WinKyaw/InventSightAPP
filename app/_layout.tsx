@@ -4,6 +4,7 @@ import { ItemsApiProvider } from '../context/ItemsApiContext';
 import { EmployeesProvider } from '../context/EmployeesContext';
 import { ReceiptProvider } from '../context/ReceiptContext';
 import { CalendarProvider } from '../context/CalendarContext';
+import { ProfileProvider } from '../context/ProfileContext';
 import { NavigationProvider } from '../context/NavigationContext';
 import { ReportsProvider } from '../context/ReportsContext';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
@@ -18,16 +19,18 @@ export default function RootLayout() {
             <ItemsApiProvider>
               <EmployeesProvider>
                 <ReportsProvider>
-                  <ReceiptProvider>
-                    <CalendarProvider>
-                      <Stack screenOptions={{ headerShown: false }}>
-                        <Stack.Screen name="index" options={{ headerShown: false }} />
-                        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                        <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
-                      </Stack>
-                    </CalendarProvider>
-                  </ReceiptProvider>
+                  <ProfileProvider>
+                    <ReceiptProvider>
+                      <CalendarProvider>
+                        <Stack screenOptions={{ headerShown: false }}>
+                          <Stack.Screen name="index" options={{ headerShown: false }} />
+                          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                          <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+                        </Stack>
+                      </CalendarProvider>
+                    </ReceiptProvider>
+                  </ProfileProvider>
                 </ReportsProvider>
               </EmployeesProvider>
             </ItemsApiProvider>

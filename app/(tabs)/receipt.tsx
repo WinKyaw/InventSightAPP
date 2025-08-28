@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useReceipt } from '../../context/ReceiptContext';
 import { useItems } from '../../context/ItemsContext';
@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { AddItemToReceiptModal } from '../../components/modals/AddItemToReceiptModal';
 import { styles } from '../../constants/Styles';
+import { Colors } from '../../constants/Colors';
 
 export default function ReceiptScreen() {
   const { 
@@ -18,7 +19,9 @@ export default function ReceiptScreen() {
     removeItemFromReceipt,
     calculateTotal,
     calculateTax,
-    handleSubmitReceipt 
+    handleSubmitReceipt,
+    loading,
+    error
   } = useReceipt();
   
   const [showAddToReceipt, setShowAddToReceipt] = useState(false);
@@ -28,7 +31,16 @@ export default function ReceiptScreen() {
   const total = subtotal + tax;
 
   const getCurrentDateTime = () => {
-    return '2025-08-25 01:34:29';
+    return new Date().toISOString().replace('T', ' ').substring(0, 19);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      await handleSubmitReceipt();
+    } catch (error) {
+      // Error handling is done in the context
+      console.error('Submit receipt error:', error);
+    }
   };
 
   return (
@@ -136,11 +148,19 @@ export default function ReceiptScreen() {
             </View>
 
             <Button
-              title="Complete Transaction"
-              onPress={handleSubmitReceipt}
+              title={loading ? "Processing..." : "Complete Transaction"}
+              onPress={handleSubmit}
               color="#10B981"
               style={styles.submitReceiptButton}
+              disabled={loading}
             />
+            {loading && (
+              <ActivityIndicator 
+                size="small" 
+                color={Colors.primary} 
+                style={{ marginTop: 8 }} 
+              />
+            )}
           </View>
         )}
 

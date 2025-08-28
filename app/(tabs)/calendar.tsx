@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
 import { useCalendar } from '../../context/CalendarContext';
 import { Header } from '../../components/shared/Header';
@@ -8,8 +8,28 @@ import { DayDetailsModal } from '../../components/modals/DayDetailsModal';
 import { styles } from '../../constants/Styles';
 
 export default function CalendarScreen() {
-  const { reminders } = useCalendar();
+  const { 
+    reminders, 
+    events,
+    loading,
+    error,
+    fetchAllEvents,
+    fetchMonthEvents,
+    currentCalendarDate 
+  } = useCalendar();
   const [showAddReminder, setShowAddReminder] = useState(false);
+
+  // Auto-fetch events on mount
+  useEffect(() => {
+    fetchAllEvents();
+  }, []);
+
+  // Fetch month events when calendar date changes
+  useEffect(() => {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth() + 1;
+    fetchMonthEvents(year, month);
+  }, [currentCalendarDate]);
 
   return (
     <SafeAreaView style={styles.container}>

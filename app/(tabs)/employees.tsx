@@ -1,15 +1,44 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useEmployees } from '../../context/EmployeesContext';
 import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
 import { AddEmployeeModal } from '../../components/modals/AddEmployeeModal';
 import { styles } from '../../constants/Styles';
+import { Colors } from '../../constants/Colors';
 
 export default function EmployeesScreen() {
-  const { employees, updateEmployee } = useEmployees();
+  const { 
+    employees, 
+    updateEmployee, 
+    loading, 
+    error, 
+    refreshEmployees,
+    useApiIntegration 
+  } = useEmployees();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Auto-refresh on mount if using API integration
+  useEffect(() => {
+    if (useApiIntegration) {
+      refreshEmployees();
+    }
+  }, [useApiIntegration]);
+
+  const handleRefresh = async () => {
+    if (useApiIntegration) {
+      setRefreshing(true);
+      try {
+        await refreshEmployees();
+      } catch (error) {
+        console.error('Refresh failed:', error);
+      } finally {
+        setRefreshing(false);
+      }
+    }
+  };
 
   const toggleEmployeeExpansion = (id: number) => {
     const employee = employees.find(emp => emp.id === id);
@@ -60,7 +89,18 @@ export default function EmployeesScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.employeesList} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.employeesList} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
+      >
         <View style={styles.employeesCard}>
           {filteredEmployees.map((employee, index) => (
             <View key={employee.id}>

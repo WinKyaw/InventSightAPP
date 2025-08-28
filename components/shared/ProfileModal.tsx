@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
+import { useProfile } from '../../context/ProfileContext';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -15,19 +16,60 @@ interface ProfileModalProps {
 
 export function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const { user, logout } = useAuth();
+  const { 
+    profile, 
+    settings, 
+    loading, 
+    error, 
+    fetchUserProfile, 
+    updateUserProfile,
+    fetchUserSettings,
+    updateUserSettings 
+  } = useProfile();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || 'WinKyaw',
-    email: user?.email || 'winkyaw@example.com',
-    phone: '(555) 123-4567',
-    role: 'Store Manager',
-    joinDate: '2024-01-15',
-    location: 'Main Branch'
+    firstName: profile?.firstName || user?.name || 'WinKyaw',
+    lastName: profile?.lastName || '',
+    email: profile?.email || user?.email || 'winkyaw@example.com',
+    phoneNumber: profile?.phoneNumber || '(555) 123-4567',
+    department: profile?.department || 'Store Manager',
   });
 
-  const handleSave = () => {
-    // In a real app, you'd save to backend here
-    setIsEditing(false);
+  // Auto-fetch profile data when modal opens
+  useEffect(() => {
+    if (visible) {
+      fetchUserProfile();
+      fetchUserSettings();
+    }
+  }, [visible]);
+
+  // Update form data when profile data is loaded
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        phoneNumber: profile.phoneNumber || '(555) 123-4567',
+        department: profile.department || 'Store Manager',
+      });
+    }
+  }, [profile]);
+
+  const handleSave = async () => {
+    try {
+      await updateUserProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+        department: formData.department,
+      });
+      setIsEditing(false);
+    } catch (error) {
+      // Error is handled in context
+    }
+  };
     Alert.alert('Success', 'Profile updated successfully!');
   };
 
@@ -134,10 +176,20 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
+              <Text style={styles.inputLabel}>First Name</Text>
               <Input
-                value={formData.name}
-                onChangeText={(text) => setFormData({ ...formData, name: text })}
+                value={formData.firstName}
+                onChangeText={(text) => setFormData({ ...formData, firstName: text })}
+                editable={isEditing}
+                style={[styles.profileInput, !isEditing && styles.disabledInput]}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Last Name</Text>
+              <Input
+                value={formData.lastName}
+                onChangeText={(text) => setFormData({ ...formData, lastName: text })}
                 editable={isEditing}
                 style={[styles.profileInput, !isEditing && styles.disabledInput]}
               />
@@ -148,17 +200,17 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
               <Input
                 value={formData.email}
                 onChangeText={(text) => setFormData({ ...formData, email: text })}
-                editable={isEditing}
+                editable={false}
                 keyboardType="email-address"
-                style={[styles.profileInput, !isEditing && styles.disabledInput]}
+                style={[styles.profileInput, styles.disabledInput]}
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Phone Number</Text>
               <Input
-                value={formData.phone}
-                onChangeText={(text) => setFormData({ ...formData, phone: text })}
+                value={formData.phoneNumber}
+                onChangeText={(text) => setFormData({ ...formData, phoneNumber: text })}
                 editable={isEditing}
                 keyboardType="phone-pad"
                 style={[styles.profileInput, !isEditing && styles.disabledInput]}
@@ -166,28 +218,10 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Role</Text>
+              <Text style={styles.inputLabel}>Department</Text>
               <Input
-                value={formData.role}
-                editable={false}
-                style={[styles.profileInput, styles.disabledInput]}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Join Date</Text>
-              <Input
-                value={formData.joinDate}
-                editable={false}
-                style={[styles.profileInput, styles.disabledInput]}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Location</Text>
-              <Input
-                value={formData.location}
-                onChangeText={(text) => setFormData({ ...formData, location: text })}
+                value={formData.department}
+                onChangeText={(text) => setFormData({ ...formData, department: text })}
                 editable={isEditing}
                 style={[styles.profileInput, !isEditing && styles.disabledInput]}
               />
@@ -197,11 +231,19 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
           {isEditing && (
             <View style={styles.saveButtonContainer}>
               <Button
-                title="Save Changes"
+                title={loading ? "Saving..." : "Save Changes"}
                 onPress={handleSave}
                 color={Colors.success}
                 style={styles.saveButton}
+                disabled={loading}
               />
+              {loading && (
+                <ActivityIndicator 
+                  size="small" 
+                  color={Colors.success} 
+                  style={{ marginTop: 8 }} 
+                />
+              )}
             </View>
           )}
         </View>
@@ -251,7 +293,7 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
   );
 }
 
-const styles = {
+const styles = StyleSheet.create({
   profileHeader: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -432,4 +474,4 @@ const styles = {
     borderColor: '#FEE2E2',
     backgroundColor: '#FEF2F2',
   },
-};
+});
