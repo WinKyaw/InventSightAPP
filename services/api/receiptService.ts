@@ -1,6 +1,5 @@
 import { Receipt, ReceiptItem } from '../../types';
-import { post, get } from './httpClient';
-import { API_CONFIG } from './config';
+import { apiClient } from './apiClient';
 
 // Receipt API endpoints (extending the config)
 const RECEIPT_ENDPOINTS = {
@@ -24,107 +23,48 @@ export interface ReceiptResponse {
   totalRevenue: number;
 }
 
+/**
+ * Receipt API Client - Simple HTTP client for receipt operations
+ */
 export class ReceiptService {
   /**
    * Create a new receipt/transaction
    */
   static async createReceipt(receiptData: CreateReceiptRequest): Promise<Receipt> {
-    try {
-      const newReceiptData = {
-        ...receiptData,
-        receiptNumber: this.generateReceiptNumber(),
-        dateTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        status: 'completed',
-      };
-
-      const response = await post<Receipt>(RECEIPT_ENDPOINTS.CREATE, newReceiptData);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to create receipt:', error);
-      throw error;
-    }
+    return await apiClient.post<Receipt>(RECEIPT_ENDPOINTS.CREATE, receiptData);
   }
 
   /**
    * Get all receipts
    */
   static async getAllReceipts(limit?: number, offset?: number): Promise<ReceiptResponse> {
-    try {
-      const params = new URLSearchParams();
-      if (limit) params.append('limit', limit.toString());
-      if (offset) params.append('offset', offset.toString());
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
 
-      const queryString = params.toString();
-      const url = queryString ? `${RECEIPT_ENDPOINTS.GET_ALL}?${queryString}` : RECEIPT_ENDPOINTS.GET_ALL;
+    const queryString = params.toString();
+    const url = queryString ? `${RECEIPT_ENDPOINTS.GET_ALL}?${queryString}` : RECEIPT_ENDPOINTS.GET_ALL;
 
-      const response = await get<ReceiptResponse>(url);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch receipts:', error);
-      throw error;
-    }
+    return await apiClient.get<ReceiptResponse>(url);
   }
 
   /**
    * Get receipt by ID
    */
   static async getReceiptById(id: string | number): Promise<Receipt> {
-    try {
-      const response = await get<Receipt>(RECEIPT_ENDPOINTS.GET_BY_ID(id));
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to fetch receipt ${id}:`, error);
-      throw error;
-    }
+    return await apiClient.get<Receipt>(RECEIPT_ENDPOINTS.GET_BY_ID(id));
   }
 
   /**
    * Get receipts by date range
    */
   static async getReceiptsByDate(startDate: string, endDate?: string): Promise<Receipt[]> {
-    try {
-      const params = new URLSearchParams();
-      params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
+    const params = new URLSearchParams();
+    params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
 
-      const url = `${RECEIPT_ENDPOINTS.GET_BY_DATE}?${params.toString()}`;
-      const response = await get<Receipt[]>(url);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch receipts by date:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate receipt number
-   */
-  private static generateReceiptNumber(): string {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const timestamp = date.getTime().toString().slice(-4);
-    return `RCP-${year}${month}${day}-${timestamp}`;
-  }
-
-  /**
-   * Calculate receipt totals (utility function)
-   */
-  static calculateReceiptTotals(items: ReceiptItem[], taxRate: number = 0.08): {
-    subtotal: number;
-    tax: number;
-    total: number;
-  } {
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const tax = subtotal * taxRate;
-    const total = subtotal + tax;
-
-    return {
-      subtotal: Math.round(subtotal * 100) / 100,
-      tax: Math.round(tax * 100) / 100,
-      total: Math.round(total * 100) / 100,
-    };
+    const url = `${RECEIPT_ENDPOINTS.GET_BY_DATE}?${params.toString()}`;
+    return await apiClient.get<Receipt[]>(url);
   }
 }
 
