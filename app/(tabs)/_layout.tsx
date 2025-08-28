@@ -89,7 +89,6 @@ export default function TabsLayout() {
             title: 'Menu',
             tabBarButton: (props) => (
               <TouchableOpacity
-                {...props}
                 onPress={() => setShowHamburgerMenu(true)}
                 style={[
                   props.style, 

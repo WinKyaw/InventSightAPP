@@ -154,6 +154,45 @@ export class EmployeeService {
       throw error;
     }
   }
+
+  /**
+   * Update employee role (admin only)
+   */
+  static async updateEmployeeRole(id: string | number, role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE'): Promise<Employee> {
+    try {
+      const response = await put<Employee>(API_ENDPOINTS.EMPLOYEES.UPDATE_ROLE(id), { role });
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to update employee role ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current employee profile
+   */
+  static async getCurrentEmployeeProfile(): Promise<Employee> {
+    try {
+      const response = await get<Employee>(API_ENDPOINTS.EMPLOYEES.CURRENT_PROFILE);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch current employee profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deactivate employee (admin only)
+   */
+  static async deactivateEmployee(id: string | number): Promise<Employee> {
+    try {
+      const response = await put<Employee>(API_ENDPOINTS.EMPLOYEES.UPDATE(id), { status: 'Inactive' });
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to deactivate employee ${id}:`, error);
+      throw error;
+    }
+  }
 }
 
 export default EmployeeService;

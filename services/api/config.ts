@@ -72,6 +72,38 @@ export const API_ENDPOINTS = {
     CHECKED_IN: '/employees/checked-in',
     SEARCH: '/employees/search',
     CREATE: '/employees',
+    UPDATE: (id: string | number) => `/employees/${id}`,
+    DELETE: (id: string | number) => `/employees/${id}`,
+    UPDATE_ROLE: (id: string | number) => `/employees/${id}/role`,
+    CURRENT_PROFILE: '/employees/profile',
+  },
+  // Receipt endpoints
+  RECEIPTS: {
+    ALL: '/api/receipts',
+    BY_ID: (id: string | number) => `/api/receipts/${id}`,
+    CREATE: '/api/receipts',
+    UPDATE: (id: string | number) => `/api/receipts/${id}`,
+    DELETE: (id: string | number) => `/api/receipts/${id}`,
+    ADD_ITEMS: (id: string | number) => `/api/receipts/${id}/items`,
+    SEARCH: '/api/receipts/search',
+  },
+  // Calendar/Event endpoints
+  EVENTS: {
+    ALL: '/api/events',
+    BY_ID: (id: string | number) => `/api/events/${id}`,
+    CREATE: '/api/events',
+    UPDATE: (id: string | number) => `/api/events/${id}`,
+    DELETE: (id: string | number) => `/api/events/${id}`,
+    MONTH: (year: number, month: number) => `/api/events/month/${year}/${month}`,
+    ADD_ATTENDEES: (id: string | number) => `/api/events/${id}/attendees`,
+  },
+  // Profile endpoints
+  PROFILE: {
+    USER: '/api/profile',
+    UPDATE: '/api/profile',
+    AVATAR: '/api/profile/avatar',
+    SETTINGS: '/api/profile/settings',
+    UPDATE_SETTINGS: '/api/profile/settings',
   },
 };
 

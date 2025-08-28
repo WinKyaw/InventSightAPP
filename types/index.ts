@@ -28,6 +28,12 @@ export interface Employee {
   title: string;
   bonus: number;
   expanded: boolean;
+  // Additional fields for API integration
+  userId?: string;
+  role?: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  department?: string;
+  hireDate?: string;
+  profile?: UserProfile;
 }
 
 export interface Reminder {
@@ -39,6 +45,19 @@ export interface Reminder {
   description: string;
 }
 
+// New Event interface for Calendar API integration
+export interface Event {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  attendees?: Employee[];
+  createdBy: string;
+  type?: 'order' | 'meeting' | 'maintenance';
+  time?: string;
+}
+
 export interface ReceiptItem {
   id: number;
   name: string;
@@ -48,7 +67,7 @@ export interface ReceiptItem {
 }
 
 export interface Receipt {
-  id: number;
+  id: string;
   receiptNumber: string;
   customerName: string;
   items: ReceiptItem[];
@@ -57,4 +76,114 @@ export interface Receipt {
   total: number;
   dateTime: string;
   status: string;
+  // Additional fields for API integration
+  userId?: string;
+  vendor?: string;
+  date?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// New UserProfile interface for Profile API integration
+export interface UserProfile {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  department?: string;
+  avatarUrl?: string;
+  role?: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+}
+
+// New UserSettings interface for Profile API integration
+export interface UserSettings {
+  id: string;
+  userId: string;
+  notifications: boolean;
+  darkMode: boolean;
+  language: string;
+  currency: string;
+  timezone: string;
+}
+
+// API Request/Response types
+export interface CreateReceiptRequest {
+  customerName?: string;
+  vendor: string;
+  items: {
+    itemId: number;
+    quantity: number;
+    price: number;
+  }[];
+  subtotal: number;
+  tax: number;
+  total: number;
+}
+
+export interface UpdateReceiptRequest {
+  customerName?: string;
+  vendor?: string;
+  items?: {
+    itemId: number;
+    quantity: number;
+    price: number;
+  }[];
+  subtotal?: number;
+  tax?: number;
+  total?: number;
+}
+
+export interface CreateEventRequest {
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  attendeeIds?: string[];
+  type?: 'order' | 'meeting' | 'maintenance';
+}
+
+export interface UpdateEventRequest {
+  title?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  attendeeIds?: string[];
+  type?: 'order' | 'meeting' | 'maintenance';
+}
+
+export interface ReceiptSearchParams {
+  query?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  minTotal?: number;
+  maxTotal?: number;
+  vendor?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface EventSearchParams {
+  query?: string;
+  year?: number;
+  month?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  type?: 'order' | 'meeting' | 'maintenance';
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  department?: string;
+}
+
+export interface UpdateUserSettingsRequest {
+  notifications?: boolean;
+  darkMode?: boolean;
+  language?: string;
+  currency?: string;
+  timezone?: string;
 }
