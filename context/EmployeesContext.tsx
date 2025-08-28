@@ -17,7 +17,6 @@ interface EmployeesContextType {
   searchEmployees: (query: string) => Promise<Employee[]>;
   getCheckedInEmployees: () => Promise<Employee[]>;
 }
-}
 
 const EmployeesContext = createContext<EmployeesContextType | undefined>(undefined);
 
@@ -39,8 +38,6 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
       setEmployees(apiEmployees);
     }
   }, [apiEmployees]);
-    }
-  }, [useApiIntegration, fetchEmployees]);
 
   const addEmployee = async (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
     try {
@@ -91,7 +88,6 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   const refreshEmployees = async (): Promise<void> => {
     await fetchEmployees();
   };
-  };
 
   const searchEmployees = async (query: string): Promise<Employee[]> => {
     try {
@@ -105,7 +101,6 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
         employee.title.toLowerCase().includes(query.toLowerCase())
       );
     }
-  };
   };
 
   const getCheckedInEmployees = async (): Promise<Employee[]> => {
