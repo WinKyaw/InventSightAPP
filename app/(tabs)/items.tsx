@@ -7,6 +7,7 @@ import { SearchBar } from '../../components/shared/SearchBar';
 import { FilterSortBar } from '../../components/shared/FilterSortBar';
 import { AddItemModal } from '../../components/modals/AddItemModal';
 import { EditItemModal } from '../../components/modals/EditItemModal';
+import { StockManagementModal } from '../../components/modals/StockManagementModal';
 import { FilterModal } from '../../components/modals/FilterModal';
 import { SortModal } from '../../components/modals/SortModal';
 import { productToItem } from '../../utils/productUtils';
@@ -38,10 +39,12 @@ export default function ItemsScreen() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showStockModal, setShowStockModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [stockManagementProduct, setStockManagementProduct] = useState<Product | null>(null);
 
   // Convert products to items for UI compatibility
   const items = products.map(productToItem);
@@ -83,6 +86,11 @@ export default function ItemsScreen() {
   const handleEditPress = (product: Product) => {
     setEditingProduct(product);
     setShowEditModal(true);
+  };
+
+  const handleStockPress = (product: Product) => {
+    setStockManagementProduct(product);
+    setShowStockModal(true);
   };
 
   const handleLoadMore = () => {
@@ -268,6 +276,22 @@ export default function ItemsScreen() {
                           </View>
                         )}
                       </View>
+                      <View style={styles.expandedActions}>
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handleStockPress(products.find(p => p.id === item.id)!)}
+                        >
+                          <Ionicons name="cube" size={16} color="#3B82F6" />
+                          <Text style={styles.actionButtonText}>Manage Stock</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handleEditPress(products.find(p => p.id === item.id)!)}
+                        >
+                          <Ionicons name="create" size={16} color="#10B981" />
+                          <Text style={styles.actionButtonText}>Edit Product</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
                 </View>
@@ -302,6 +326,15 @@ export default function ItemsScreen() {
           setEditingProduct(null);
         }}
         product={editingProduct}
+      />
+
+      <StockManagementModal
+        visible={showStockModal}
+        onClose={() => {
+          setShowStockModal(false);
+          setStockManagementProduct(null);
+        }}
+        product={stockManagementProduct}
       />
       
       <FilterModal
