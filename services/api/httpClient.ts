@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { API_CONFIG, getSessionInfo, getAuthHeaders, ApiResponse } from './config';
+import { API_CONFIG, getSessionInfo, ApiResponse } from './config';
 import { tokenManager } from '../../utils/tokenManager';
 
 // Track if we're currently refreshing token to avoid multiple refresh calls
@@ -36,15 +36,11 @@ const createHttpClient = (): AxiosInstance => {
   client.interceptors.request.use(
     async (config) => {
       const sessionInfo = getSessionInfo();
-      const authHeaders = getAuthHeaders();
       
       // Add session headers
       if (config.headers) {
         config.headers['X-User-Login'] = sessionInfo.userLogin;
         config.headers['X-Request-Timestamp'] = sessionInfo.timestamp;
-        
-        // Add authentication headers from environment (if any)
-        Object.assign(config.headers, authHeaders);
         
         // Add JWT token if available and not a login/signup request
         const isAuthRequest = config.url?.includes('/auth/login') || config.url?.includes('/auth/signup');
@@ -60,11 +56,6 @@ const createHttpClient = (): AxiosInstance => {
       console.log(`🔄 InventSightApp API Request: ${config.method?.toUpperCase()} ${config.url}`);
       console.log(`📅 Current Date and Time (UTC): ${sessionInfo.timestamp}`);
       console.log(`👤 Current User's Login: ${sessionInfo.userLogin}`);
-      
-      // Log authentication method (but not sensitive data)
-      if (Object.keys(authHeaders).length > 0) {
-        console.log(`🔐 Authentication: ${API_CONFIG.AUTH_TYPE.toUpperCase()} method`);
-      }
       
       // Log request data if present
       if (config.data && __DEV__) {
