@@ -1,7 +1,8 @@
 import { get } from './httpClient';
 import { 
   API_ENDPOINTS, 
-  CategoryCountResponse
+  CategoryCountResponse,
+  CategoriesResponse
 } from './config';
 
 export class CategoryService {
@@ -22,13 +23,16 @@ export class CategoryService {
   /**
    * Get all categories
    */
-  static async getAllCategories(): Promise<any[]> {
+  static async getAllCategories(): Promise<CategoriesResponse> {
     try {
-      const response = await get<any[]>(API_ENDPOINTS.CATEGORIES.ALL);
+      const response = await get<CategoriesResponse>(API_ENDPOINTS.CATEGORIES.ALL);
       return response.data;
     } catch (error) {
       console.error('Failed to fetch all categories:', error);
-      return [];
+      return {
+        categories: [],
+        totalCount: 0
+      };
     }
   }
 }

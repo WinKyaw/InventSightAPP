@@ -7,6 +7,12 @@ export interface Item {
   expanded: boolean;
   category: string;
   salesCount: number;
+  description?: string;
+  sku?: string;
+  minStock?: number;
+  maxStock?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Employee {

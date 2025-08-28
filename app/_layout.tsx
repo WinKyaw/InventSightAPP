@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
-import { ItemsProvider } from '../context/ItemsContext';
+import { ItemsApiProvider } from '../context/ItemsApiContext';
 import { EmployeesProvider } from '../context/EmployeesContext';
 import { ReceiptProvider } from '../context/ReceiptContext';
 import { CalendarProvider } from '../context/CalendarContext';
@@ -15,7 +15,7 @@ export default function RootLayout() {
       <AuthErrorBoundary>
         <AuthProvider>
           <NavigationProvider>
-            <ItemsProvider>
+            <ItemsApiProvider>
               <EmployeesProvider>
                 <ReportsProvider>
                   <ReceiptProvider>
@@ -30,7 +30,7 @@ export default function RootLayout() {
                   </ReceiptProvider>
                 </ReportsProvider>
               </EmployeesProvider>
-            </ItemsProvider>
+            </ItemsApiProvider>
           </NavigationProvider>
         </AuthProvider>
       </AuthErrorBoundary>

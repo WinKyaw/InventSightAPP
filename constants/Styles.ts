@@ -300,6 +300,14 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
   },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 8,
+    borderRadius: 6,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
   itemSeparator: {
     height: 1,
     backgroundColor: '#F3F4F6',
