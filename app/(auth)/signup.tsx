@@ -9,12 +9,14 @@ import { PasswordStrengthIndicator } from '../../components/ui/PasswordStrengthI
 import { TermsCheckbox } from '../../components/ui/TermsCheckbox';
 import { SignupSuccessScreen } from '../../components/ui/SignupSuccessScreen';
 import { styles } from '../../constants/Styles';
-import { validateSignupForm, getFieldError, validateEmail, validatePassword, validateName, validatePasswordConfirmation, validateTermsAcceptance } from '../../utils/validation';
+import { validateSignupForm, getFieldError, validateEmail, validatePassword, validateFirstName, validateLastName, validateUsername, validatePasswordConfirmation, validateTermsAcceptance } from '../../utils/validation';
 import { SignupCredentials } from '../../types/auth';
 
 export default function SignUpScreen() {
   const [credentials, setCredentials] = useState<SignupCredentials>({
-    name: '',
+    firstName: '',
+    lastName: '',
+    username: '',
     email: '', 
     password: '', 
     confirmPassword: '',
@@ -32,6 +34,8 @@ export default function SignUpScreen() {
   const slideAnim = useRef(new Animated.Value(50)).current;
 
   // Input references for auto-focus
+  const lastNameInputRef = useRef<any>(null);
+  const usernameInputRef = useRef<any>(null);
   const emailInputRef = useRef<any>(null);
   const passwordInputRef = useRef<any>(null);
   const confirmPasswordInputRef = useRef<any>(null);
@@ -74,8 +78,14 @@ export default function SignUpScreen() {
     let error = null;
     
     switch (field) {
-      case 'name':
-        error = validateName(credentials.name);
+      case 'firstName':
+        error = validateFirstName(credentials.firstName);
+        break;
+      case 'lastName':
+        error = validateLastName(credentials.lastName);
+        break;
+      case 'username':
+        error = validateUsername(credentials.username);
         break;
       case 'email':
         error = validateEmail(credentials.email);
@@ -155,8 +165,12 @@ export default function SignUpScreen() {
     if (!credentials[field] || (!submitAttempted && !fieldTouched[field])) return false;
     
     switch (field) {
-      case 'name':
-        return !validateName(credentials.name);
+      case 'firstName':
+        return !validateFirstName(credentials.firstName);
+      case 'lastName':
+        return !validateLastName(credentials.lastName);
+      case 'username':
+        return !validateUsername(credentials.username);
       case 'email':
         return !validateEmail(credentials.email);
       case 'password':
@@ -168,7 +182,9 @@ export default function SignUpScreen() {
     }
   };
 
-  const nameError = hasFieldError('name');
+  const firstNameError = hasFieldError('firstName');
+  const lastNameError = hasFieldError('lastName');
+  const usernameError = hasFieldError('username');
   const emailError = hasFieldError('email');
   const passwordError = hasFieldError('password');
   const confirmPasswordError = hasFieldError('confirmPassword');
@@ -212,17 +228,48 @@ export default function SignUpScreen() {
             
             <View style={styles.inputContainer}>
               <Input
-                placeholder="Full Name"
-                value={credentials.name}
-                onChangeText={(value) => handleInputChange('name', value)}
-                onBlur={() => handleInputBlur('name')}
-                onSubmitEditing={() => emailInputRef.current?.focus()}
+                placeholder="First Name"
+                value={credentials.firstName}
+                onChangeText={(value) => handleInputChange('firstName', value)}
+                onBlur={() => handleInputBlur('firstName')}
+                onSubmitEditing={() => lastNameInputRef.current?.focus()}
                 returnKeyType="next"
                 editable={!isSubmitting}
-                error={nameError}
-                success={isFieldValid('name')}
-                accessibilityLabel="Full name"
-                accessibilityHint="Enter your full name"
+                error={firstNameError}
+                success={isFieldValid('firstName')}
+                accessibilityLabel="First name"
+                accessibilityHint="Enter your first name"
+              />
+
+              <Input
+                ref={lastNameInputRef}
+                placeholder="Last Name"
+                value={credentials.lastName}
+                onChangeText={(value) => handleInputChange('lastName', value)}
+                onBlur={() => handleInputBlur('lastName')}
+                onSubmitEditing={() => usernameInputRef.current?.focus()}
+                returnKeyType="next"
+                editable={!isSubmitting}
+                error={lastNameError}
+                success={isFieldValid('lastName')}
+                accessibilityLabel="Last name"
+                accessibilityHint="Enter your last name"
+              />
+
+              <Input
+                ref={usernameInputRef}
+                placeholder="Username"
+                value={credentials.username}
+                onChangeText={(value) => handleInputChange('username', value)}
+                onBlur={() => handleInputBlur('username')}
+                onSubmitEditing={() => emailInputRef.current?.focus()}
+                autoCapitalize="none"
+                returnKeyType="next"
+                editable={!isSubmitting}
+                error={usernameError}
+                success={isFieldValid('username')}
+                accessibilityLabel="Username"
+                accessibilityHint="Enter your username"
               />
               
               <Input

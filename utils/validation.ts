@@ -53,17 +53,56 @@ export const validatePassword = (password: string): ValidationError | null => {
 };
 
 /**
- * Validate name
+ * Validate first name
  */
-export const validateName = (name: string): ValidationError | null => {
-  if (!name) {
-    return { field: 'name', message: 'Name is required' };
+export const validateFirstName = (firstName: string): ValidationError | null => {
+  if (!firstName) {
+    return { field: 'firstName', message: 'First name is required' };
   }
   
-  if (!NAME_REGEX.test(name.trim())) {
+  if (!NAME_REGEX.test(firstName.trim())) {
     return { 
-      field: 'name', 
-      message: 'Name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes' 
+      field: 'firstName', 
+      message: 'First name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes' 
+    };
+  }
+  
+  return null;
+};
+
+/**
+ * Validate last name
+ */
+export const validateLastName = (lastName: string): ValidationError | null => {
+  if (!lastName) {
+    return { field: 'lastName', message: 'Last name is required' };
+  }
+  
+  if (!NAME_REGEX.test(lastName.trim())) {
+    return { 
+      field: 'lastName', 
+      message: 'Last name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes' 
+    };
+  }
+  
+  return null;
+};
+
+/**
+ * Validate username
+ */
+export const validateUsername = (username: string): ValidationError | null => {
+  if (!username) {
+    return { field: 'username', message: 'Username is required' };
+  }
+  
+  // Username regex: alphanumeric, underscore, hyphen, 3-30 characters
+  const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,30}$/;
+  
+  if (!USERNAME_REGEX.test(username.trim())) {
+    return { 
+      field: 'username', 
+      message: 'Username must be 3-30 characters and contain only letters, numbers, underscores, and hyphens' 
     };
   }
   
@@ -116,8 +155,14 @@ export const validateLoginForm = (credentials: LoginCredentials): FormValidation
 export const validateSignupForm = (credentials: SignupCredentials): FormValidation => {
   const errors: ValidationError[] = [];
   
-  const nameError = validateName(credentials.name);
-  if (nameError) errors.push(nameError);
+  const firstNameError = validateFirstName(credentials.firstName);
+  if (firstNameError) errors.push(firstNameError);
+  
+  const lastNameError = validateLastName(credentials.lastName);
+  if (lastNameError) errors.push(lastNameError);
+  
+  const usernameError = validateUsername(credentials.username);
+  if (usernameError) errors.push(usernameError);
   
   const emailError = validateEmail(credentials.email);
   if (emailError) errors.push(emailError);

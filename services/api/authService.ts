@@ -10,21 +10,27 @@ import { httpClient } from './httpClient';
 import { API_ENDPOINTS, API_CONFIG } from './config';
 import { tokenManager } from '../../utils/tokenManager';
 
-// Demo mode configuration
-const DEMO_MODE = process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL;
+// Demo mode configuration - disabled by default, enable for development only
+const DEMO_MODE = false;
 
 // Mock data for demo mode
 const DEMO_USERS = {
   'winkyaw@example.com': {
     id: '1',
     email: 'winkyaw@example.com',
-    name: 'WinKyaw',
+    fullName: 'WinKyaw',
+    firstName: 'Win',
+    lastName: 'Kyaw',
+    username: 'winkyaw',
     role: 'admin',
   },
   'demo@example.com': {
     id: '2',
     email: 'demo@example.com',
-    name: 'Demo User',
+    fullName: 'Demo User',
+    firstName: 'Demo',
+    lastName: 'User',
+    username: 'demouser',
     role: 'user',
   },
 };
@@ -147,7 +153,9 @@ class AuthService {
       const response = await httpClient.post<LoginResponse>(
         API_ENDPOINTS.AUTH.SIGNUP,
         {
-          name: credentials.name.trim(),
+          firstName: credentials.firstName.trim(),
+          lastName: credentials.lastName.trim(),
+          username: credentials.username.trim(),
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
         }
@@ -196,7 +204,10 @@ class AuthService {
     const user: AuthUser = {
       id: `demo_${Date.now()}`,
       email: credentials.email.toLowerCase().trim(),
-      name: credentials.name.trim(),
+      fullName: `${credentials.firstName.trim()} ${credentials.lastName.trim()}`,
+      firstName: credentials.firstName.trim(),
+      lastName: credentials.lastName.trim(),
+      username: credentials.username.trim(),
       role: 'user',
     };
     

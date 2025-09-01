@@ -6,7 +6,9 @@ export interface LoginCredentials {
 }
 
 export interface SignupCredentials {
-  name: string;
+  firstName: string;
+  lastName: string;
+  username: string;
   email: string;
   password: string;
   confirmPassword?: string;
@@ -16,7 +18,10 @@ export interface SignupCredentials {
 export interface AuthUser {
   id: string;
   email: string;
-  name: string;
+  fullName: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
   role?: string;
   profilePicture?: string;
   verified?: boolean;
