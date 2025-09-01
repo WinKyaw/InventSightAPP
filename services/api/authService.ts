@@ -10,8 +10,8 @@ import { httpClient } from './httpClient';
 import { API_ENDPOINTS, API_CONFIG } from './config';
 import { tokenManager } from '../../utils/tokenManager';
 
-// Demo mode configuration - disabled by default, enable for development only
-const DEMO_MODE = false;
+// Demo mode configuration - can be enabled for development/testing
+const DEMO_MODE = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEMO_MODE === 'true';
 
 // Mock data for demo mode
 const DEMO_USERS = {
