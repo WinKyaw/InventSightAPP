@@ -147,7 +147,8 @@ class AuthService {
       const response = await httpClient.post<LoginResponse>(
         API_ENDPOINTS.AUTH.SIGNUP,
         {
-          name: credentials.name.trim(),
+          firstName: credentials.firstName.trim(),
+          lastName: credentials.lastName.trim(),
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
         }
@@ -196,7 +197,7 @@ class AuthService {
     const user: AuthUser = {
       id: `demo_${Date.now()}`,
       email: credentials.email.toLowerCase().trim(),
-      name: credentials.name.trim(),
+      name: `${credentials.firstName.trim()} ${credentials.lastName.trim()}`,
       role: 'user',
     };
     
