@@ -11,7 +11,7 @@ import { API_ENDPOINTS, API_CONFIG } from './config';
 import { tokenManager } from '../../utils/tokenManager';
 
 // Demo mode configuration
-const DEMO_MODE = process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL;
+const DEMO_MODE = process.env.DEMO_MODE === 'true' || (process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL);
 
 // Mock data for demo mode
 const DEMO_USERS = {
