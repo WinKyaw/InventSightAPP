@@ -126,7 +126,7 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
                     <Ionicons name="person" size={32} color="white" />
                   </View>
                   <View style={styles.profileInfo}>
-                    <Text style={styles.profileName}>{user?.name || 'WinKyaw'}</Text>
+                    <Text style={styles.profileName}>{user?.fullName || user?.firstName || 'WinKyaw'}</Text>
                     <Text style={styles.profileEmail}>{user?.email || 'winkyaw@example.com'}</Text>
                     <Text style={styles.profileStatus}>Active User</Text>
                   </View>

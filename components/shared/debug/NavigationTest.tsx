@@ -18,7 +18,7 @@ export function NavigationTest() {
     <View style={styles.container}>
       <Text style={styles.title}>Navigation Test Panel</Text>
       <Text style={styles.info}>
-        Current User: {user?.name || 'None'}{'\n'}
+        Current User: {user?.fullName || user?.firstName || 'None'}{'\n'}
         Time: 2025-08-25 08:39:32
       </Text>
       

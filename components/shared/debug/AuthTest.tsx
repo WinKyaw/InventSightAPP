@@ -23,7 +23,7 @@ export function AuthTest() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Auth Debug Panel</Text>
-      <Text>User: {user?.name || 'Not logged in'}</Text>
+      <Text>User: {user?.fullName || user?.firstName || 'Not logged in'}</Text>
       <Text>Loading: {isLoading ? 'Yes' : 'No'}</Text>
       <Text>Current Time: 2025-08-25 08:35:18</Text>
       

@@ -17,7 +17,7 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const { user, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || 'WinKyaw',
+    name: user?.fullName || user?.firstName || 'WinKyaw',
     email: user?.email || 'winkyaw@example.com',
     phone: '(555) 123-4567',
     role: 'Store Manager',
