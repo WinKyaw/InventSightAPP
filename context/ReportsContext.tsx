@@ -42,7 +42,7 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     error,
     execute: refreshDashboardData,
   } = useApi(
-    DashboardService.getComprehensiveDashboardData,
+    () => DashboardService.getComprehensiveDashboardData(),
     {
       immediate: false, // Don't auto-load, let components control when to fetch
       onSuccess: (data) => {

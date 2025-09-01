@@ -40,6 +40,9 @@ export class DashboardService {
    * Get comprehensive dashboard summary (single API call)
    */
   static async getDashboardSummary(): Promise<DashboardSummary> {
+    
+    var testURL = "http://localhost:8080" + API_ENDPOINTS.DASHBOARD.SUMMARY;
+    console.log("URL: " + testURL);
     return await apiClient.get<DashboardSummary>(API_ENDPOINTS.DASHBOARD.SUMMARY);
   }
 
