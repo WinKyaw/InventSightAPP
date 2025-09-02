@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useReceipt } from '../../context/ReceiptContext';
 import { useItems } from '../../context/ItemsContext';
 import { Header } from '../../components/shared/Header';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { SearchBar } from '../../components/shared/SearchBar';
 import { AddItemToReceiptModal } from '../../components/modals/AddItemToReceiptModal';
+import { ReceiptService } from '../../services/api/receiptService';
+import { Receipt } from '../../types';
 import { styles } from '../../constants/Styles';
+
+type TabType = 'create' | 'list';
 
 export default function ReceiptScreen() {
   const { 
@@ -26,8 +31,229 @@ export default function ReceiptScreen() {
     setUseApiIntegration
   } = useReceipt();
   
+  const [activeTab, setActiveTab] = useState<TabType>('create');
   const [showAddToReceipt, setShowAddToReceipt] = useState(false);
   const [customerNameError, setCustomerNameError] = useState('');
+  
+  // Receipt listing state
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [loadingReceipts, setLoadingReceipts] = useState(false);
+  const [receiptsError, setReceiptsError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'total' | 'customer'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Load receipts when switching to list tab
+  useEffect(() => {
+    if (activeTab === 'list') {
+      loadReceipts();
+    }
+  }, [activeTab]);
+
+  const loadReceipts = async (showRefreshing = false) => {
+    try {
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoadingReceipts(true);
+      }
+      setReceiptsError(null);
+      
+      const response = await ReceiptService.getAllReceipts();
+      setReceipts(response.receipts || []);
+    } catch (error: any) {
+      console.error('Failed to load receipts:', error);
+      setReceiptsError(error.message || 'Failed to load receipts');
+    } finally {
+      setLoadingReceipts(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefreshReceipts = () => {
+    loadReceipts(true);
+  };
+
+  // Filter and sort receipts
+  const getFilteredAndSortedReceipts = () => {
+    let filtered = receipts;
+    
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(receipt => 
+        receipt.customerName?.toLowerCase().includes(term) ||
+        receipt.receiptNumber?.toLowerCase().includes(term) ||
+        receipt.total.toString().includes(term)
+      );
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(a.dateTime || '').getTime() - new Date(b.dateTime || '').getTime();
+          break;
+        case 'total':
+          comparison = a.total - b.total;
+          break;
+        case 'customer':
+          comparison = (a.customerName || 'Walk-in').localeCompare(b.customerName || 'Walk-in');
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    
+    return filtered;
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
+
+  const formatDate = (dateTime: string | undefined) => {
+    if (!dateTime) return 'Unknown';
+    return new Date(dateTime).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const renderReceiptItem = ({ item }: { item: Receipt }) => (
+    <View style={styles.receiptItem}>
+      <View style={styles.receiptItemInfo}>
+        <Text style={styles.receiptItemName}>#{item.receiptNumber}</Text>
+        <Text style={styles.receiptItemPrice}>
+          {item.customerName || 'Walk-in Customer'}
+        </Text>
+        <Text style={styles.receiptItemPrice}>
+          {item.items?.length || 0} items • Tax: ${item.tax?.toFixed(2) || '0.00'}
+        </Text>
+      </View>
+      <View style={styles.receiptItemControls}>
+        <Text style={styles.receiptItemTotal}>${item.total.toFixed(2)}</Text>
+        <Text style={styles.receiptItemName}>{formatDate(item.dateTime)}</Text>
+      </View>
+    </View>
+  );
+
+  const renderReceiptListTab = () => (
+    <View style={styles.receiptContainer}>
+      {/* Search and Filter Section */}
+      <SearchBar
+        placeholder="Search receipts..."
+        value={searchTerm}
+        onChangeText={setSearchTerm}
+      />
+      
+      <View style={styles.employeeStats}>
+        <TouchableOpacity 
+          style={[styles.employeeStatCard, sortBy === 'date' && { backgroundColor: '#FEF3C7' }]}
+          onPress={() => setSortBy('date')}
+        >
+          <Text style={styles.employeeStatValue}>Date</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.employeeStatCard, sortBy === 'total' && { backgroundColor: '#FEF3C7' }]}
+          onPress={() => setSortBy('total')}
+        >
+          <Text style={styles.employeeStatValue}>Amount</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.employeeStatCard, sortBy === 'customer' && { backgroundColor: '#FEF3C7' }]}
+          onPress={() => setSortBy('customer')}
+        >
+          <Text style={styles.employeeStatValue}>Customer</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.employeeStatCard}
+          onPress={toggleSortOrder}
+        >
+          <Ionicons 
+            name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
+            size={16} 
+            color="#6B7280" 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Loading State */}
+      {loadingReceipts && !refreshing && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F59E0B" />
+          <Text style={styles.loadingText}>Loading receipts...</Text>
+        </View>
+      )}
+
+      {/* Error State */}
+      {receiptsError && (
+        <View style={styles.errorContainer}>
+          <View style={styles.errorHeader}>
+            <Ionicons name="alert-circle" size={16} color="#EF4444" />
+            <Text style={styles.errorText}>{receiptsError}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => loadReceipts()}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Receipt List */}
+      {!loadingReceipts && !receiptsError && (
+        <FlatList
+          data={getFilteredAndSortedReceipts()}
+          renderItem={renderReceiptItem}
+          keyExtractor={(item) => item.id?.toString() || item.receiptNumber || Math.random().toString()}
+          refreshing={refreshing}
+          onRefresh={handleRefreshReceipts}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyReceiptCard}>
+              <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyReceiptTitle}>No Receipts Found</Text>
+              <Text style={styles.emptyReceiptText}>
+                {searchTerm.trim() ? 'No receipts match your search criteria' : 'No receipts have been created yet'}
+              </Text>
+              {searchTerm.trim() && (
+                <TouchableOpacity 
+                  style={styles.headerButton}
+                  onPress={() => setSearchTerm('')}
+                >
+                  <Text style={styles.headerButtonText}>Clear Search</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          style={styles.employeesList}
+        />
+      )}
+
+      {/* Receipt Stats */}
+      {receipts.length > 0 && (
+        <View style={styles.employeeStats}>
+          <View style={styles.employeeStatCard}>
+            <Text style={styles.employeeStatValue}>{receipts.length}</Text>
+            <Text style={styles.employeeStatLabel}>Total Receipts</Text>
+          </View>
+          <View style={styles.employeeStatCard}>
+            <Text style={styles.employeeStatValue}>
+              ${receipts.reduce((sum, receipt) => sum + receipt.total, 0).toLocaleString()}
+            </Text>
+            <Text style={styles.employeeStatLabel}>Total Revenue</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
 
   const subtotal = calculateTotal();
   const tax = calculateTax(subtotal);
@@ -64,12 +290,46 @@ export default function ReceiptScreen() {
       <StatusBar backgroundColor="#F59E0B" barStyle="light-content" />
       
       <Header 
-        title="Create Receipt"
-        subtitle="Point of Sale Transaction"
+        title={activeTab === 'create' ? "Create Receipt" : "Receipt History"}
+        subtitle={activeTab === 'create' ? "Point of Sale Transaction" : "View and search receipts"}
         backgroundColor="#F59E0B"
       />
 
-      <ScrollView style={styles.receiptContainer} showsVerticalScrollIndicator={false}>
+      {/* Tab Navigation */}
+      <View style={styles.employeeStats}>
+        <TouchableOpacity 
+          style={[styles.employeeStatCard, activeTab === 'create' && { backgroundColor: '#FEF3C7' }]}
+          onPress={() => setActiveTab('create')}
+        >
+          <Ionicons 
+            name="add-circle-outline" 
+            size={20} 
+            color={activeTab === 'create' ? '#F59E0B' : '#6B7280'} 
+          />
+          <Text style={[styles.employeeStatLabel, activeTab === 'create' && { color: '#F59E0B' }]}>
+            Create
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.employeeStatCard, activeTab === 'list' && { backgroundColor: '#FEF3C7' }]}
+          onPress={() => setActiveTab('list')}
+        >
+          <Ionicons 
+            name="list-outline" 
+            size={20} 
+            color={activeTab === 'list' ? '#F59E0B' : '#6B7280'} 
+          />
+          <Text style={[styles.employeeStatLabel, activeTab === 'list' && { color: '#F59E0B' }]}>
+            History
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tab Content */}
+      {activeTab === 'create' ? (
+        <ScrollView style={styles.receiptContainer} showsVerticalScrollIndicator={false}>
+          {/* Create Receipt Content */}
         <View style={styles.receiptInfoCard}>
           <View style={styles.receiptInfoRow}>
             <View style={styles.receiptInfoItem}>
@@ -210,6 +470,9 @@ export default function ReceiptScreen() {
           </View>
         )}
       </ScrollView>
+      ) : (
+        renderReceiptListTab()
+      )}
 
       <AddItemToReceiptModal 
         visible={showAddToReceipt}

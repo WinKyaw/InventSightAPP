@@ -11,7 +11,7 @@ import { API_ENDPOINTS, API_CONFIG } from './config';
 import { tokenManager } from '../../utils/tokenManager';
 
 // Demo mode configuration
-const DEMO_MODE = process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL;
+const DEMO_MODE = process.env.DEMO_MODE === 'true' || (process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL);
 
 // Mock data for demo mode
 const DEMO_USERS = {
@@ -147,7 +147,8 @@ class AuthService {
       const response = await httpClient.post<LoginResponse>(
         API_ENDPOINTS.AUTH.SIGNUP,
         {
-          name: credentials.name.trim(),
+          firstName: credentials.firstName.trim(),
+          lastName: credentials.lastName.trim(),
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
         }
@@ -196,7 +197,7 @@ class AuthService {
     const user: AuthUser = {
       id: `demo_${Date.now()}`,
       email: credentials.email.toLowerCase().trim(),
-      name: credentials.name.trim(),
+      name: `${credentials.firstName.trim()} ${credentials.lastName.trim()}`,
       role: 'user',
     };
     

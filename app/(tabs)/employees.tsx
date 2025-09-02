@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployees } from '../../context/EmployeesContext';
 import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
 import { AddEmployeeModal } from '../../components/modals/AddEmployeeModal';
+import { EditEmployeeModal } from '../../components/modals/EditEmployeeModal';
+import { Employee } from '../../types';
 import { styles } from '../../constants/Styles';
 
 export default function EmployeesScreen() {
@@ -13,18 +15,44 @@ export default function EmployeesScreen() {
     loading, 
     error, 
     updateEmployee, 
+    deleteEmployee,
     refreshEmployees,
     useApiIntegration,
     setUseApiIntegration
   } = useEmployees();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const toggleEmployeeExpansion = (id: number) => {
     const employee = employees.find(emp => emp.id === id);
     if (employee) {
       updateEmployee(id, { expanded: !employee.expanded });
     }
+  };
+
+  const handleEditEmployee = (employee: Employee) => {
+    setEditingEmployee(employee);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteEmployee = (employee: Employee) => {
+    Alert.alert(
+      'Delete Employee',
+      `Are you sure you want to delete ${employee.firstName} ${employee.lastName}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => {
+            deleteEmployee(employee.id);
+            Alert.alert('Success', `${employee.firstName} ${employee.lastName} has been deleted.`);
+          }
+        }
+      ]
+    );
   };
 
   const filteredEmployees = employees.filter(employee =>
@@ -191,6 +219,25 @@ export default function EmployeesScreen() {
                       {employee.status}
                     </Text>
                   </View>
+                  
+                  {/* Action Buttons */}
+                  <View style={styles.employeeStats}>
+                    <TouchableOpacity 
+                      style={[styles.headerButton, { backgroundColor: '#3B82F6' }]}
+                      onPress={() => handleEditEmployee(employee)}
+                    >
+                      <Ionicons name="pencil" size={16} color="white" />
+                      <Text style={styles.headerButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.headerButton, { backgroundColor: '#EF4444' }]}
+                      onPress={() => handleDeleteEmployee(employee)}
+                    >
+                      <Ionicons name="trash" size={16} color="white" />
+                      <Text style={styles.headerButtonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </View>
@@ -201,6 +248,23 @@ export default function EmployeesScreen() {
       <AddEmployeeModal 
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
+      />
+      
+      <EditEmployeeModal 
+        visible={showEditModal}
+        employee={editingEmployee}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingEmployee(null);
+        }}
+        onSave={(updatedEmployee) => {
+          if (editingEmployee) {
+            updateEmployee(editingEmployee.id, updatedEmployee);
+            setShowEditModal(false);
+            setEditingEmployee(null);
+            Alert.alert('Success', 'Employee updated successfully');
+          }
+        }}
       />
     </SafeAreaView>
   );

@@ -53,7 +53,43 @@ export const validatePassword = (password: string): ValidationError | null => {
 };
 
 /**
- * Validate name
+ * Validate first name
+ */
+export const validateFirstName = (firstName: string): ValidationError | null => {
+  if (!firstName) {
+    return { field: 'firstName', message: 'First name is required' };
+  }
+  
+  if (!NAME_REGEX.test(firstName.trim())) {
+    return { 
+      field: 'firstName', 
+      message: 'First name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes' 
+    };
+  }
+  
+  return null;
+};
+
+/**
+ * Validate last name
+ */
+export const validateLastName = (lastName: string): ValidationError | null => {
+  if (!lastName) {
+    return { field: 'lastName', message: 'Last name is required' };
+  }
+  
+  if (!NAME_REGEX.test(lastName.trim())) {
+    return { 
+      field: 'lastName', 
+      message: 'Last name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes' 
+    };
+  }
+  
+  return null;
+};
+
+/**
+ * Validate name (legacy - for backward compatibility)
  */
 export const validateName = (name: string): ValidationError | null => {
   if (!name) {
@@ -116,8 +152,11 @@ export const validateLoginForm = (credentials: LoginCredentials): FormValidation
 export const validateSignupForm = (credentials: SignupCredentials): FormValidation => {
   const errors: ValidationError[] = [];
   
-  const nameError = validateName(credentials.name);
-  if (nameError) errors.push(nameError);
+  const firstNameError = validateFirstName(credentials.firstName);
+  if (firstNameError) errors.push(firstNameError);
+  
+  const lastNameError = validateLastName(credentials.lastName);
+  if (lastNameError) errors.push(lastNameError);
   
   const emailError = validateEmail(credentials.email);
   if (emailError) errors.push(emailError);
