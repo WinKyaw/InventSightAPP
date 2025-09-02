@@ -56,50 +56,63 @@ class AuthService {
    * Login user with email and password
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    try {
-      console.log('🔐 AuthService: Attempting login for:', credentials.email);
-      
-      // Demo mode - use mock authentication
-      // if (DEMO_MODE) {
-      //   return this.mockLogin(credentials);
-      // }
-
-      // const API_BASE_URL = "http://10.0.0.127:8080/api";
-      const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`;
-
-      console.log('🔗 Login API URL:', fullUrl);
-      const response = await httpClient.post<LoginResponse>(
-        fullUrl,
-        {
-          email: credentials.email.toLowerCase().trim(),
-          password: credentials.password,
-        }
-      );
-
-      const loginData = response.data;
-      
-      // Store tokens and user data securely
-      if (loginData.tokens) {
-        await tokenManager.storeTokens(loginData.tokens);
-        await tokenManager.storeUser(loginData.user);
+  try {
+    console.log('🔐 AuthService: Attempting login for:', credentials.email);
+    
+    const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`;
+    console.log('🔗 Login API URL:', fullUrl);
+    
+    const response = await httpClient.post(
+      fullUrl,
+      {
+        email: credentials.email.toLowerCase().trim(),
+        password: credentials.password,
       }
+    );
 
-      console.log('✅ AuthService: Login successful for user:', loginData.user.email);
-      return loginData;
-    } catch (error: any) {
-      console.error('❌ AuthService: Login failed:', error);
-      
-      if (error.response?.status === 401) {
-        throw new Error('Invalid email or password');
-      } else if (error.response?.status === 429) {
-        throw new Error('Too many login attempts. Please try again later');
-      } else if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      } else {
-        throw new Error('Login failed. Please check your connection and try again');
-      }
+    const apiResponse = response.data;
+    console.log('📥 Raw API Response:', apiResponse);
+    
+    // Transform the API response to match expected LoginResponse format
+    const loginData: LoginResponse = {
+      user: {
+        id: apiResponse.id.toString(),
+        email: apiResponse.email,
+        name: apiResponse.fullName,
+        role: apiResponse.role.toLowerCase(),
+      },
+      tokens: {
+        accessToken: apiResponse.token,
+        refreshToken: apiResponse.token, // Use same token if no separate refresh token
+        expiresIn: apiResponse.expiresIn || 86400000,
+        tokenType: apiResponse.tokenType || 'Bearer',
+      },
+      message: apiResponse.message,
+    };
+    
+    // Store tokens and user data securely
+    if (loginData.tokens) {
+      await tokenManager.storeTokens(loginData.tokens);
+      await tokenManager.storeUser(loginData.user);
+    }
+
+    console.log('✅ AuthService: Login successful for user:', loginData.user.email);
+    return loginData;
+  } catch (error: any) {
+    console.log('we are in the catch');
+    console.error('❌ AuthService: Login failed:', error);
+    
+    if (error.response?.status === 401) {
+      throw new Error('Invalid email or password');
+    } else if (error.response?.status === 429) {
+      throw new Error('Too many login attempts. Please try again later');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Login failed. Please check your connection and try again');
     }
   }
+}
 
   /**
    * Mock login for demo mode
@@ -147,11 +160,9 @@ class AuthService {
       // if (DEMO_MODE) {
       //   return this.mockSignup(credentials);
       // }
-      const fullUrl = `${API_BASE_URL}/auth/register`;
-      console.log("🔗 Full Signup API URL:", fullUrl);
-      console.log('🔗 Signup API URL:', API_ENDPOINTS.AUTH.SIGNUP);
+      const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.SIGNUP}`;
       const response = await httpClient.post<LoginResponse>(
-        API_ENDPOINTS.AUTH.SIGNUP,
+        fullUrl,
         {
           firstName: credentials.firstName.trim(),
           lastName: credentials.lastName.trim(),
