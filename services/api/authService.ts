@@ -60,12 +60,12 @@ class AuthService {
       console.log('🔐 AuthService: Attempting login for:', credentials.email);
       
       // Demo mode - use mock authentication
-      if (DEMO_MODE) {
-        return this.mockLogin(credentials);
-      }
+      // if (DEMO_MODE) {
+      //   return this.mockLogin(credentials);
+      // }
       
       const response = await httpClient.post<LoginResponse>(
-        API_ENDPOINTS.AUTH.LOGIN,
+        API_CONFIG.BASE_URL+ API_ENDPOINTS.AUTH.LOGIN,
         {
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
@@ -140,10 +140,10 @@ class AuthService {
       console.log('🔐 AuthService: Attempting signup for:', credentials.email);
       
       // Demo mode - use mock authentication
-      if (DEMO_MODE) {
-        return this.mockSignup(credentials);
-      }
-      
+      // if (DEMO_MODE) {
+      //   return this.mockSignup(credentials);
+      // }
+      console.log('🔗 Signup API URL:', API_ENDPOINTS.AUTH.SIGNUP);
       const response = await httpClient.post<LoginResponse>(
         API_ENDPOINTS.AUTH.SIGNUP,
         {

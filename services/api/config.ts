@@ -11,14 +11,14 @@ export const API_CONFIG = {
 export const API_ENDPOINTS = {
   // Authentication endpoints
   AUTH: {
-    LOGIN: '/auth/login',
-    SIGNUP: '/auth/signup',
-    LOGOUT: '/auth/logout',
-    REFRESH: '/auth/refresh',
-    PROFILE: '/auth/profile',
-    CHANGE_PASSWORD: '/auth/change-password',
-    RESET_PASSWORD: '/auth/reset-password',
-    VERIFY_EMAIL: '/auth/verify-email',
+    LOGIN: '/api/auth/login',
+    SIGNUP: '/api/auth/register',
+    LOGOUT: '/api/auth/logout',
+    REFRESH: '/api/auth/refresh',
+    PROFILE: '/api/auth/profile',
+    CHANGE_PASSWORD: '/api/auth/change-password',
+    RESET_PASSWORD: '/api/auth/reset-password',
+    VERIFY_EMAIL: '/api/auth/verify-email',
   },
   // Reports endpoints
   REPORTS: {
