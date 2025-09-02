@@ -1,11 +1,26 @@
 import { Employee } from '../../types';
+import { getApiBaseUrl, getNetworkInfo } from '../../utils/networkConfig';
 
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: process.env.API_BASE_URL || 'http://localhost:8080',
+  BASE_URL: getApiBaseUrl(8080, 'http'),
   TIMEOUT: parseInt(process.env.API_TIMEOUT || '10000'),
   USER_LOGIN: process.env.USER_LOGIN || 'WinKyaw',
 };
+
+// Log network configuration in development for debugging
+if (__DEV__) {
+  console.log('🌐 InventSightAPP Network Configuration:');
+  console.log(`📡 API Base URL: ${API_CONFIG.BASE_URL}`);
+  const networkInfo = getNetworkInfo();
+  console.log('📱 Platform Details:', {
+    platform: networkInfo.platform,
+    isDevice: networkInfo.isDevice,
+    detectedUrl: networkInfo.detectedBaseUrl,
+    envOverride: networkInfo.environmentBaseUrl || 'None',
+  });
+  console.log('💡 If you see network errors, check the README for platform-specific URLs');
+}
 
 // API Endpoints
 export const API_ENDPOINTS = {
