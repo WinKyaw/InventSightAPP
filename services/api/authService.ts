@@ -63,9 +63,13 @@ class AuthService {
       // if (DEMO_MODE) {
       //   return this.mockLogin(credentials);
       // }
-      
+
+      // const API_BASE_URL = "http://10.0.0.127:8080/api";
+      const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`;
+
+      console.log('🔗 Login API URL:', fullUrl);
       const response = await httpClient.post<LoginResponse>(
-        API_ENDPOINTS.AUTH.LOGIN,
+        fullUrl,
         {
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
@@ -143,6 +147,8 @@ class AuthService {
       // if (DEMO_MODE) {
       //   return this.mockSignup(credentials);
       // }
+      const fullUrl = `${API_BASE_URL}/auth/register`;
+      console.log("🔗 Full Signup API URL:", fullUrl);
       console.log('🔗 Signup API URL:', API_ENDPOINTS.AUTH.SIGNUP);
       const response = await httpClient.post<LoginResponse>(
         API_ENDPOINTS.AUTH.SIGNUP,

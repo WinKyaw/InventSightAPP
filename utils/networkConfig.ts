@@ -16,7 +16,7 @@ const getMachineIP = (): string => {
   // In a real implementation, you might want to detect the actual IP
   // For now, we'll use common development network ranges
   // This could be enhanced to actually detect the machine's IP if needed
-  return '192.168.1.100'; // Common router IP range - should be configured per developer
+  return '10.0.0.127'; // Common router IP range - should be configured per developer
 };
 
 /**
@@ -50,7 +50,7 @@ const isIOSSimulator = (): boolean => {
 export const getApiBaseUrl = (port: number = 8080, protocol: string = 'http'): string => {
   // Always respect explicit environment variable first
   if (process.env.API_BASE_URL) {
-    return process.env.API_BASE_URL;
+    return protocol + "//" + process.env.API_BASE_URL + ":" + port;
   }
 
   // If not in development, use production URL or localhost
@@ -94,7 +94,7 @@ export const getNetworkInfo = () => {
 export const API_BASE_URL_EXAMPLES = {
   ANDROID_EMULATOR: 'http://10.0.2.2:8080',
   IOS_SIMULATOR: 'http://localhost:8080',
-  PHYSICAL_DEVICE_COMMON: 'http://192.168.1.100:8080', // Replace with your machine's IP
+  PHYSICAL_DEVICE_COMMON: 'http://10.0.0.127:8080', // Replace with your machine's IP
   PRODUCTION: 'https://your-api-domain.com',
   LOCALHOST: 'http://localhost:8080',
 };
