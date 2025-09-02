@@ -65,7 +65,7 @@ class AuthService {
       // }
       
       const response = await httpClient.post<LoginResponse>(
-        API_CONFIG.BASE_URL+ API_ENDPOINTS.AUTH.LOGIN,
+        API_ENDPOINTS.AUTH.LOGIN,
         {
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
