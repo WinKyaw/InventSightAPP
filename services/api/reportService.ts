@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { tokenManager } from '../../utils/tokenManager';
 import { 
   API_ENDPOINTS, 
   DailyReportData, 
@@ -12,9 +13,20 @@ import {
  */
 export class ReportService {
   /**
+   * Verify authentication before making API calls
+   */
+  private static async verifyAuthentication(): Promise<void> {
+    const accessToken = await tokenManager.getAccessToken();
+    if (!accessToken) {
+      throw new Error('Authentication required - no access token available');
+    }
+  }
+
+  /**
    * Get daily business report
    */
   static async getDailyReport(date?: string): Promise<DailyReportData> {
+    await this.verifyAuthentication();
     const params = date ? `?date=${date}` : '';
     return await apiClient.get<DailyReportData>(`${API_ENDPOINTS.REPORTS.DAILY}${params}`);
   }
@@ -23,6 +35,7 @@ export class ReportService {
    * Get weekly analytics report
    */
   static async getWeeklyReport(startDate?: string, endDate?: string): Promise<WeeklyReportData> {
+    await this.verifyAuthentication();
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
@@ -37,6 +50,7 @@ export class ReportService {
    * Get inventory status report
    */
   static async getInventoryReport(): Promise<InventoryReportData> {
+    await this.verifyAuthentication();
     return await apiClient.get<InventoryReportData>(API_ENDPOINTS.REPORTS.INVENTORY);
   }
 
@@ -44,6 +58,7 @@ export class ReportService {
    * Get comprehensive business intelligence data
    */
   static async getBusinessIntelligence(): Promise<BusinessIntelligenceData> {
+    await this.verifyAuthentication();
     return await apiClient.get<BusinessIntelligenceData>(API_ENDPOINTS.REPORTS.BUSINESS_INTELLIGENCE);
   }
 
