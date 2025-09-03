@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { Employee } from '../types';
 import { initialEmployees } from '../constants/Data';
 import { EmployeeService, CreateEmployeeRequest } from '../services';
-import { useApi } from '../hooks';
+import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 
 interface EmployeesContextType {
   employees: Employee[];
@@ -26,18 +26,21 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [useApiIntegration, setUseApiIntegration] = useState<boolean>(false);
 
-  // API integration using useApi hook
+  // Authentication readiness check
+  const { canMakeApiCalls } = useApiReadiness();
+
+  // API integration using useAuthenticatedAPI hook
   const {
     data: apiEmployees,
     loading,
     error,
     execute: fetchEmployees,
     reset,
-  } = useApi(EmployeeService.getAllEmployees);
+  } = useAuthenticatedAPI(EmployeeService.getAllEmployees, { immediate: false });
 
   // Effect to sync API data with local state when API integration is enabled
   useEffect(() => {
-    if (useApiIntegration && apiEmployees) {
+    if (useApiIntegration && apiEmployees && Array.isArray(apiEmployees)) {
       setEmployees(apiEmployees);
     } else if (!useApiIntegration) {
       setEmployees(initialEmployees);
@@ -46,13 +49,13 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
 
   // Auto-fetch employees when API integration is enabled
   useEffect(() => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       fetchEmployees();
     }
-  }, [useApiIntegration, fetchEmployees]);
+  }, [useApiIntegration, canMakeApiCalls, fetchEmployees]);
 
   const addEmployee = async (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       try {
         const createData: CreateEmployeeRequest = {
           firstName: newEmployee.firstName,
@@ -88,7 +91,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   };
 
   const updateEmployee = async (id: number, updates: Partial<Employee>) => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       try {
         const updatedEmployee = await EmployeeService.updateEmployee(id, updates);
         setEmployees(prev => prev.map(employee => 
@@ -109,7 +112,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteEmployee = async (id: number) => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       try {
         await EmployeeService.deleteEmployee(id);
         setEmployees(prev => prev.filter(employee => employee.id !== id));
@@ -124,13 +127,13 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshEmployees = async (): Promise<void> => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       await fetchEmployees();
     }
   };
 
   const searchEmployees = async (query: string): Promise<Employee[]> => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       try {
         return await EmployeeService.searchEmployees({ query });
       } catch (error) {
@@ -153,7 +156,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   };
 
   const getCheckedInEmployees = async (): Promise<Employee[]> => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       try {
         return await EmployeeService.getCheckedInEmployees();
       } catch (error) {

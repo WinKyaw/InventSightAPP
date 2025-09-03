@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Item } from '../types';
 import { initialItems } from '../constants/Data';
+import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 
 interface ItemsContextType {
   items: Item[];
@@ -9,12 +10,54 @@ interface ItemsContextType {
   updateItem: (id: number, updates: Partial<Item>) => void;
   deleteItem: (id: number) => void;
   calculateDynamicSalesData: () => any;
+  // New API integration properties
+  useApiIntegration: boolean;
+  setUseApiIntegration: (use: boolean) => void;
+  loading: boolean;
+  error: string | null;
+  refreshItems: () => Promise<void>;
 }
 
 const ItemsContext = createContext<ItemsContextType | undefined>(undefined);
 
 export function ItemsProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>(initialItems);
+  const [useApiIntegration, setUseApiIntegration] = useState<boolean>(false);
+
+  // Authentication readiness check
+  const { canMakeApiCalls } = useApiReadiness();
+
+  // Optional API integration for items - similar to other contexts
+  // This could be connected to a different service in the future
+  const {
+    data: apiItems,
+    loading,
+    error,
+    execute: fetchItems,
+  } = useAuthenticatedAPI(
+    async () => {
+      // Placeholder for potential future API integration
+      // For now, return the local data structure to maintain compatibility
+      return initialItems;
+    },
+    { immediate: false }
+  );
+
+  // Effect to sync API data with local state when API integration is enabled
+  useEffect(() => {
+    if (useApiIntegration && apiItems && Array.isArray(apiItems)) {
+      setItems(apiItems);
+    } else if (!useApiIntegration) {
+      setItems(initialItems);
+    }
+  }, [useApiIntegration, apiItems]);
+
+  // Auto-fetch items when API integration is enabled
+  useEffect(() => {
+    if (useApiIntegration && canMakeApiCalls) {
+      fetchItems();
+    }
+  }, [useApiIntegration, canMakeApiCalls, fetchItems]);
 
   const addItem = (newItem: Omit<Item, 'id' | 'salesCount' | 'expanded'>) => {
     const item: Item = {
@@ -64,6 +107,12 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const refreshItems = async (): Promise<void> => {
+    if (useApiIntegration && canMakeApiCalls) {
+      await fetchItems();
+    }
+  };
+
   return (
     <ItemsContext.Provider value={{
       items,
@@ -71,7 +120,12 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
       addItem,
       updateItem,
       deleteItem,
-      calculateDynamicSalesData
+      calculateDynamicSalesData,
+      useApiIntegration,
+      setUseApiIntegration,
+      loading: loading || false,
+      error: error || null,
+      refreshItems,
     }}>
       {children}
     </ItemsContext.Provider>
