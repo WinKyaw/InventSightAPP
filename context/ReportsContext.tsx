@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { ReportService, DashboardService, BusinessIntelligenceData, DailyReportData, WeeklyReportData, InventoryReportData } from '../services';
-import { useApi } from '../hooks';
+import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 import type { ComprehensiveDashboardData } from '../services/api/dashboardService';
 
 interface ReportsContextType {
@@ -35,16 +35,18 @@ interface ReportsContextType {
 const ReportsContext = createContext<ReportsContextType | undefined>(undefined);
 
 export function ReportsProvider({ children }: { children: ReactNode }) {
-  // Use comprehensive dashboard data API
+  const { canMakeApiCalls } = useApiReadiness();
+  
+  // Use comprehensive dashboard data API with authentication guard
   const {
     data: dashboardData,
     loading,
     error,
     execute: refreshDashboardData,
-  } = useApi(
+  } = useAuthenticatedAPI(
     () => DashboardService.getComprehensiveDashboardData(),
     {
-      immediate: false, // Don't auto-load, let components control when to fetch
+      immediate: false, // Never auto-load, let components control when to fetch after auth
       onSuccess: (data) => {
         console.log('📊 Comprehensive dashboard data loaded successfully');
         if (data?.isEmpty) {
@@ -57,24 +59,39 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     }
   );
 
-  // Individual report methods (for backward compatibility)
+  // Individual report methods (for backward compatibility with authentication guards)
   const getDailyReport = async (date?: string): Promise<DailyReportData> => {
+    if (!canMakeApiCalls) {
+      throw new Error('Authentication required to fetch daily report');
+    }
     return await ReportService.getDailyReport(date);
   };
 
   const getWeeklyReport = async (startDate?: string, endDate?: string): Promise<WeeklyReportData> => {
+    if (!canMakeApiCalls) {
+      throw new Error('Authentication required to fetch weekly report');
+    }
     return await ReportService.getWeeklyReport(startDate, endDate);
   };
 
   const getBusinessIntelligence = async (): Promise<BusinessIntelligenceData> => {
+    if (!canMakeApiCalls) {
+      throw new Error('Authentication required to fetch business intelligence data');
+    }
     return await ReportService.getBusinessIntelligence();
   };
 
   const getInventoryReport = async (): Promise<InventoryReportData> => {
+    if (!canMakeApiCalls) {
+      throw new Error('Authentication required to fetch inventory report');
+    }
     return await ReportService.getInventoryReport();
   };
 
   const getTopItems = async (limit: number = 10) => {
+    if (!canMakeApiCalls) {
+      throw new Error('Authentication required to fetch top items');
+    }
     return await DashboardService.getTopItems(limit);
   };
 

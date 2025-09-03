@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { tokenManager } from '../../utils/tokenManager';
 import { 
   API_ENDPOINTS, 
   DashboardSummary,
@@ -37,9 +38,21 @@ export interface ComprehensiveDashboardData {
  */
 export class DashboardService {
   /**
+   * Verify authentication before making API calls
+   */
+  private static async verifyAuthentication(): Promise<void> {
+    const accessToken = await tokenManager.getAccessToken();
+    if (!accessToken) {
+      throw new Error('Authentication required - no access token available');
+    }
+  }
+
+  /**
    * Get comprehensive dashboard summary (single API call)
    */
   static async getDashboardSummary(): Promise<DashboardSummary> {
+    // Verify authentication before making the call
+    await this.verifyAuthentication();
     
     var testURL = "http://localhost:8080" + API_ENDPOINTS.DASHBOARD.SUMMARY;
     console.log("URL: " + testURL);
@@ -51,7 +64,7 @@ export class DashboardService {
    * Note: In a proper backend implementation, this would be a single endpoint
    */
   static async getComprehensiveDashboardData(): Promise<ComprehensiveDashboardData> {
-    // This should be replaced with a single backend endpoint that provides all dashboard data
+    // Verify authentication is done in getDashboardSummary call
     const dashboardSummary = await this.getDashboardSummary();
     
     return {
@@ -84,6 +97,9 @@ export class DashboardService {
     quantity: number;
     trend: number;
   }>> {
+    // Verify authentication before making the call
+    await this.verifyAuthentication();
+    
     // This should be a dedicated backend endpoint
     return await apiClient.get<Array<{
       name: string;

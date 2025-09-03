@@ -48,6 +48,9 @@ const createHttpClient = (): AxiosInstance => {
           const accessToken = await tokenManager.getAccessToken();
           if (accessToken) {
             config.headers['Authorization'] = `Bearer ${accessToken}`;
+          } else {
+            // For non-auth requests without a token, this might be an unauthenticated call
+            console.warn('⚠️ API request made without authentication token:', config.url);
           }
         }
       }
