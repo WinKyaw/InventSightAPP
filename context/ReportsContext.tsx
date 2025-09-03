@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { ReportService, DashboardService, BusinessIntelligenceData, DailyReportData, WeeklyReportData, InventoryReportData } from '../services';
-import { useApi } from '../hooks';
+import { useAuthenticatedAPI } from '../hooks';
 import type { ComprehensiveDashboardData } from '../services/api/dashboardService';
 
 interface ReportsContextType {
@@ -35,16 +35,16 @@ interface ReportsContextType {
 const ReportsContext = createContext<ReportsContextType | undefined>(undefined);
 
 export function ReportsProvider({ children }: { children: ReactNode }) {
-  // Use comprehensive dashboard data API
+  // Use comprehensive dashboard data API with authentication guard
   const {
     data: dashboardData,
     loading,
     error,
     execute: refreshDashboardData,
-  } = useApi(
+  } = useAuthenticatedAPI(
     () => DashboardService.getComprehensiveDashboardData(),
     {
-      immediate: false, // Don't auto-load, let components control when to fetch
+      immediate: false, // Never auto-load, let components control when to fetch after auth
       onSuccess: (data) => {
         console.log('📊 Comprehensive dashboard data loaded successfully');
         if (data?.isEmpty) {

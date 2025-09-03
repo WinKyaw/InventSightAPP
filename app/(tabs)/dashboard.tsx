@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { useReports } from '../../context/ReportsContext';
 import { useEmployees } from '../../context/EmployeesContext';
+import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { Header } from '../../components/shared/Header';
 import { styles } from '../../constants/Styles';
 
 export default function DashboardScreen() {
+  const { isReady: apiReady, isAuthenticating, canMakeApiCalls } = useApiReadiness();
+  
   let reportsData;
   try {
     reportsData = useReports();
@@ -37,12 +40,23 @@ export default function DashboardScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // Auto-load dashboard data on mount
+  // Only load dashboard data when API is ready (user is authenticated)
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (canMakeApiCalls) {
+      console.log('🔐 Dashboard: Authentication verified, loading dashboard data');
+      loadDashboardData();
+    } else if (isAuthenticating) {
+      console.log('🔐 Dashboard: Waiting for authentication to complete');
+    }
+  }, [canMakeApiCalls, isAuthenticating]);
 
   const loadDashboardData = async () => {
+    // Additional safety check before making API calls
+    if (!canMakeApiCalls) {
+      console.log('⚠️ Dashboard: Skipping API call - user not authenticated');
+      return;
+    }
+
     try {
       await refreshDashboardData();
     } catch (error) {
@@ -52,6 +66,12 @@ export default function DashboardScreen() {
   };
 
   const handleRefresh = async () => {
+    // Check authentication before allowing refresh
+    if (!canMakeApiCalls) {
+      Alert.alert('Authentication Required', 'Please log in to refresh data.');
+      return;
+    }
+
     setRefreshing(true);
     try {
       await loadDashboardData();
@@ -140,8 +160,16 @@ export default function DashboardScreen() {
           />
         }
       >
+        {/* Authentication Loading Indicator */}
+        {isAuthenticating && (
+          <View style={[styles.kpiCard, { alignItems: 'center', paddingVertical: 20 }]}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={[styles.kpiLabel, { marginTop: 8 }]}>Verifying authentication...</Text>
+          </View>
+        )}
+
         {/* Loading Indicator */}
-        {(reportsLoading || employeesLoading) && (
+        {(reportsLoading || employeesLoading) && canMakeApiCalls && (
           <View style={[styles.kpiCard, { alignItems: 'center', paddingVertical: 20 }]}>
             <ActivityIndicator size="large" color="#3B82F6" />
             <Text style={[styles.kpiLabel, { marginTop: 8 }]}>Loading dashboard data...</Text>
@@ -149,7 +177,7 @@ export default function DashboardScreen() {
         )}
 
         {/* Error Display */}
-        {reportsError && (
+        {reportsError && canMakeApiCalls && (
           <View style={[styles.kpiCard, { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }]}>
             <Text style={[styles.kpiLabel, { color: '#EF4444' }]}>⚠️ API Error</Text>
             <Text style={[styles.kpiLabelSmall, { color: '#EF4444' }]}>{reportsError}</Text>
@@ -160,7 +188,7 @@ export default function DashboardScreen() {
         )}
 
         {/* Empty State Display */}
-        {dashboardData?.isEmpty && !reportsLoading && (
+        {dashboardData?.isEmpty && !reportsLoading && canMakeApiCalls && (
           <View style={[styles.kpiCard, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
             <Text style={[styles.kpiLabel, { color: '#D97706' }]}>📊 Empty Database</Text>
             <Text style={[styles.kpiLabelSmall, { color: '#D97706' }]}>

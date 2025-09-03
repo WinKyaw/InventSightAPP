@@ -8,7 +8,7 @@ interface ApiState<T> {
 }
 
 // Hook configuration options
-interface UseApiOptions {
+export interface UseApiOptions {
   immediate?: boolean; // Execute immediately on mount
   onSuccess?: (data: any) => void;
   onError?: (error: string) => void;

@@ -62,7 +62,15 @@ export function ProtectedRoute({
           color: Colors.text,
           textAlign: 'center'
         }}>
-          {isLoading ? 'Authenticating...' : 'Loading...'}
+          {isLoading ? 'Verifying authentication...' : 'Initializing...'}
+        </Text>
+        <Text style={{
+          marginTop: 8,
+          fontSize: 12,
+          color: Colors.textSecondary || '#6B7280',
+          textAlign: 'center'
+        }}>
+          Please wait while we prepare your secure session
         </Text>
       </View>
     );
