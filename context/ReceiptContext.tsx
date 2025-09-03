@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 import { useItems } from './ItemsContext';
 import { Receipt, ReceiptItem, Item } from '../types';
 import { ReceiptService } from '../services';
-import { useApi } from '../hooks/useApi';
+import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 
 interface ReceiptContextType {
   receiptItems: ReceiptItem[];
@@ -35,19 +35,22 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { items, setItems } = useItems();
 
-  // API integration using useApi hook
+  // Authentication readiness check
+  const { canMakeApiCalls } = useApiReadiness();
+
+  // API integration using useAuthenticatedAPI hook
   const {
     data: apiReceipts,
     loading,
     error,
     execute: fetchReceipts,
     reset,
-  } = useApi(() => ReceiptService.getAllReceipts());
+  } = useAuthenticatedAPI(() => ReceiptService.getAllReceipts(), { immediate: false });
 
   // Effect to sync API data with local state when API integration is enabled
   useEffect(() => {
-    if (useApiIntegration && apiReceipts) {
-      setReceipts(apiReceipts.receipts || []);
+    if (useApiIntegration && apiReceipts && apiReceipts.receipts) {
+      setReceipts(apiReceipts.receipts);
     } else if (!useApiIntegration) {
       // Keep local receipts when API integration is disabled
     }
@@ -55,10 +58,10 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
 
   // Auto-fetch receipts when API integration is enabled
   useEffect(() => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       fetchReceipts();
     }
-  }, [useApiIntegration, fetchReceipts]);
+  }, [useApiIntegration, canMakeApiCalls, fetchReceipts]);
 
   const addItemToReceipt = (item: Item, quantity = 1) => {
     if (item.quantity < quantity) {
@@ -155,7 +158,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     try {
       let receipt: Receipt;
 
-      if (useApiIntegration) {
+      if (useApiIntegration && canMakeApiCalls) {
         // Create receipt via API
         receipt = await ReceiptService.createReceipt(receiptData);
         setReceipts(prev => [receipt, ...prev]);
@@ -223,7 +226,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshReceipts = async (): Promise<void> => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       await fetchReceipts();
     }
   };

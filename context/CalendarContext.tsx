@@ -3,7 +3,7 @@ import { Reminder } from '../types';
 import { initialReminders } from '../constants/Data';
 import { getSeasonalMultiplier, generateDailyActivities, generateTopItemsForDay } from '../utils/calendarHelpers';
 import { CalendarService } from '../services';
-import { useApi } from '../hooks/useApi';
+import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 import { ActivityItem } from '../services/api/config';
 
 interface DayActivity {
@@ -48,13 +48,16 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [showDayModal, setShowDayModal] = useState(false);
   const [useApiIntegration, setUseApiIntegration] = useState<boolean>(false);
 
+  // Authentication readiness check
+  const { canMakeApiCalls } = useApiReadiness();
+
   // API integration for reminders
   const {
     data: apiReminders,
     loading: remindersLoading,
     error: remindersError,
     execute: fetchReminders,
-  } = useApi(CalendarService.getReminders);
+  } = useAuthenticatedAPI(CalendarService.getReminders, { immediate: false });
 
   // API integration for daily activities
   const {
@@ -62,7 +65,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     loading: activitiesLoading,
     error: activitiesError,
     execute: fetchActivities,
-  } = useApi(() => {
+  } = useAuthenticatedAPI(() => {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 1); // Get last month
     const endDate = new Date();
@@ -72,7 +75,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       startDate.toISOString().split('T')[0],
       endDate.toISOString().split('T')[0]
     );
-  });
+  }, { immediate: false });
 
   const loading = remindersLoading || activitiesLoading;
   const error = remindersError || activitiesError;
@@ -112,7 +115,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   // Effect to sync API data with local state when API integration is enabled
   useEffect(() => {
-    if (useApiIntegration && apiReminders) {
+    if (useApiIntegration && apiReminders && Array.isArray(apiReminders)) {
       setReminders(apiReminders);
     } else if (!useApiIntegration) {
       setReminders(initialReminders);
@@ -121,15 +124,15 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   // Auto-fetch data when API integration is enabled
   useEffect(() => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       fetchReminders();
       fetchActivities();
     }
-  }, [useApiIntegration, fetchReminders, fetchActivities]);
+  }, [useApiIntegration, canMakeApiCalls, fetchReminders, fetchActivities]);
 
   const addReminder = async (newReminder: Omit<Reminder, 'id'>): Promise<void> => {
     try {
-      if (useApiIntegration) {
+      if (useApiIntegration && canMakeApiCalls) {
         const reminder = await CalendarService.createReminder({
           ...newReminder,
         });
@@ -153,7 +156,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshCalendarData = async (): Promise<void> => {
-    if (useApiIntegration) {
+    if (useApiIntegration && canMakeApiCalls) {
       await Promise.all([fetchReminders(), fetchActivities()]);
     }
   };

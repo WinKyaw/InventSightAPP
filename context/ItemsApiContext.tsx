@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { Alert } from 'react-native';
 import ProductService from '../services/api/productService';
 import CategoryService from '../services/api/categoryService';
-import { useApi } from '../hooks/useApi';
+import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 import { 
   Product,
   CreateProductRequest,
@@ -63,6 +63,9 @@ const DEFAULT_SORT_ORDER = 'asc';
 const DEFAULT_PAGE_SIZE = 20;
 
 export function ItemsApiProvider({ children }: { children: ReactNode }) {
+  // Authentication readiness check
+  const { canMakeApiCalls } = useApiReadiness();
+
   // Products state
   const [products, setProducts] = useState<Product[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -85,6 +88,11 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
 
   // Load products with pagination
   const loadProducts = useCallback(async (page = 1, refresh = false) => {
+    if (!canMakeApiCalls) {
+      console.warn('Cannot load products - not authenticated');
+      return;
+    }
+
     try {
       if (refresh) {
         setRefreshing(true);
@@ -138,10 +146,15 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [searchQuery, selectedCategoryId, sortBy, sortOrder]);
+  }, [searchQuery, selectedCategoryId, sortBy, sortOrder, canMakeApiCalls]);
 
   // Search products
   const searchProducts = useCallback(async (query: string, filters: Partial<SearchProductsParams> = {}) => {
+    if (!canMakeApiCalls) {
+      console.warn('Cannot search products - not authenticated');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -168,10 +181,15 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [sortBy, sortOrder]);
+  }, [sortBy, sortOrder, canMakeApiCalls]);
 
   // Create product
   const createProduct = useCallback(async (productData: CreateProductRequest): Promise<Product | null> => {
+    if (!canMakeApiCalls) {
+      console.warn('Cannot create product - not authenticated');
+      return null;
+    }
+
     try {
       const newProduct = await ProductService.createProduct(productData);
       if (newProduct) {
@@ -185,10 +203,15 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create product');
       throw err;
     }
-  }, [loadProducts]);
+  }, [loadProducts, canMakeApiCalls]);
 
   // Update product
   const updateProduct = useCallback(async (id: number, updates: UpdateProductRequest): Promise<Product | null> => {
+    if (!canMakeApiCalls) {
+      console.warn('Cannot update product - not authenticated');
+      return null;
+    }
+
     try {
       const updatedProduct = await ProductService.updateProduct(id, updates);
       if (updatedProduct) {
@@ -202,10 +225,15 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update product');
       throw err;
     }
-  }, []);
+  }, [canMakeApiCalls]);
 
   // Delete product
   const deleteProduct = useCallback(async (id: number): Promise<boolean> => {
+    if (!canMakeApiCalls) {
+      console.warn('Cannot delete product - not authenticated');
+      return false;
+    }
+
     try {
       const success = await ProductService.deleteProduct(id);
       if (success) {
@@ -220,10 +248,15 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete product');
       throw err;
     }
-  }, []);
+  }, [canMakeApiCalls]);
 
   // Update product stock
   const updateProductStock = useCallback(async (id: number, stockData: UpdateStockRequest): Promise<Product | null> => {
+    if (!canMakeApiCalls) {
+      console.warn('Cannot update product stock - not authenticated');
+      return null;
+    }
+
     try {
       const updatedProduct = await ProductService.updateProductStock(id, stockData);
       if (updatedProduct) {
@@ -237,10 +270,15 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update stock');
       throw err;
     }
-  }, []);
+  }, [canMakeApiCalls]);
 
   // Load categories
   const loadCategories = useCallback(async () => {
+    if (!canMakeApiCalls) {
+      console.warn('Cannot load categories - not authenticated');
+      return;
+    }
+
     try {
       setCategoriesLoading(true);
       const response = await CategoryService.getAllCategories();
@@ -250,7 +288,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
     } finally {
       setCategoriesLoading(false);
     }
-  }, []);
+  }, [canMakeApiCalls]);
 
   // Refresh products
   const refreshProducts = useCallback(async () => {
