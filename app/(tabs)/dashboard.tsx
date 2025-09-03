@@ -6,6 +6,24 @@ import { Header } from '../../components/shared/Header';
 import { styles } from '../../constants/Styles';
 
 export default function DashboardScreen() {
+  let reportsData;
+  try {
+    reportsData = useReports();
+  } catch (error) {
+    console.error('Error accessing Reports context:', error);
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ fontSize: 18, color: '#EF4444', textAlign: 'center', marginBottom: 10 }}>
+            Context Error
+          </Text>
+          <Text style={{ color: '#6B7280', textAlign: 'center' }}>
+            Failed to load Reports context. Please restart the app.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
   const { 
     dashboardData, 
     loading: reportsLoading, 

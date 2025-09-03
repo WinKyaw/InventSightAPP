@@ -8,7 +8,23 @@ import { HamburgerMenu } from '../../components/shared/HamburgerMenu';
 
 export default function TabsLayout() {
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
-  const { selectedNavItems } = useNavigation();
+  
+  // Add error handling for navigation context
+  let navigationData;
+  try {
+    navigationData = useNavigation();
+  } catch (error) {
+    console.error('Error accessing Navigation context:', error);
+    // Provide fallback values
+    navigationData = {
+      selectedNavItems: [
+        { key: 'receipt', title: 'Receipt', icon: 'receipt', screen: '/(tabs)/receipt', color: '#F59E0B' },
+        { key: 'employees', title: 'Team', icon: 'people', screen: '/(tabs)/employees', color: '#8B5CF6' }
+      ]
+    };
+  }
+
+  const { selectedNavItems } = navigationData;
 
   return (
     <>
@@ -54,12 +70,12 @@ export default function TabsLayout() {
 
         {/* Dynamic Tab 3: User's Pick 1 */}
         <Tabs.Screen
-          name={selectedNavItems[0]?.key || 'receipt'}
+          name={selectedNavItems?.[0]?.key || 'receipt'}
           options={{
-            title: selectedNavItems[0]?.title || 'Receipt',
+            title: selectedNavItems?.[0]?.title || 'Receipt',
             tabBarIcon: ({ color, size }) => (
               <Ionicons 
-                name={(selectedNavItems[0]?.icon || 'receipt') as any} 
+                name={(selectedNavItems?.[0]?.icon || 'receipt') as any} 
                 size={size} 
                 color={color} 
               />
@@ -69,12 +85,12 @@ export default function TabsLayout() {
 
         {/* Dynamic Tab 4: User's Pick 2 */}
         <Tabs.Screen
-          name={selectedNavItems[1]?.key || 'employees'}
+          name={selectedNavItems?.[1]?.key || 'employees'}
           options={{
-            title: selectedNavItems[1]?.title || 'Team',
+            title: selectedNavItems?.[1]?.title || 'Team',
             tabBarIcon: ({ color, size }) => (
               <Ionicons 
-                name={(selectedNavItems[1]?.icon || 'people') as any} 
+                name={(selectedNavItems?.[1]?.icon || 'people') as any} 
                 size={size} 
                 color={color} 
               />

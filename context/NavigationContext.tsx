@@ -68,23 +68,34 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setSelectedNavItems([item1, item2]);
   };
 
+  // Ensure the context value is always properly constructed
+  const contextValue: NavigationContextType = {
+    availableOptions,
+    selectedNavItems: selectedNavItems || [],
+    updateNavigationPreferences,
+    showNavigationSettings: showNavigationSettings || false,
+    setShowNavigationSettings
+  };
+
   return (
-    <NavigationContext.Provider value={{
-      availableOptions,
-      selectedNavItems,
-      updateNavigationPreferences,
-      showNavigationSettings,
-      setShowNavigationSettings
-    }}>
+    <NavigationContext.Provider value={contextValue}>
       {children}
     </NavigationContext.Provider>
   );
 }
 
-export function useNavigation() {
+export function useNavigation(): NavigationContextType {
   const context = useContext(NavigationContext);
   if (context === undefined) {
-    throw new Error('useNavigation must be used within a NavigationProvider');
+    console.error('useNavigation must be used within a NavigationProvider');
+    // Return a default context to prevent crashes
+    return {
+      availableOptions: [],
+      selectedNavItems: [],
+      updateNavigationPreferences: () => {},
+      showNavigationSettings: false,
+      setShowNavigationSettings: () => {}
+    };
   }
   return context;
 }

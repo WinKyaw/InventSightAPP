@@ -47,7 +47,7 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
       immediate: false, // Don't auto-load, let components control when to fetch
       onSuccess: (data) => {
         console.log('📊 Comprehensive dashboard data loaded successfully');
-        if (data.isEmpty) {
+        if (data?.isEmpty) {
           console.log('📊 Database appears to be empty - showing zero states');
         }
       },
@@ -82,12 +82,12 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     // Extract KPIs from comprehensive dashboard data if available
     if (dashboardData) {
       return {
-        totalRevenue: dashboardData.totalRevenue,
-        totalOrders: dashboardData.totalOrders,
-        avgOrderValue: dashboardData.avgOrderValue,
-        customerSatisfaction: dashboardData.customerSatisfaction,
-        revenueGrowth: dashboardData.revenueGrowth,
-        orderGrowth: dashboardData.orderGrowth,
+        totalRevenue: dashboardData.totalRevenue || 0,
+        totalOrders: dashboardData.totalOrders || 0,
+        avgOrderValue: dashboardData.avgOrderValue || 0,
+        customerSatisfaction: dashboardData.customerSatisfaction || 0,
+        revenueGrowth: dashboardData.revenueGrowth || 0,
+        orderGrowth: dashboardData.orderGrowth || 0,
       };
     }
     
@@ -95,25 +95,28 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     return await ReportService.getKPIs();
   };
 
+  // Ensure the context value is always an object
+  const contextValue: ReportsContextType = {
+    dashboardData: dashboardData || null,
+    loading: loading || false,
+    error: error || null,
+    refreshDashboardData,
+    getDailyReport,
+    getWeeklyReport,
+    getBusinessIntelligence,
+    getInventoryReport,
+    getTopItems,
+    getKPIs,
+  };
+
   return (
-    <ReportsContext.Provider value={{
-      dashboardData,
-      loading,
-      error,
-      refreshDashboardData,
-      getDailyReport,
-      getWeeklyReport,
-      getBusinessIntelligence,
-      getInventoryReport,
-      getTopItems,
-      getKPIs,
-    }}>
+    <ReportsContext.Provider value={contextValue}>
       {children}
     </ReportsContext.Provider>
   );
 }
 
-export function useReports() {
+export function useReports(): ReportsContextType {
   const context = useContext(ReportsContext);
   if (context === undefined) {
     throw new Error('useReports must be used within a ReportsProvider');
