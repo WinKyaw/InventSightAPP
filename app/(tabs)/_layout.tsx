@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Tabs } from 'expo-router';
 import { TouchableOpacity, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,20 +9,22 @@ import { HamburgerMenu } from '../../components/shared/HamburgerMenu';
 export default function TabsLayout() {
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   
-  // Add error handling for navigation context
-  let navigationData;
-  try {
-    navigationData = useNavigation();
-  } catch (error) {
-    console.error('Error accessing Navigation context:', error);
-    // Provide fallback values
-    navigationData = {
-      selectedNavItems: [
-        { key: 'receipt', title: 'Receipt', icon: 'receipt', screen: '/(tabs)/receipt', color: '#F59E0B' },
-        { key: 'employees', title: 'Team', icon: 'people', screen: '/(tabs)/employees', color: '#8B5CF6' }
-      ]
-    };
-  }
+  // Always call hooks at the top level - never inside try-catch or conditionals
+  const navigationContext = useNavigation();
+  
+  // Use useMemo to provide fallback values if context is not properly initialized
+  const navigationData = useMemo(() => {
+    if (!navigationContext || !navigationContext.selectedNavItems) {
+      console.warn('Navigation context not available, using fallback values');
+      return {
+        selectedNavItems: [
+          { key: 'receipt', title: 'Receipt', icon: 'receipt', screen: '/(tabs)/receipt', color: '#F59E0B' },
+          { key: 'employees', title: 'Team', icon: 'people', screen: '/(tabs)/employees', color: '#8B5CF6' }
+        ]
+      };
+    }
+    return navigationContext;
+  }, [navigationContext]);
 
   const { selectedNavItems } = navigationData;
 

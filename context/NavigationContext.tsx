@@ -88,13 +88,34 @@ export function useNavigation(): NavigationContextType {
   const context = useContext(NavigationContext);
   if (context === undefined) {
     console.error('useNavigation must be used within a NavigationProvider');
-    // Return a default context to prevent crashes
+    // Return a more complete default context to prevent crashes
+    const defaultOptions: NavigationOption[] = [
+      {
+        key: 'receipt',
+        title: 'Receipt',
+        icon: 'receipt',
+        screen: '/(tabs)/receipt',
+        color: '#F59E0B'
+      },
+      {
+        key: 'employees',
+        title: 'Team',
+        icon: 'people',
+        screen: '/(tabs)/employees',
+        color: '#8B5CF6'
+      }
+    ];
+    
     return {
-      availableOptions: [],
-      selectedNavItems: [],
-      updateNavigationPreferences: () => {},
+      availableOptions: defaultOptions,
+      selectedNavItems: defaultOptions,
+      updateNavigationPreferences: () => {
+        console.warn('NavigationContext not available - updateNavigationPreferences called');
+      },
       showNavigationSettings: false,
-      setShowNavigationSettings: () => {}
+      setShowNavigationSettings: () => {
+        console.warn('NavigationContext not available - setShowNavigationSettings called');
+      }
     };
   }
   return context;
