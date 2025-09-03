@@ -7,7 +7,13 @@ import { Header } from '../../components/shared/Header';
 import { styles } from '../../constants/Styles';
 
 export default function DashboardScreen() {
-  const { isReady: apiReady, isAuthenticating, canMakeApiCalls } = useApiReadiness();
+  // Add null check for useApiReadiness result
+  const apiReadinessResult = useApiReadiness();
+  const { isReady: apiReady, isAuthenticating, canMakeApiCalls } = apiReadinessResult || {
+    isReady: false,
+    isAuthenticating: true,
+    canMakeApiCalls: false
+  };
   
   let reportsData;
   try {

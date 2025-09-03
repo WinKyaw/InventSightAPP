@@ -41,10 +41,18 @@ export function useAuthenticatedAPI<T>(
  * Useful for components that need to know authentication state before attempting calls
  */
 export function useApiReadiness() {
-  const authContext = useAuth();
-  
-  // Handle case where auth context is not yet initialized
-  if (!authContext) {
+  try {
+    const { isAuthenticated, isInitialized, isLoading } = useAuth();
+
+    return {
+      isReady: isInitialized && isAuthenticated && !isLoading,
+      isAuthenticating: isLoading || !isInitialized,
+      isUnauthenticated: isInitialized && !isAuthenticated && !isLoading,
+      canMakeApiCalls: isInitialized && isAuthenticated && !isLoading,
+    };
+  } catch (error) {
+    // Handle case where AuthContext is not available
+    console.warn('⚠️ useApiReadiness: AuthContext not available, returning safe defaults');
     return {
       isReady: false,
       isAuthenticating: true,
@@ -52,13 +60,4 @@ export function useApiReadiness() {
       canMakeApiCalls: false,
     };
   }
-
-  const { isAuthenticated, isInitialized, isLoading } = authContext;
-
-  return {
-    isReady: isInitialized && isAuthenticated && !isLoading,
-    isAuthenticating: isLoading || !isInitialized,
-    isUnauthenticated: isInitialized && !isAuthenticated && !isLoading,
-    canMakeApiCalls: isInitialized && isAuthenticated && !isLoading,
-  };
 }
