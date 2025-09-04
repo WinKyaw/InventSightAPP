@@ -1,32 +1,60 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Tabs } from 'expo-router';
-import { TouchableOpacity, Text } from 'react-native';
+import { TouchableOpacity, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
-import { useNavigation } from '../../context/NavigationContext';
 import { HamburgerMenu } from '../../components/shared/HamburgerMenu';
+
+// Import with error boundary
+let useNavigation: any = null;
+try {
+  const NavigationModule = require('../../context/NavigationContext');
+  useNavigation = NavigationModule.useNavigation;
+} catch (error) {
+  console.error('Failed to import NavigationContext:', error);
+}
+
+// Fallback navigation items
+const FALLBACK_NAV_ITEMS = [
+  { key: 'receipt', title: 'Receipt', icon: 'receipt', screen: '/(tabs)/receipt', color: '#F59E0B' },
+  { key: 'employees', title: 'Team', icon: 'people', screen: '/(tabs)/employees', color: '#8B5CF6' }
+];
 
 export default function TabsLayout() {
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
-  
-  // Always call hooks at the top level - never inside try-catch or conditionals
-  const navigationContext = useNavigation();
-  
-  // Use useMemo to provide fallback values if context is not properly initialized
-  const navigationData = useMemo(() => {
-    if (!navigationContext || !navigationContext.selectedNavItems) {
-      console.warn('Navigation context not available, using fallback values');
-      return {
-        selectedNavItems: [
-          { key: 'receipt', title: 'Receipt', icon: 'receipt', screen: '/(tabs)/receipt', color: '#F59E0B' },
-          { key: 'employees', title: 'Team', icon: 'people', screen: '/(tabs)/employees', color: '#8B5CF6' }
-        ]
-      };
-    }
-    return navigationContext;
-  }, [navigationContext]);
+  const [isReady, setIsReady] = useState(false);
+  const [selectedNavItems, setSelectedNavItems] = useState(FALLBACK_NAV_ITEMS);
 
-  const { selectedNavItems } = navigationData;
+  // Initialize safely
+  useEffect(() => {
+    const initializeNavigation = async () => {
+      try {
+        if (useNavigation) {
+          // Try to get navigation context
+          const navContext = useNavigation();
+          if (navContext && Array.isArray(navContext.selectedNavItems)) {
+            setSelectedNavItems(navContext.selectedNavItems);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to initialize navigation context, using fallbacks:', error);
+      } finally {
+        setIsReady(true);
+      }
+    };
+
+    initializeNavigation();
+  }, []);
+
+  // Show loading state while initializing
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={{ marginTop: 10, color: Colors.gray }}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -72,12 +100,12 @@ export default function TabsLayout() {
 
         {/* Dynamic Tab 3: User's Pick 1 */}
         <Tabs.Screen
-          name={selectedNavItems?.[0]?.key || 'receipt'}
+          name={selectedNavItems[0]?.key || 'receipt'}
           options={{
-            title: selectedNavItems?.[0]?.title || 'Receipt',
+            title: selectedNavItems[0]?.title || 'Receipt',
             tabBarIcon: ({ color, size }) => (
               <Ionicons 
-                name={(selectedNavItems?.[0]?.icon || 'receipt') as any} 
+                name={(selectedNavItems[0]?.icon || 'receipt') as any} 
                 size={size} 
                 color={color} 
               />
@@ -87,12 +115,12 @@ export default function TabsLayout() {
 
         {/* Dynamic Tab 4: User's Pick 2 */}
         <Tabs.Screen
-          name={selectedNavItems?.[1]?.key || 'employees'}
+          name={selectedNavItems[1]?.key || 'employees'}
           options={{
-            title: selectedNavItems?.[1]?.title || 'Team',
+            title: selectedNavItems[1]?.title || 'Team',
             tabBarIcon: ({ color, size }) => (
               <Ionicons 
-                name={(selectedNavItems?.[1]?.icon || 'people') as any} 
+                name={(selectedNavItems[1]?.icon || 'people') as any} 
                 size={size} 
                 color={color} 
               />
