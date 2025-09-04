@@ -93,6 +93,7 @@ export default function DashboardScreen() {
 
   const getRevenueGrowth = (): string => {
     if (!dashboardData) return '0.0';
+    if (!dashboardData.revenueGrowth || typeof dashboardData.revenueGrowth !== 'number') return '0.0';
     return dashboardData.revenueGrowth.toFixed(1);
   };
 
@@ -112,8 +113,9 @@ export default function DashboardScreen() {
     }
 
     // Use the first recent activity as a placeholder for best performer
-    const recentActivity = dashboardData.recentActivities[0];
-    if (recentActivity) {
+    
+    if (dashboardData && dashboardData.recentActivities && dashboardData.recentActivities.length > 0) {
+      const recentActivity = dashboardData.recentActivities[0];
       return {
         name: recentActivity.productName,
         quantity: recentActivity.quantity,
@@ -129,7 +131,7 @@ export default function DashboardScreen() {
   };
 
   const getTopPerformers = () => {
-    if (!dashboardData || dashboardData.isEmpty) {
+    if (!dashboardData || dashboardData.isEmpty || !dashboardData.recentActivities) {
       return [];
     }
 
