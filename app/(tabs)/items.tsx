@@ -47,7 +47,7 @@ export default function ItemsScreen() {
   const [stockManagementProduct, setStockManagementProduct] = useState<Product | null>(null);
 
   // Convert products to items for UI compatibility
-  const items = products.map(productToItem);
+  const items = (products ?? []).map(productToItem);
 
   const toggleItemExpansion = (id: number) => {
     const newExpanded = new Set(expandedItems);

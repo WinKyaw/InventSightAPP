@@ -34,9 +34,11 @@ export class ProductService {
   /**
    * Get all products with pagination
    */
-  static async getAllProducts(page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<ProductsListResponse> {
+  static async getAllProducts(page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<Product[]> {
     const url = `${API_ENDPOINTS.PRODUCTS.ALL}?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
-    return await apiClient.get<ProductsListResponse>(url);
+    const response = await apiClient.get<ProductsListResponse>(url);
+    // Defensive: if products is undefined, return empty array
+    return response.products || [];
   }
 
   /**
