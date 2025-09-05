@@ -34,11 +34,17 @@ export class ProductService {
   /**
    * Get all products with pagination
    */
-  static async getAllProducts(page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<Product[]> {
+  static async getAllProducts(page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<ProductsListResponse> {
     const url = `${API_ENDPOINTS.PRODUCTS.ALL}?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
     const response = await apiClient.get<ProductsListResponse>(url);
-    // Defensive: if products is undefined, return empty array
-    return response.products || [];
+    // Ensure we return a properly structured response even if the API returns unexpected data
+    return {
+      products: response.products || [],
+      totalCount: response.totalCount || 0,
+      currentPage: response.currentPage || page,
+      totalPages: response.totalPages || 1,
+      hasMore: response.hasMore || false
+    };
   }
 
   /**

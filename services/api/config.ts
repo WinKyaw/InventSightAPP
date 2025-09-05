@@ -190,6 +190,10 @@ export interface ActivityItem {
   timestamp: string;
   userId?: string;
   notes?: string;
+  // Enhanced fields for better data display
+  unitPrice?: number;
+  totalValue?: number;
+  productId?: number;
 }
 
 export interface RecentActivitiesResponse {

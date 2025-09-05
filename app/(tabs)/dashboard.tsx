@@ -103,7 +103,7 @@ export default function DashboardScreen() {
   };
 
   const getBestPerformer = () => {
-    // For now, create a best performer from available data
+    // Use available dashboard data to show meaningful information
     if (!dashboardData || dashboardData.isEmpty) {
       return {
         name: 'No Data Available',
@@ -112,19 +112,27 @@ export default function DashboardScreen() {
       };
     }
 
-    // Use the first recent activity as a placeholder for best performer
-    
-    if (dashboardData && dashboardData.recentActivities && dashboardData.recentActivities.length > 0) {
-      const recentActivity = dashboardData.recentActivities[0];
-      return {
-        name: recentActivity.productName,
-        quantity: recentActivity.quantity,
-        sales: Math.floor(Math.random() * 10000) // Placeholder calculation
-      };
+    // Find the activity with the highest quantity for "best performer"
+    if (dashboardData.recentActivities && dashboardData.recentActivities.length > 0) {
+      const sortedActivities = [...dashboardData.recentActivities]
+        .filter(activity => activity.type === 'sale')
+        .sort((a, b) => b.quantity - a.quantity);
+      
+      if (sortedActivities.length > 0) {
+        const topActivity = sortedActivities[0];
+        return {
+          name: topActivity.productName,
+          quantity: topActivity.quantity,
+          // Use totalValue if available, otherwise estimate
+          sales: topActivity.totalValue || 
+                 (dashboardData.avgOrderValue > 0 ? 
+                  Math.round(topActivity.quantity * dashboardData.avgOrderValue / Math.max(dashboardData.totalOrders, 1)) : 0)
+        };
+      }
     }
 
     return {
-      name: 'No Products Available',
+      name: 'No Sales Data Available',
       quantity: 0,
       sales: 0
     };
@@ -136,11 +144,18 @@ export default function DashboardScreen() {
     }
 
     // Convert recent activities to top performers format for display
-    return dashboardData.recentActivities.slice(0, 4).map((activity, index) => ({
-      name: activity.productName,
-      quantity: activity.quantity,
-      sales: Math.floor(Math.random() * 5000 + 1000), // Placeholder calculation
-    }));
+    // Filter for sale activities and use real data
+    return dashboardData.recentActivities
+      .filter(activity => activity.type === 'sale')
+      .slice(0, 4)
+      .map((activity) => ({
+        name: activity.productName,
+        quantity: activity.quantity,
+        // Use totalValue if available, otherwise estimate
+        sales: activity.totalValue || 
+               (dashboardData.avgOrderValue > 0 ? 
+                Math.round(activity.quantity * dashboardData.avgOrderValue / Math.max(dashboardData.totalOrders, 1)) : 0)
+      }));
   };
 
   const bestItem = getBestPerformer();
