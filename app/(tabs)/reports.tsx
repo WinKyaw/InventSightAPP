@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/shared/Header';
@@ -17,11 +17,7 @@ export default function ReportsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [kpiData, setKpiData] = useState<any>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       await refreshDashboardData();
       const kpis = await getKPIs();
@@ -29,13 +25,17 @@ export default function ReportsScreen() {
     } catch (error) {
       console.error('Failed to load reports data:', error);
     }
-  };
+  }, [refreshDashboardData, getKPIs]);
 
-  const handleRefresh = async () => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  };
+  }, [loadData]);
 
   return (
     <SafeAreaView style={styles.container}>
