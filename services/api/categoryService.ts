@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { 
+  API_CONFIG,
   API_ENDPOINTS, 
   CategoryCountResponse,
   CategoriesResponse
@@ -13,7 +14,7 @@ export class CategoryService {
    * Get total categories count
    */
   static async getCategoriesCount(): Promise<number> {
-    const response = await apiClient.get<CategoryCountResponse>(API_ENDPOINTS.CATEGORIES.COUNT);
+    const response = await apiClient.get<CategoryCountResponse>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.COUNT}`);
     return response.totalCategories;
   }
 
@@ -21,7 +22,7 @@ export class CategoryService {
    * Get all categories
    */
   static async getAllCategories(): Promise<CategoriesResponse> {
-    return await apiClient.get<CategoriesResponse>(API_ENDPOINTS.CATEGORIES.ALL);
+    return await apiClient.get<CategoriesResponse>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.ALL}`);
   }
 }
 

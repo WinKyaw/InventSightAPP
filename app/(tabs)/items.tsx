@@ -205,22 +205,22 @@ export default function ItemsScreen() {
                     <View style={styles.itemInfo}>
                       <View style={styles.itemNameRow}>
                         <Text style={styles.itemName}>{item.name}</Text>
-                        <View style={styles.categoryBadge}>
+                        {/* <View style={styles.categoryBadge}>
                           <Text style={styles.categoryBadgeText}>{item.category}</Text>
-                        </View>
+                        </View> */}
                       </View>
                     </View>
                     <View style={styles.itemStats}>
                       <Text style={styles.itemStat}>${item.price.toFixed(2)}</Text>
                       <Text style={styles.itemStat}>Qty: {item.quantity}</Text>
-                      <Text style={[styles.itemStat, { color: '#3B82F6', fontWeight: '600' }]}>
+                      {/* <Text style={[styles.itemStat, { color: '#3B82F6', fontWeight: '600' }]}>
                         Sold: {item.salesCount || 0}
                       </Text>
                       <Text style={[styles.itemStat, { color: '#10B981', fontWeight: '600' }]}>
                         ${item.total.toFixed(2)}
-                      </Text>
+                      </Text> */}
                     </View>
-                    <View style={styles.itemActions}>
+                    {/* <View style={styles.itemActions}>
                       <TouchableOpacity
                         style={styles.editButton}
                         onPress={() => handleEditPress(products.find(p => p.id === item.id)!)}
@@ -233,7 +233,7 @@ export default function ItemsScreen() {
                       >
                         <Ionicons name="trash-outline" size={18} color="#EF4444" />
                       </TouchableOpacity>
-                    </View>
+                    </View> */}
                   </TouchableOpacity>
                   
                   {expandedItems.has(item.id) && (

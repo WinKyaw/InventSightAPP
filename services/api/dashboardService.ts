@@ -1,6 +1,7 @@
 import { apiClient } from './apiClient';
 import { tokenManager } from '../../utils/tokenManager';
 import { 
+  API_CONFIG,
   API_ENDPOINTS, 
   DashboardSummary,
   ActivityItem,
@@ -54,9 +55,9 @@ export class DashboardService {
     // Verify authentication before making the call
     await this.verifyAuthentication();
     
-    var testURL = "http://localhost:8080" + API_ENDPOINTS.DASHBOARD.SUMMARY;
+    var testURL = API_CONFIG.BASE_URL + API_ENDPOINTS.DASHBOARD.SUMMARY;
     console.log("URL: " + testURL);
-    return await apiClient.get<DashboardSummary>(API_ENDPOINTS.DASHBOARD.SUMMARY);
+    return await apiClient.get<DashboardSummary>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.DASHBOARD.SUMMARY}`);
   }
 
   /**
@@ -107,7 +108,7 @@ export class DashboardService {
       sales: number;
       quantity: number;
       trend: number;
-    }>>(`${API_ENDPOINTS.DASHBOARD.SUMMARY}/top-items?limit=${limit}`);
+    }>>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.DASHBOARD.SUMMARY}/top-items?limit=${limit}`);
   }
 }
 

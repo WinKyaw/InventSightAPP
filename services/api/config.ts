@@ -268,7 +268,7 @@ export interface UpdateStockRequest {
 
 export interface ProductsListResponse {
   products: Product[];
-  totalCount: number;
+  totalItems: number;
   currentPage: number;
   totalPages: number;
   hasMore: boolean;

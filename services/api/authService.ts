@@ -36,6 +36,15 @@ const generateMockToken = (user: AuthUser) => ({
   tokenType: 'Bearer',
 });
 
+const generateRandomId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let id = '_';
+  for (let i = 0; i < 5; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
 /**
  * Authentication Service
  * Handles all authentication-related API calls
@@ -166,6 +175,7 @@ class AuthService {
         {
           firstName: credentials.firstName.trim(),
           lastName: credentials.lastName.trim(),
+          username: credentials.firstName.trim()+ "." + credentials.lastName.trim() + generateRandomId(),
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
         }

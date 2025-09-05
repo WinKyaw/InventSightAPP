@@ -92,7 +92,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       console.warn('Cannot load products - not authenticated');
       return;
     }
-
+    console.log("loading products...")
     try {
       if (refresh) {
         setRefreshing(true);
@@ -116,6 +116,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
         };
         
         const searchResponse = await ProductService.searchProducts(searchParams);
+        console.log(searchResponse.toString());
         response = {
           products: searchResponse.products,
           totalCount: searchResponse.totalCount,
@@ -126,6 +127,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       } else {
         // Otherwise use regular getAllProducts
         response = await ProductService.getAllProducts(page, DEFAULT_PAGE_SIZE, sortBy, sortOrder);
+        console.log(JSON.stringify(response));
       }
 
       if (refresh || page === 1) {
