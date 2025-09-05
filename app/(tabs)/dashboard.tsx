@@ -54,7 +54,7 @@ export default function DashboardScreen() {
     } else if (isAuthenticating) {
       console.log('🔐 Dashboard: Waiting for authentication to complete');
     }
-  }, [canMakeApiCalls, isAuthenticating]);
+  }, [canMakeApiCalls, isAuthenticating, refreshDashboardData]); // Added refreshDashboardData to deps
 
   const loadDashboardData = async () => {
     // Additional safety check before making API calls
@@ -99,11 +99,12 @@ export default function DashboardScreen() {
 
   const getOrderGrowth = (): string => {
     if (!dashboardData) return '0.0';
+    if (!dashboardData.orderGrowth || typeof dashboardData.orderGrowth !== 'number') return '0.0';
     return dashboardData.orderGrowth.toFixed(1);
   };
 
   const getBestPerformer = () => {
-    // For now, create a best performer from available data
+    // Use available dashboard data to show meaningful information
     if (!dashboardData || dashboardData.isEmpty) {
       return {
         name: 'No Data Available',
@@ -112,19 +113,27 @@ export default function DashboardScreen() {
       };
     }
 
-    // Use the first recent activity as a placeholder for best performer
-    
-    if (dashboardData && dashboardData.recentActivities && dashboardData.recentActivities.length > 0) {
-      const recentActivity = dashboardData.recentActivities[0];
-      return {
-        name: recentActivity.productName,
-        quantity: recentActivity.quantity,
-        sales: Math.floor(Math.random() * 10000) // Placeholder calculation
-      };
+    // Find the activity with the highest quantity for "best performer"
+    if (dashboardData.recentActivities && dashboardData.recentActivities.length > 0) {
+      const sortedActivities = [...dashboardData.recentActivities]
+        .filter(activity => activity.type === 'sale')
+        .sort((a, b) => b.quantity - a.quantity);
+      
+      if (sortedActivities.length > 0) {
+        const topActivity = sortedActivities[0];
+        return {
+          name: topActivity.productName,
+          quantity: topActivity.quantity,
+          // Use totalValue if available, otherwise estimate
+          sales: topActivity.totalValue || 
+                 (dashboardData.avgOrderValue > 0 ? 
+                  Math.round(topActivity.quantity * dashboardData.avgOrderValue / Math.max(dashboardData.totalOrders, 1)) : 0)
+        };
+      }
     }
 
     return {
-      name: 'No Products Available',
+      name: 'No Sales Data Available',
       quantity: 0,
       sales: 0
     };
@@ -136,11 +145,18 @@ export default function DashboardScreen() {
     }
 
     // Convert recent activities to top performers format for display
-    return dashboardData.recentActivities.slice(0, 4).map((activity, index) => ({
-      name: activity.productName,
-      quantity: activity.quantity,
-      sales: Math.floor(Math.random() * 5000 + 1000), // Placeholder calculation
-    }));
+    // Filter for sale activities and use real data
+    return dashboardData.recentActivities
+      .filter(activity => activity.type === 'sale')
+      .slice(0, 4)
+      .map((activity) => ({
+        name: activity.productName,
+        quantity: activity.quantity,
+        // Use totalValue if available, otherwise estimate
+        sales: activity.totalValue || 
+               (dashboardData.avgOrderValue > 0 ? 
+                Math.round(activity.quantity * dashboardData.avgOrderValue / Math.max(dashboardData.totalOrders, 1)) : 0)
+      }));
   };
 
   const bestItem = getBestPerformer();
@@ -205,32 +221,34 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        <View style={styles.kpiContainer}>
-          <View style={styles.kpiRow}>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>Monthly Revenue</Text>
-              <Text style={styles.kpiValue}>${getDisplayValue(dashboardData?.totalRevenue)}</Text>
-              <Text style={[styles.kpiTrend, { color: parseFloat(getRevenueGrowth()) >= 0 ? '#10B981' : '#EF4444' }]}>
-                {parseFloat(getRevenueGrowth()) >= 0 ? '↗' : '↘'} {Math.abs(parseFloat(getRevenueGrowth()))}%
-              </Text>
-            </View>
-            
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>Total Orders</Text>
-              <Text style={[styles.kpiValue, { color: '#3B82F6' }]}>{getDisplayValue(dashboardData?.totalOrders)}</Text>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${Math.min(85, 100)}%` }]} />
+        {/* Main Dashboard Content - Only show when authenticated and not in loading states */}
+        {canMakeApiCalls && !isAuthenticating && (
+          <View style={styles.kpiContainer}>
+            <View style={styles.kpiRow}>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Monthly Revenue</Text>
+                <Text style={styles.kpiValue}>${getDisplayValue(dashboardData?.totalRevenue)}</Text>
+                <Text style={[styles.kpiTrend, { color: parseFloat(getRevenueGrowth()) >= 0 ? '#10B981' : '#EF4444' }]}>
+                  {parseFloat(getRevenueGrowth()) >= 0 ? '↗' : '↘'} {Math.abs(parseFloat(getRevenueGrowth()))}%
+                </Text>
+              </View>
+              
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Total Orders</Text>
+                <Text style={[styles.kpiValue, { color: '#3B82F6' }]}>{getDisplayValue(dashboardData?.totalOrders)}</Text>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${Math.min(85, 100)}%` }]} />
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.kpiRowSmall}>
-            <View style={styles.kpiCardSmall}>
-              <Text style={styles.kpiLabelSmall}>Total Products</Text>
-              <Text style={[styles.kpiValueSmall, { color: '#10B981' }]}>
-                {getDisplayValue(dashboardData?.totalProducts)}
-              </Text>
-            </View>
+            <View style={styles.kpiRowSmall}>
+              <View style={styles.kpiCardSmall}>
+                <Text style={styles.kpiLabelSmall}>Total Products</Text>
+                <Text style={[styles.kpiValueSmall, { color: '#10B981' }]}>
+                  {getDisplayValue(dashboardData?.totalProducts)}
+                </Text>
+              </View>
             
             <View style={styles.kpiCardSmall}>
               <Text style={styles.kpiLabelSmall}>Low Stock Items</Text>
@@ -329,6 +347,7 @@ export default function DashboardScreen() {
             </Text>
           </View>
         </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
