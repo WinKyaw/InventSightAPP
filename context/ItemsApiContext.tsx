@@ -319,20 +319,28 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
     });
   }, [products]);
 
-  // Load initial data
+  // Load initial data only when authentication is ready
   useEffect(() => {
-    loadProducts();
-    loadCategories();
-  }, []);
+    if (canMakeApiCalls) {
+      console.log('🔐 ItemsApiContext: Authentication verified, loading initial data');
+      loadProducts();
+      loadCategories();
+    }
+  }, [canMakeApiCalls, loadProducts, loadCategories]);
 
   // Reload products when search/filter/sort changes
   useEffect(() => {
+    if (!canMakeApiCalls) {
+      console.log('⚠️ ItemsApiContext: Skipping reload - not authenticated');
+      return;
+    }
+    
     if (searchQuery || selectedCategoryId) {
       searchProducts(searchQuery, { categoryId: selectedCategoryId || undefined });
     } else {
       loadProducts(1, true);
     }
-  }, [searchQuery, selectedCategoryId, sortBy, sortOrder]);
+  }, [searchQuery, selectedCategoryId, sortBy, sortOrder, canMakeApiCalls, searchProducts, loadProducts]);
 
   return (
     <ItemsApiContext.Provider value={{

@@ -54,7 +54,7 @@ export default function DashboardScreen() {
     } else if (isAuthenticating) {
       console.log('🔐 Dashboard: Waiting for authentication to complete');
     }
-  }, [canMakeApiCalls, isAuthenticating]);
+  }, [canMakeApiCalls, isAuthenticating, refreshDashboardData]); // Added refreshDashboardData to deps
 
   const loadDashboardData = async () => {
     // Additional safety check before making API calls
@@ -99,6 +99,7 @@ export default function DashboardScreen() {
 
   const getOrderGrowth = (): string => {
     if (!dashboardData) return '0.0';
+    if (!dashboardData.orderGrowth || typeof dashboardData.orderGrowth !== 'number') return '0.0';
     return dashboardData.orderGrowth.toFixed(1);
   };
 
@@ -220,32 +221,34 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        <View style={styles.kpiContainer}>
-          <View style={styles.kpiRow}>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>Monthly Revenue</Text>
-              <Text style={styles.kpiValue}>${getDisplayValue(dashboardData?.totalRevenue)}</Text>
-              <Text style={[styles.kpiTrend, { color: parseFloat(getRevenueGrowth()) >= 0 ? '#10B981' : '#EF4444' }]}>
-                {parseFloat(getRevenueGrowth()) >= 0 ? '↗' : '↘'} {Math.abs(parseFloat(getRevenueGrowth()))}%
-              </Text>
-            </View>
-            
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>Total Orders</Text>
-              <Text style={[styles.kpiValue, { color: '#3B82F6' }]}>{getDisplayValue(dashboardData?.totalOrders)}</Text>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${Math.min(85, 100)}%` }]} />
+        {/* Main Dashboard Content - Only show when authenticated and not in loading states */}
+        {canMakeApiCalls && !isAuthenticating && (
+          <View style={styles.kpiContainer}>
+            <View style={styles.kpiRow}>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Monthly Revenue</Text>
+                <Text style={styles.kpiValue}>${getDisplayValue(dashboardData?.totalRevenue)}</Text>
+                <Text style={[styles.kpiTrend, { color: parseFloat(getRevenueGrowth()) >= 0 ? '#10B981' : '#EF4444' }]}>
+                  {parseFloat(getRevenueGrowth()) >= 0 ? '↗' : '↘'} {Math.abs(parseFloat(getRevenueGrowth()))}%
+                </Text>
+              </View>
+              
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Total Orders</Text>
+                <Text style={[styles.kpiValue, { color: '#3B82F6' }]}>{getDisplayValue(dashboardData?.totalOrders)}</Text>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${Math.min(85, 100)}%` }]} />
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.kpiRowSmall}>
-            <View style={styles.kpiCardSmall}>
-              <Text style={styles.kpiLabelSmall}>Total Products</Text>
-              <Text style={[styles.kpiValueSmall, { color: '#10B981' }]}>
-                {getDisplayValue(dashboardData?.totalProducts)}
-              </Text>
-            </View>
+            <View style={styles.kpiRowSmall}>
+              <View style={styles.kpiCardSmall}>
+                <Text style={styles.kpiLabelSmall}>Total Products</Text>
+                <Text style={[styles.kpiValueSmall, { color: '#10B981' }]}>
+                  {getDisplayValue(dashboardData?.totalProducts)}
+                </Text>
+              </View>
             
             <View style={styles.kpiCardSmall}>
               <Text style={styles.kpiLabelSmall}>Low Stock Items</Text>
@@ -344,6 +347,7 @@ export default function DashboardScreen() {
             </Text>
           </View>
         </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
