@@ -16,7 +16,7 @@ const getMachineIP = (): string => {
   // In a real implementation, you might want to detect the actual IP
   // For now, we'll use common development network ranges
   // This could be enhanced to actually detect the machine's IP if needed
-  return '10.0.0.127'; // Common router IP range - should be configured per developer
+  return '10.0.0.125'; // Common router IP range - should be configured per developer
 };
 
 /**

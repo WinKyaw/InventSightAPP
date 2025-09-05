@@ -25,26 +25,22 @@ export default function TabsLayout() {
   const [isReady, setIsReady] = useState(false);
   const [selectedNavItems, setSelectedNavItems] = useState(FALLBACK_NAV_ITEMS);
 
-  // Initialize safely
-  useEffect(() => {
-    const initializeNavigation = async () => {
-      try {
-        if (useNavigation) {
-          // Try to get navigation context
-          const navContext = useNavigation();
-          if (navContext && Array.isArray(navContext.selectedNavItems)) {
-            setSelectedNavItems(navContext.selectedNavItems);
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to initialize navigation context, using fallbacks:', error);
-      } finally {
-        setIsReady(true);
-      }
-    };
+  // ✅ SOLUTION 1: Call hook at component top level with error handling
+  let navContext = null;
+  try {
+    navContext = useNavigation ? useNavigation() : null;
+  } catch (error) {
+    console.warn('Failed to get navigation context:', error);
+    navContext = null;
+  }
 
-    initializeNavigation();
-  }, []);
+  // ✅ Update selected items when navigation context changes
+  useEffect(() => {
+    if (navContext && Array.isArray(navContext.selectedNavItems)) {
+      setSelectedNavItems(navContext.selectedNavItems);
+    }
+    setIsReady(true);
+  }, [navContext]);
 
   // Show loading state while initializing
   if (!isReady) {
