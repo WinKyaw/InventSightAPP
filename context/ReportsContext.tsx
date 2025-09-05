@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
 import { ReportService, DashboardService, BusinessIntelligenceData, DailyReportData, WeeklyReportData, InventoryReportData } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 import type { ComprehensiveDashboardData } from '../services/api/dashboardService';
@@ -37,6 +37,11 @@ const ReportsContext = createContext<ReportsContextType | undefined>(undefined);
 export function ReportsProvider({ children }: { children: ReactNode }) {
   const { canMakeApiCalls } = useApiReadiness();
   
+  // Memoize the API function to prevent it from changing on every render
+  const dashboardApiFunction = useCallback(() => {
+    return DashboardService.getComprehensiveDashboardData();
+  }, []);
+  
   // Use comprehensive dashboard data API with authentication guard
   const {
     data: dashboardData,
@@ -44,7 +49,7 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     error,
     execute: refreshDashboardData,
   } = useAuthenticatedAPI(
-    () => DashboardService.getComprehensiveDashboardData(),
+    dashboardApiFunction,
     {
       immediate: false, // Never auto-load, let components control when to fetch after auth
       onSuccess: (data) => {
@@ -60,42 +65,42 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
   );
 
   // Individual report methods (for backward compatibility with authentication guards)
-  const getDailyReport = async (date?: string): Promise<DailyReportData> => {
+  const getDailyReport = useCallback(async (date?: string): Promise<DailyReportData> => {
     if (!canMakeApiCalls) {
       throw new Error('Authentication required to fetch daily report');
     }
     return await ReportService.getDailyReport(date);
-  };
+  }, [canMakeApiCalls]);
 
-  const getWeeklyReport = async (startDate?: string, endDate?: string): Promise<WeeklyReportData> => {
+  const getWeeklyReport = useCallback(async (startDate?: string, endDate?: string): Promise<WeeklyReportData> => {
     if (!canMakeApiCalls) {
       throw new Error('Authentication required to fetch weekly report');
     }
     return await ReportService.getWeeklyReport(startDate, endDate);
-  };
+  }, [canMakeApiCalls]);
 
-  const getBusinessIntelligence = async (): Promise<BusinessIntelligenceData> => {
+  const getBusinessIntelligence = useCallback(async (): Promise<BusinessIntelligenceData> => {
     if (!canMakeApiCalls) {
       throw new Error('Authentication required to fetch business intelligence data');
     }
     return await ReportService.getBusinessIntelligence();
-  };
+  }, [canMakeApiCalls]);
 
-  const getInventoryReport = async (): Promise<InventoryReportData> => {
+  const getInventoryReport = useCallback(async (): Promise<InventoryReportData> => {
     if (!canMakeApiCalls) {
       throw new Error('Authentication required to fetch inventory report');
     }
     return await ReportService.getInventoryReport();
-  };
+  }, [canMakeApiCalls]);
 
-  const getTopItems = async (limit: number = 10) => {
+  const getTopItems = useCallback(async (limit: number = 10) => {
     if (!canMakeApiCalls) {
       throw new Error('Authentication required to fetch top items');
     }
     return await DashboardService.getTopItems(limit);
-  };
+  }, [canMakeApiCalls]);
 
-  const getKPIs = async () => {
+  const getKPIs = useCallback(async () => {
     // Extract KPIs from comprehensive dashboard data if available
     if (dashboardData) {
       return {
@@ -110,10 +115,10 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     
     // Fallback to ReportService
     return await ReportService.getKPIs();
-  };
+  }, [dashboardData]);
 
-  // Ensure the context value is always an object
-  const contextValue: ReportsContextType = {
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue: ReportsContextType = useMemo(() => ({
     dashboardData: dashboardData || null,
     loading: loading || false,
     error: error || null,
@@ -124,7 +129,7 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     getInventoryReport,
     getTopItems,
     getKPIs,
-  };
+  }), [dashboardData, loading, error, refreshDashboardData, getDailyReport, getWeeklyReport, getBusinessIntelligence, getInventoryReport, getTopItems, getKPIs]);
 
   return (
     <ReportsContext.Provider value={contextValue}>
