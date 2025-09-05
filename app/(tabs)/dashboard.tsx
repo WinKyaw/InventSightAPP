@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { useReports } from '../../context/ReportsContext';
 import { useEmployees } from '../../context/EmployeesContext';
@@ -15,24 +15,6 @@ export default function DashboardScreen() {
     canMakeApiCalls: false
   };
   
-  let reportsData;
-  try {
-    reportsData = useReports();
-  } catch (error) {
-    console.error('Error accessing Reports context:', error);
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ fontSize: 18, color: '#EF4444', textAlign: 'center', marginBottom: 10 }}>
-            Context Error
-          </Text>
-          <Text style={{ color: '#6B7280', textAlign: 'center' }}>
-            Failed to load Reports context. Please restart the app.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
   const { 
     dashboardData, 
     loading: reportsLoading, 
@@ -46,17 +28,8 @@ export default function DashboardScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // Only load dashboard data when API is ready (user is authenticated)
-  useEffect(() => {
-    if (canMakeApiCalls) {
-      console.log('🔐 Dashboard: Authentication verified, loading dashboard data');
-      loadDashboardData();
-    } else if (isAuthenticating) {
-      console.log('🔐 Dashboard: Waiting for authentication to complete');
-    }
-  }, [canMakeApiCalls, isAuthenticating, refreshDashboardData]); // Added refreshDashboardData to deps
-
-  const loadDashboardData = async () => {
+  // Memoize loadDashboardData to prevent it from changing on every render
+  const loadDashboardData = useCallback(async () => {
     // Additional safety check before making API calls
     if (!canMakeApiCalls) {
       console.log('⚠️ Dashboard: Skipping API call - user not authenticated');
@@ -69,9 +42,19 @@ export default function DashboardScreen() {
       console.error('Failed to load dashboard data:', error);
       Alert.alert('Error', 'Failed to load data from API. Please check your network connection.');
     }
-  };
+  }, [canMakeApiCalls, refreshDashboardData]);
 
-  const handleRefresh = async () => {
+  // Only load dashboard data when API is ready (user is authenticated)
+  useEffect(() => {
+    if (canMakeApiCalls) {
+      console.log('🔐 Dashboard: Authentication verified, loading dashboard data');
+      loadDashboardData();
+    } else if (isAuthenticating) {
+      console.log('🔐 Dashboard: Waiting for authentication to complete');
+    }
+  }, [canMakeApiCalls, isAuthenticating, loadDashboardData]);
+
+  const handleRefresh = useCallback(async () => {
     // Check authentication before allowing refresh
     if (!canMakeApiCalls) {
       Alert.alert('Authentication Required', 'Please log in to refresh data.');
@@ -84,26 +67,27 @@ export default function DashboardScreen() {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [canMakeApiCalls, loadDashboardData]);
 
   // Helper functions for displaying data with empty state handling
-  const getDisplayValue = (value: number | undefined, defaultValue: number = 0): string => {
+  const getDisplayValue = useCallback((value: number | undefined, defaultValue: number = 0): string => {
     return (value ?? defaultValue).toLocaleString();
-  };
+  }, []);
 
-  const getRevenueGrowth = (): string => {
+  const getRevenueGrowth = useCallback((): string => {
     if (!dashboardData) return '0.0';
     if (!dashboardData.revenueGrowth || typeof dashboardData.revenueGrowth !== 'number') return '0.0';
     return dashboardData.revenueGrowth.toFixed(1);
-  };
+  }, [dashboardData]);
 
-  const getOrderGrowth = (): string => {
+  const getOrderGrowth = useCallback((): string => {
     if (!dashboardData) return '0.0';
     if (!dashboardData.orderGrowth || typeof dashboardData.orderGrowth !== 'number') return '0.0';
     return dashboardData.orderGrowth.toFixed(1);
-  };
+  }, [dashboardData]);
 
-  const getBestPerformer = () => {
+  // Memoize expensive calculations to prevent re-computation on every render
+  const getBestPerformer = useMemo(() => {
     // Use available dashboard data to show meaningful information
     if (!dashboardData || dashboardData.isEmpty) {
       return {
@@ -137,9 +121,9 @@ export default function DashboardScreen() {
       quantity: 0,
       sales: 0
     };
-  };
+  }, [dashboardData]);
 
-  const getTopPerformers = () => {
+  const getTopPerformers = useMemo(() => {
     if (!dashboardData || dashboardData.isEmpty || !dashboardData.recentActivities) {
       return [];
     }
@@ -157,10 +141,11 @@ export default function DashboardScreen() {
                (dashboardData.avgOrderValue > 0 ? 
                 Math.round(activity.quantity * dashboardData.avgOrderValue / Math.max(dashboardData.totalOrders, 1)) : 0)
       }));
-  };
+  }, [dashboardData]);
 
-  const bestItem = getBestPerformer();
-  const topItems = getTopPerformers();
+  // Use memoized values instead of calling functions
+  const bestItem = getBestPerformer;
+  const topItems = getTopPerformers;
 
   return (
     <SafeAreaView style={styles.container}>
