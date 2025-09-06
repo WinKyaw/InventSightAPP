@@ -34,7 +34,7 @@ export function ProtectedRoute({
     if (requireAuth && !isAuthenticated && !inAuthGroup) {
       // User needs to be authenticated but isn't, redirect to login
       console.log('🔐 ProtectedRoute: Redirecting unauthenticated user to login');
-      router.replace(fallbackRoute);
+      router.replace(fallbackRoute as any);
     } else if (!requireAuth && isAuthenticated && inAuthGroup) {
       // User is authenticated but on auth pages, redirect to dashboard
       console.log('🔐 ProtectedRoute: Redirecting authenticated user to dashboard');
