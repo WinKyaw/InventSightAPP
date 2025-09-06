@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { 
   AuthUser, 
   AuthState, 
@@ -34,6 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokens: null,
   });
 
+  // Ref to track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   /**
    * Initialize authentication state on app start
    */
@@ -41,18 +50,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
   }, []);
 
-  const initializeAuth = async () => {
+  const initializeAuth = useCallback(async () => {
     try {
       console.log('🔐 AuthContext: Initializing authentication...');
+      if (!isMountedRef.current) return;
+      
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
       // Check if user has valid authentication
       const isAuthenticated = await authService.verifyAuthentication();
       
+      if (!isMountedRef.current) return;
+      
       if (isAuthenticated) {
         // Get stored user data
         const user = await tokenManager.getUser();
-        if (user) {
+        if (user && isMountedRef.current) {
           console.log('✅ AuthContext: User authenticated:', user.email);
           setAuthState({
             user,
@@ -65,112 +78,134 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      console.log('ℹ️ AuthContext: No valid authentication found');
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        isInitialized: true,
-        tokens: null,
-      });
+      if (isMountedRef.current) {
+        console.log('ℹ️ AuthContext: No valid authentication found');
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          isInitialized: true,
+          tokens: null,
+        });
+      }
     } catch (error) {
       console.error('❌ AuthContext: Auth initialization failed:', error);
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        isInitialized: true,
-        tokens: null,
-      });
+      if (isMountedRef.current) {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          isInitialized: true,
+          tokens: null,
+        });
+      }
     }
-  };
+  }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       console.log('🔐 AuthContext: Attempting login...');
+      if (!isMountedRef.current) return;
+      
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
       const loginResponse = await authService.login(credentials);
 
-      setAuthState({
-        user: loginResponse.user,
-        isAuthenticated: true,
-        isLoading: false,
-        isInitialized: true,
-        tokens: null,
-      });
+      if (isMountedRef.current) {
+        setAuthState({
+          user: loginResponse.user,
+          isAuthenticated: true,
+          isLoading: false,
+          isInitialized: true,
+          tokens: null,
+        });
 
-      console.log('✅ AuthContext: Login successful');
+        console.log('✅ AuthContext: Login successful');
+      }
     } catch (error) {
       console.error('❌ AuthContext: Login failed:', error);
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false,
-        isAuthenticated: false,
-        user: null 
-      }));
+      if (isMountedRef.current) {
+        setAuthState(prev => ({ 
+          ...prev, 
+          isLoading: false,
+          isAuthenticated: false,
+          user: null 
+        }));
+      }
       throw error;
     }
-  };
+  }, []);
 
-  const signup = async (credentials: SignupCredentials) => {
+  const signup = useCallback(async (credentials: SignupCredentials) => {
     try {
       console.log('🔐 AuthContext: Attempting signup...');
+      if (!isMountedRef.current) return;
+      
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
       const signupResponse = await authService.signup(credentials);
 
-      setAuthState({
-        user: signupResponse.user,
-        isAuthenticated: true,
-        isLoading: false,
-        isInitialized: true,
-        tokens: null,
-      });
+      if (isMountedRef.current) {
+        setAuthState({
+          user: signupResponse.user,
+          isAuthenticated: true,
+          isLoading: false,
+          isInitialized: true,
+          tokens: null,
+        });
 
-      console.log('✅ AuthContext: Signup successful');
+        console.log('✅ AuthContext: Signup successful');
+      }
     } catch (error) {
       console.error('❌ AuthContext: Signup failed:', error);
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false,
-        isAuthenticated: false,
-        user: null 
-      }));
+      if (isMountedRef.current) {
+        setAuthState(prev => ({ 
+          ...prev, 
+          isLoading: false,
+          isAuthenticated: false,
+          user: null 
+        }));
+      }
       throw error;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       console.log('🔐 AuthContext: Logging out...');
+      if (!isMountedRef.current) return;
+      
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
       await authService.logout();
 
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        isInitialized: true,
-        tokens: null,
-      });
+      if (isMountedRef.current) {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          isInitialized: true,
+          tokens: null,
+        });
 
-      console.log('✅ AuthContext: Logout successful');
+        console.log('✅ AuthContext: Logout successful');
+      }
     } catch (error) {
       console.error('❌ AuthContext: Logout error:', error);
       // Even if server logout fails, clear local state
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        isInitialized: true,
-        tokens: null,
-      });
+      if (isMountedRef.current) {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          isInitialized: true,
+          tokens: null,
+        });
+      }
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       console.log('👤 AuthContext: Refreshing user data...');
       if (!authState.isAuthenticated) {
@@ -179,12 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const updatedUser = await authService.getCurrentUser();
       
-      setAuthState(prev => ({
-        ...prev,
-        user: updatedUser,
-      }));
+      if (isMountedRef.current) {
+        setAuthState(prev => ({
+          ...prev,
+          user: updatedUser,
+        }));
 
-      console.log('✅ AuthContext: User data refreshed');
+        console.log('✅ AuthContext: User data refreshed');
+      }
     } catch (error) {
       console.error('❌ AuthContext: Failed to refresh user data:', error);
       // If refresh fails due to authentication, logout
@@ -193,9 +230,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       throw error;
     }
-  };
+  }, [authState.isAuthenticated, logout]);
 
-  const updateProfile = async (updates: Partial<AuthUser>) => {
+  const updateProfile = useCallback(async (updates: Partial<AuthUser>) => {
     try {
       console.log('👤 AuthContext: Updating profile...');
       if (!authState.isAuthenticated) {
@@ -204,17 +241,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const updatedUser = await authService.updateProfile(updates);
       
-      setAuthState(prev => ({
-        ...prev,
-        user: updatedUser,
-      }));
+      if (isMountedRef.current) {
+        setAuthState(prev => ({
+          ...prev,
+          user: updatedUser,
+        }));
 
-      console.log('✅ AuthContext: Profile updated');
+        console.log('✅ AuthContext: Profile updated');
+      }
     } catch (error) {
       console.error('❌ AuthContext: Failed to update profile:', error);
       throw error;
     }
-  };
+  }, [authState.isAuthenticated]);
 
   return (
     <AuthContext.Provider 

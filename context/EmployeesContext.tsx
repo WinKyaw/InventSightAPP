@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { Employee } from '../types';
 import { initialEmployees } from '../constants/Data';
 import { EmployeeService, CreateEmployeeRequest } from '../services';
@@ -53,9 +53,19 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
     if (useApiIntegration && canMakeApiCalls) {
       fetchEmployees();
     }
-  }, [useApiIntegration, canMakeApiCalls, fetchEmployees]);
+  }, [useApiIntegration, canMakeApiCalls]);
 
-  const addEmployee = async (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
+  const fallbackAddEmployee = useCallback((newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
+    const employee: Employee = {
+      ...newEmployee,
+      id: Date.now(),
+      expanded: false,
+      totalCompensation: newEmployee.hourlyRate * 2080, // 40 hours * 52 weeks
+    };
+    setEmployees(prev => [...prev, employee]);
+  }, []);
+
+  const addEmployee = useCallback(async (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
     if (useApiIntegration && canMakeApiCalls) {
       try {
         const createData: CreateEmployeeRequest = {
@@ -79,19 +89,9 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
     } else {
       fallbackAddEmployee(newEmployee);
     }
-  };
+  }, [useApiIntegration, canMakeApiCalls, fallbackAddEmployee]);
 
-  const fallbackAddEmployee = (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
-    const employee: Employee = {
-      ...newEmployee,
-      id: Date.now(),
-      expanded: false,
-      totalCompensation: newEmployee.hourlyRate * 2080, // 40 hours * 52 weeks
-    };
-    setEmployees(prev => [...prev, employee]);
-  };
-
-  const updateEmployee = async (id: number, updates: Partial<Employee>) => {
+  const updateEmployee = useCallback(async (id: number, updates: Partial<Employee>) => {
     if (useApiIntegration && canMakeApiCalls) {
       try {
         const updatedEmployee = await EmployeeService.updateEmployee(id, updates);
@@ -110,9 +110,9 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
         employee.id === id ? { ...employee, ...updates } : employee
       ));
     }
-  };
+  }, [useApiIntegration, canMakeApiCalls]);
 
-  const deleteEmployee = async (id: number) => {
+  const deleteEmployee = useCallback(async (id: number) => {
     if (useApiIntegration && canMakeApiCalls) {
       try {
         await EmployeeService.deleteEmployee(id);
@@ -125,15 +125,15 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
     } else {
       setEmployees(prev => prev.filter(employee => employee.id !== id));
     }
-  };
+  }, [useApiIntegration, canMakeApiCalls]);
 
-  const refreshEmployees = async (): Promise<void> => {
+  const refreshEmployees = useCallback(async (): Promise<void> => {
     if (useApiIntegration && canMakeApiCalls) {
       await fetchEmployees();
     }
-  };
+  }, [useApiIntegration, canMakeApiCalls, fetchEmployees]);
 
-  const searchEmployees = async (query: string): Promise<Employee[]> => {
+  const searchEmployees = useCallback(async (query: string): Promise<Employee[]> => {
     if (useApiIntegration && canMakeApiCalls) {
       try {
         return await EmployeeService.searchEmployees({ query });
@@ -154,9 +154,9 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
         employee.title.toLowerCase().includes(query.toLowerCase())
       );
     }
-  };
+  }, [useApiIntegration, canMakeApiCalls, employees]);
 
-  const getCheckedInEmployees = async (): Promise<Employee[]> => {
+  const getCheckedInEmployees = useCallback(async (): Promise<Employee[]> => {
     if (useApiIntegration && canMakeApiCalls) {
       try {
         return await EmployeeService.getCheckedInEmployees();
@@ -172,7 +172,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
         employee.checkInTime !== 'Not checked in'
       );
     }
-  };
+  }, [useApiIntegration, canMakeApiCalls, employees]);
 
   return (
     <EmployeesContext.Provider value={{
