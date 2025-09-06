@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Reminder } from '../types';
 import { initialReminders } from '../constants/Data';
 import { getSeasonalMultiplier, generateDailyActivities, generateTopItemsForDay } from '../utils/calendarHelpers';
@@ -128,9 +128,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       fetchReminders();
       fetchActivities();
     }
-  }, [useApiIntegration, canMakeApiCalls, fetchReminders, fetchActivities]);
+  }, [useApiIntegration, canMakeApiCalls]);
 
-  const addReminder = async (newReminder: Omit<Reminder, 'id'>): Promise<void> => {
+  const addReminder = useCallback(async (newReminder: Omit<Reminder, 'id'>): Promise<void> => {
     try {
       if (useApiIntegration && canMakeApiCalls) {
         const reminder = await CalendarService.createReminder({
@@ -153,25 +153,25 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       };
       setReminders(prev => [...prev, reminder]);
     }
-  };
+  }, [useApiIntegration, canMakeApiCalls]);
 
-  const refreshCalendarData = async (): Promise<void> => {
+  const refreshCalendarData = useCallback(async (): Promise<void> => {
     if (useApiIntegration && canMakeApiCalls) {
       await Promise.all([fetchReminders(), fetchActivities()]);
     }
-  };
+  }, [useApiIntegration, canMakeApiCalls, fetchReminders, fetchActivities]);
 
-  const navigateCalendar = (direction: number) => {
+  const navigateCalendar = useCallback((direction: number) => {
     const newDate = new Date(currentCalendarDate);
     newDate.setMonth(newDate.getMonth() + direction);
     setCurrentCalendarDate(newDate);
-  };
+  }, [currentCalendarDate]);
 
-  const formatDate = (year: number, month: number, day: number) => {
+  const formatDate = useCallback((year: number, month: number, day: number) => {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  };
+  }, []);
 
-  const handleDayPress = (day: number) => {
+  const handleDayPress = useCallback((day: number) => {
     const dateKey = formatDate(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth(), day);
     const dayData = dailyActivities[dateKey];
     
@@ -179,7 +179,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       setSelectedDayData(dayData);
       setShowDayModal(true);
     }
-  };
+  }, [currentCalendarDate, dailyActivities, formatDate]);
 
   return (
     <CalendarContext.Provider value={{
