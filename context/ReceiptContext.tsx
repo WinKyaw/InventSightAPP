@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useItems } from './ItemsContext';
 import { Receipt, ReceiptItem, Item } from '../types';
@@ -61,9 +61,9 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     if (useApiIntegration && canMakeApiCalls) {
       fetchReceipts();
     }
-  }, [useApiIntegration, canMakeApiCalls, fetchReceipts]);
+  }, [useApiIntegration, canMakeApiCalls]);
 
-  const addItemToReceipt = (item: Item, quantity = 1) => {
+  const addItemToReceipt = useCallback((item: Item, quantity = 1) => {
     if (item.quantity < quantity) {
       Alert.alert('Insufficient Stock', `Only ${item.quantity} units available for ${item.name}`);
       return;
@@ -91,13 +91,13 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       }]);
     }
     Alert.alert('Success', `${item.name} added to receipt!`);
-  };
+  }, [receiptItems]);
 
-  const removeItemFromReceipt = (itemId: number) => {
+  const removeItemFromReceipt = useCallback((itemId: number) => {
     setReceiptItems(receiptItems.filter(item => item.id !== itemId));
-  };
+  }, [receiptItems]);
 
-  const updateReceiptItemQuantity = (itemId: number, newQuantity: number) => {
+  const updateReceiptItemQuantity = useCallback((itemId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeItemFromReceipt(itemId);
       return;
@@ -112,21 +112,26 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     setReceiptItems(receiptItems.map(item =>
       item.id === itemId ? { ...item, quantity: newQuantity, total: item.price * newQuantity } : item
     ));
-  };
+  }, [receiptItems, items, removeItemFromReceipt]);
 
-  const calculateTotal = () => {
+  const calculateTotal = useCallback(() => {
     return receiptItems.reduce((sum, item) => sum + item.total, 0);
-  };
+  }, [receiptItems]);
 
-  const calculateTax = (subtotal: number) => {
+  const calculateTax = useCallback((subtotal: number) => {
     return subtotal * 0.08;
-  };
+  }, []);
 
-  const generateReceiptNumber = () => {
+  const generateReceiptNumber = useCallback(() => {
     return `RCP-${Date.now()}`;
-  };
+  }, []);
 
-  const handleSubmitReceipt = async (): Promise<void> => {
+  const clearReceipt = useCallback(() => {
+    setReceiptItems([]);
+    setCustomerName('');
+  }, []);
+
+  const handleSubmitReceipt = useCallback(async (): Promise<void> => {
     if (receiptItems.length === 0) {
       Alert.alert('Error', 'Please add items to the receipt');
       return;
@@ -223,18 +228,13 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [receiptItems, items, calculateTotal, calculateTax, generateReceiptNumber, customerName, useApiIntegration, canMakeApiCalls, setItems, clearReceipt]);
 
-  const refreshReceipts = async (): Promise<void> => {
+  const refreshReceipts = useCallback(async (): Promise<void> => {
     if (useApiIntegration && canMakeApiCalls) {
       await fetchReceipts();
     }
-  };
-
-  const clearReceipt = () => {
-    setReceiptItems([]);
-    setCustomerName('');
-  };
+  }, [useApiIntegration, canMakeApiCalls, fetchReceipts]);
 
   return (
     <ReceiptContext.Provider value={{
