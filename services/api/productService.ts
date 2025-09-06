@@ -69,7 +69,7 @@ export class ProductService {
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
       })),
-      totalCount: response.totalItems,
+      totalItems: response.totalItems,
       currentPage: (response.currentPage || 0) + 1, // convert 0-based to 1-based if needed
       totalPages: response.totalPages,
       hasMore: response.currentPage < response.totalPages - 1,
