@@ -1356,4 +1356,479 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text,
   },
+
+  // Date Picker styles
+  datePickerInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  datePickerInputText: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  datePickerInputPlaceholder: {
+    color: Colors.textSecondary,
+  },
+  datePickerContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  datePickerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  datePickerSelectors: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 24,
+  },
+  datePickerSelector: {
+    flex: 1,
+  },
+  datePickerSelectorLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  datePickerOptions: {
+    maxHeight: 200,
+  },
+  datePickerOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 4,
+    backgroundColor: Colors.background,
+  },
+  datePickerOptionSelected: {
+    backgroundColor: Colors.primary,
+  },
+  datePickerOptionText: {
+    fontSize: 14,
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  datePickerOptionTextSelected: {
+    color: Colors.white,
+    fontWeight: '500',
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'flex-end',
+  },
+
+  // Modal styles - moved from App.js
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 0,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '90%',
+  },
+
+  // Barcode Scanner styles
+  scannerContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  scannerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  scannerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  scannerContent: {
+    alignItems: 'center',
+  },
+  scannerViewfinder: {
+    width: 200,
+    height: 200,
+    borderWidth: 2,
+    borderColor: '#6B7280',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  scanningIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanLine: {
+    width: '80%',
+    height: 2,
+    backgroundColor: '#F59E0B',
+    opacity: 0.8,
+  },
+  scannerInstructions: {
+    fontSize: 16,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  scannerActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  scannerTips: {
+    backgroundColor: Colors.background,
+    padding: 16,
+    borderRadius: 8,
+    width: '100%',
+  },
+  scannerTipsTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  scannerTip: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    lineHeight: 16,
+  },
+
+  // OCR Scanner styles
+  ocrContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 450,
+    maxHeight: '90%',
+  },
+  ocrHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  ocrTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  ocrContent: {
+    maxHeight: 500,
+  },
+  ocrInitialState: {
+    alignItems: 'center',
+  },
+  ocrViewfinder: {
+    width: 150,
+    height: 200,
+    borderWidth: 2,
+    borderColor: '#6B7280',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderStyle: 'dashed',
+  },
+  ocrInstructions: {
+    fontSize: 16,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  ocrTips: {
+    backgroundColor: Colors.background,
+    padding: 16,
+    borderRadius: 8,
+    width: '100%',
+    marginTop: 16,
+  },
+  ocrTipsTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  ocrTip: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    lineHeight: 16,
+  },
+  ocrProcessingState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  ocrProcessingIndicator: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  ocrProcessingDots: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 16,
+  },
+  ocrProcessingDot: {
+    width: 8,
+    height: 8,
+    backgroundColor: '#F59E0B',
+    borderRadius: 4,
+    opacity: 0.6,
+  },
+  ocrProcessingText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  ocrProcessingSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  ocrPreviewState: {
+    flex: 1,
+  },
+  ocrPreviewTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  ocrTextPreview: {
+    backgroundColor: Colors.background,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    maxHeight: 200,
+  },
+  ocrPreviewText: {
+    fontSize: 12,
+    color: Colors.text,
+    fontFamily: 'monospace',
+    lineHeight: 16,
+  },
+  ocrConfirmInstructions: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  ocrPreviewActions: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'flex-end',
+  },
+
+  // Scanner Options styles
+  scannerOptionsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  scannerOptionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  scannerOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+
+  // Recent Receipts styles
+  recentReceiptsSection: {
+    marginTop: 24,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+  },
+  recentReceiptsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 16,
+  },
+  emptyRecentReceipts: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  emptyRecentReceiptsText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  recentReceiptsList: {
+    gap: 12,
+  },
+  recentReceiptItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+  },
+  recentReceiptInfo: {
+    flex: 1,
+  },
+  recentReceiptNumber: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  recentReceiptCustomer: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  recentReceiptDetails: {
+    alignItems: 'flex-end',
+  },
+  recentReceiptTotal: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  recentReceiptDate: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  viewAllReceiptsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  viewAllReceiptsText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.primary,
+  },
+
+  // Date Filter styles
+  dateFilterContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 12,
+  },
+  dateFilterRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dateFilterField: {
+    flex: 1,
+  },
+  clearDateFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 12,
+    gap: 6,
+    backgroundColor: Colors.background,
+    borderRadius: 6,
+  },
+  clearDateFiltersText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+
+  // Button styles
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  buttonPrimary: {
+    backgroundColor: Colors.primary,
+  },
+  buttonSecondary: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.white,
+  },
+  buttonSecondaryText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+
+  // Input styles
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: Colors.text,
+    backgroundColor: Colors.white,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 8,
+  },
 });

@@ -31,7 +31,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [useApiIntegration, setUseApiIntegration] = useState<boolean>(false);
+  const [useApiIntegration, setUseApiIntegration] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { items, setItems } = useItems();
 

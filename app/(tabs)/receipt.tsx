@@ -7,9 +7,12 @@ import { Header } from '../../components/shared/Header';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { SearchBar } from '../../components/shared/SearchBar';
+import { DatePicker } from '../../components/ui/DatePicker';
+import { BarcodeScanner } from '../../components/ui/BarcodeScanner';
+import { OCRScanner } from '../../components/ui/OCRScanner';
 import { AddItemToReceiptModal } from '../../components/modals/AddItemToReceiptModal';
 import { ReceiptService } from '../../services/api/receiptService';
-import { Receipt } from '../../types';
+import { Receipt, Item } from '../../types';
 import { styles } from '../../constants/Styles';
 
 type TabType = 'create' | 'list';
@@ -44,12 +47,28 @@ export default function ReceiptScreen() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Load receipts when switching to list tab
+  // Date filtering state
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+
+  // Scanner state
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showOCRScanner, setShowOCRScanner] = useState(false);
+
+  // Items context for adding scanned items
+  const { items, addItem } = useItems();
+
+  // Load receipts when switching to list tab or on component mount
   useEffect(() => {
     if (activeTab === 'list') {
       loadReceipts();
     }
   }, [activeTab]);
+
+  // Load receipts on component mount for recent receipts in create tab
+  useEffect(() => {
+    loadReceipts();
+  }, []);
 
   const loadReceipts = async (showRefreshing = false) => {
     try {
@@ -78,6 +97,9 @@ export default function ReceiptScreen() {
   // Filter and sort receipts
   const getFilteredAndSortedReceipts = () => {
     let filtered = receipts;
+    
+    // Apply date range filter first
+    filtered = getFilteredReceiptsByDate(filtered);
     
     // Apply search filter
     if (searchTerm.trim()) {
@@ -152,6 +174,42 @@ export default function ReceiptScreen() {
         value={searchTerm}
         onChangeText={setSearchTerm}
       />
+
+      {/* Date Range Filters */}
+      <View style={styles.dateFilterContainer}>
+        <View style={styles.dateFilterRow}>
+          <View style={styles.dateFilterField}>
+            <DatePicker
+              label="Start Date"
+              value={startDate}
+              onChange={setStartDate}
+              placeholder="Any date"
+            />
+          </View>
+          <View style={styles.dateFilterField}>
+            <DatePicker
+              label="End Date"
+              value={endDate}
+              onChange={setEndDate}
+              placeholder="Any date"
+              minimumDate={startDate || undefined}
+            />
+          </View>
+        </View>
+        
+        {(startDate || endDate) && (
+          <TouchableOpacity
+            style={styles.clearDateFiltersButton}
+            onPress={() => {
+              setStartDate(null);
+              setEndDate(null);
+            }}
+          >
+            <Ionicons name="close" size={16} color="#6B7280" />
+            <Text style={styles.clearDateFiltersText}>Clear Date Filters</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       
       <View style={styles.employeeStats}>
         <TouchableOpacity 
@@ -282,7 +340,61 @@ export default function ReceiptScreen() {
   };
 
   const getCurrentDateTime = () => {
-    return '2025-08-25 01:34:29';
+    return new Date().toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  const handleBarcodeScan = (data: { name: string; price: string }) => {
+    const newItem: Omit<Item, 'id'> = {
+      name: data.name,
+      price: parseFloat(data.price),
+      quantity: 1,
+      total: parseFloat(data.price),
+      category: 'Beverages', // Default category for scanned items
+      salesCount: 0,
+      expanded: false
+    };
+    
+    addItem(newItem);
+  };
+
+  const handleOCRScan = (items: Array<{ name: string; price: number; quantity: number }>) => {
+    items.forEach(item => {
+      const newItem: Omit<Item, 'id'> = {
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.price * item.quantity,
+        category: 'Food', // Default category for OCR items
+        salesCount: 0,
+        expanded: false
+      };
+      
+      addItem(newItem);
+    });
+  };
+
+  // Filter receipts by date range
+  const getFilteredReceiptsByDate = (receiptsList: Receipt[]) => {
+    if (!startDate && !endDate) return receiptsList;
+    
+    return receiptsList.filter(receipt => {
+      if (!receipt.dateTime) return true;
+      
+      const receiptDate = new Date(receipt.dateTime);
+      const start = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) : null;
+      const end = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59) : null;
+      
+      if (start && receiptDate < start) return false;
+      if (end && receiptDate > end) return false;
+      return true;
+    });
   };
 
   return (
@@ -373,6 +485,25 @@ export default function ReceiptScreen() {
           <Text style={styles.addItemToReceiptText}>Add Items to Receipt</Text>
         </TouchableOpacity>
 
+        {/* Scanner Options */}
+        <View style={styles.scannerOptionsContainer}>
+          <TouchableOpacity 
+            style={styles.scannerOptionButton}
+            onPress={() => setShowBarcodeScanner(true)}
+          >
+            <Ionicons name="scan" size={20} color="#3B82F6" />
+            <Text style={styles.scannerOptionText}>Barcode Scan</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.scannerOptionButton}
+            onPress={() => setShowOCRScanner(true)}
+          >
+            <Ionicons name="document-text" size={20} color="#10B981" />
+            <Text style={styles.scannerOptionText}>OCR Receipt</Text>
+          </TouchableOpacity>
+        </View>
+
         {receiptItems.length > 0 && (
           <View style={styles.receiptItemsCard}>
             <Text style={styles.receiptItemsTitle}>Items in Receipt</Text>
@@ -460,6 +591,43 @@ export default function ReceiptScreen() {
           </View>
         )}
 
+        {/* Recent Receipt History Section */}
+        <View style={styles.recentReceiptsSection}>
+          <Text style={styles.recentReceiptsTitle}>Recent Receipts</Text>
+          {receipts.length === 0 ? (
+            <View style={styles.emptyRecentReceipts}>
+              <Text style={styles.emptyRecentReceiptsText}>No recent receipts</Text>
+            </View>
+          ) : (
+            <View style={styles.recentReceiptsList}>
+              {receipts.slice(0, 3).map((receipt, index) => (
+                <View key={receipt.id || index} style={styles.recentReceiptItem}>
+                  <View style={styles.recentReceiptInfo}>
+                    <Text style={styles.recentReceiptNumber}>#{receipt.receiptNumber}</Text>
+                    <Text style={styles.recentReceiptCustomer}>
+                      {receipt.customerName || 'Walk-in Customer'}
+                    </Text>
+                  </View>
+                  <View style={styles.recentReceiptDetails}>
+                    <Text style={styles.recentReceiptTotal}>${receipt.total.toFixed(2)}</Text>
+                    <Text style={styles.recentReceiptDate}>
+                      {receipt.dateTime ? new Date(receipt.dateTime).toLocaleDateString() : 'Today'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+              
+              <TouchableOpacity 
+                style={styles.viewAllReceiptsButton}
+                onPress={() => setActiveTab('list')}
+              >
+                <Text style={styles.viewAllReceiptsText}>View All Receipts</Text>
+                <Ionicons name="arrow-forward" size={16} color="#F59E0B" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         {receiptItems.length === 0 && (
           <View style={styles.emptyReceiptCard}>
             <Ionicons name="receipt-outline" size={64} color="#D1D5DB" />
@@ -477,6 +645,18 @@ export default function ReceiptScreen() {
       <AddItemToReceiptModal 
         visible={showAddToReceipt}
         onClose={() => setShowAddToReceipt(false)}
+      />
+
+      <BarcodeScanner
+        visible={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScanResult={handleBarcodeScan}
+      />
+
+      <OCRScanner
+        visible={showOCRScanner}
+        onClose={() => setShowOCRScanner(false)}
+        onOCRResult={handleOCRScan}
       />
     </SafeAreaView>
   );

@@ -137,7 +137,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
         setProducts(prev => [...prev, ...response.products]);
       }
 
-      setTotalProducts(response.totalCount);
+      setTotalProducts(response.totalItems || 0);
       setCurrentPage(response.currentPage);
       setTotalPages(response.totalPages);
       setHasMore(response.hasMore);

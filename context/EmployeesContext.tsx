@@ -23,8 +23,8 @@ interface EmployeesContextType {
 const EmployeesContext = createContext<EmployeesContextType | undefined>(undefined);
 
 export function EmployeesProvider({ children }: { children: ReactNode }) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-  const [useApiIntegration, setUseApiIntegration] = useState<boolean>(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [useApiIntegration, setUseApiIntegration] = useState<boolean>(true);
 
   // Authentication readiness check
   const { canMakeApiCalls } = useApiReadiness();
@@ -43,6 +43,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
     if (useApiIntegration && apiEmployees && Array.isArray(apiEmployees)) {
       setEmployees(apiEmployees);
     } else if (!useApiIntegration) {
+      // Only fallback to mock data when API integration is explicitly disabled
       setEmployees(initialEmployees);
     }
   }, [useApiIntegration, apiEmployees]);
