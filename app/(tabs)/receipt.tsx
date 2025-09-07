@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   StatusBar,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -23,178 +24,7 @@ import SmartScanner from "../../components/ui/SmartScanner";
 import { useReceipt } from "../../context/ReceiptContext";
 import { useItems } from "../../context/ItemsContext";
 import { Receipt, Item } from "../../constants/types";
-import ReceiptService from "../../services/ReceiptService";
-
-// You can move these styles to a separate file if preferred
-const styles = {
-  container: { flex: 1, backgroundColor: "#fff" },
-  receiptContainer: { flex: 1, padding: 16 },
-  employeeStats: { flexDirection: "row", marginBottom: 12 },
-  employeeStatCard: {
-    flex: 1,
-    backgroundColor: "#fff7e6",
-    padding: 12,
-    borderRadius: 12,
-    marginHorizontal: 4,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-  },
-  employeeStatValue: { fontSize: 16, fontWeight: "bold", marginRight: 6 },
-  employeeStatLabel: { fontSize: 13, color: "#6B7280" },
-  addItemToReceiptButton: {
-    flexDirection: "row",
-    backgroundColor: "#F59E0B",
-    padding: 14,
-    borderRadius: 12,
-    marginVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addItemToReceiptText: {
-    color: "#fff",
-    fontWeight: "600",
-    marginLeft: 8,
-    fontSize: 16,
-  },
-  scannerOptionsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginVertical: 10,
-  },
-  scannerOptionButton: {
-    flexDirection: "row",
-    backgroundColor: "#e0e7ff",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginHorizontal: 8,
-  },
-  scannerOptionText: {
-    marginLeft: 8,
-    color: "#3B82F6",
-    fontWeight: "500",
-  },
-  receiptInfoCard: {
-    backgroundColor: "#fffbe9",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 14,
-  },
-  receiptInfoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  receiptInfoItem: { flexDirection: "row", alignItems: "center" },
-  receiptInfoLabel: { fontWeight: "bold", color: "#F59E0B", marginLeft: 6 },
-  receiptInfoValue: { fontWeight: "500", color: "#6B7280" },
-  customerInputSection: { marginTop: 8 },
-  customerInputLabel: { fontWeight: "600", fontSize: 14, marginBottom: 2 },
-  customerInput: { borderColor: "#ddd", borderWidth: 1, borderRadius: 8, padding: 8 },
-  fieldErrorContainer: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-  fieldErrorText: { color: "#EF4444", marginLeft: 4, fontSize: 12 },
-  receiptItemsCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    marginVertical: 16,
-    elevation: 2,
-  },
-  receiptItemsTitle: { fontWeight: "bold", fontSize: 16, marginBottom: 10 },
-  receiptItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
-  },
-  receiptItemInfo: {},
-  receiptItemName: { fontWeight: "600", fontSize: 15 },
-  receiptItemPrice: { color: "#6B7280", marginTop: 2, fontSize: 13 },
-  receiptItemControls: { flexDirection: "row", alignItems: "center" },
-  quantityControls: { flexDirection: "row", alignItems: "center", marginRight: 12 },
-  quantityButton: {
-    backgroundColor: "#FEF3C7",
-    borderRadius: 6,
-    padding: 2,
-    marginHorizontal: 2,
-  },
-  quantityText: { fontWeight: "bold", fontSize: 15, marginHorizontal: 6 },
-  receiptItemTotal: { fontWeight: "bold", marginRight: 10, fontSize: 15 },
-  removeItemButton: { marginLeft: 3, padding: 2 },
-  receiptTotals: { marginTop: 16 },
-  totalRow: { flexDirection: "row", justifyContent: "space-between", marginVertical: 2 },
-  totalLabel: { fontWeight: "600", fontSize: 14 },
-  totalValue: { fontWeight: "bold", fontSize: 14 },
-  grandTotalRow: { marginTop: 6 },
-  grandTotalLabel: { fontWeight: "bold", fontSize: 16 },
-  grandTotalValue: { fontWeight: "bold", fontSize: 16, color: "#10B981" },
-  submitReceiptButton: { marginTop: 16 },
-  apiToggleButton: {
-    marginTop: 12,
-    alignSelf: "center",
-    backgroundColor: "#e0e7ff",
-    borderRadius: 8,
-    padding: 6,
-    paddingHorizontal: 12,
-  },
-  apiToggleText: { color: "#3B82F6", fontWeight: "600" },
-  errorContainer: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-  errorText: { color: "#EF4444", marginLeft: 6, fontSize: 13 },
-  recentReceiptsSection: { marginTop: 16 },
-  recentReceiptsTitle: { fontSize: 15, fontWeight: "bold", marginBottom: 6 },
-  emptyRecentReceipts: { alignItems: "center", padding: 14 },
-  emptyRecentReceiptsText: { color: "#aaa", fontSize: 13 },
-  recentReceiptsList: { marginTop: 6 },
-  recentReceiptItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    backgroundColor: "#fffbe9",
-    borderRadius: 8,
-    padding: 8,
-  },
-  recentReceiptInfo: {},
-  recentReceiptNumber: { fontWeight: "bold" },
-  recentReceiptCustomer: { color: "#555" },
-  recentReceiptDetails: { alignItems: "flex-end" },
-  recentReceiptTotal: { fontWeight: "bold", color: "#10B981" },
-  recentReceiptDate: { color: "#555", fontSize: 12 },
-  viewAllReceiptsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-    alignSelf: "flex-end",
-  },
-  viewAllReceiptsText: { color: "#F59E0B", fontWeight: "bold", marginRight: 4 },
-  emptyReceiptCard: {
-    alignItems: "center",
-    marginVertical: 32,
-    padding: 18,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-  },
-  emptyReceiptTitle: { fontWeight: "bold", fontSize: 17, marginTop: 18 },
-  emptyReceiptText: { color: "#6B7280", marginTop: 4, fontSize: 13 },
-  dateFilterContainer: { marginVertical: 10 },
-  dateFilterRow: { flexDirection: "row", marginBottom: 4 },
-  dateFilterField: { flex: 1, marginHorizontal: 4 },
-  clearDateFiltersButton: {
-    alignSelf: "flex-end",
-    margin: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 8,
-  },
-  clearDateFiltersText: { color: "#F59E0B", fontWeight: "bold" },
-  employeesList: {},
-  loadingContainer: { alignItems: "center", marginTop: 16 },
-  loadingText: { color: "#F59E0B", marginTop: 8 },
-  errorHeader: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
-};
+import ReceiptService from "../../services/api/receiptService";
 
 type TabType = "create" | "list";
 
@@ -213,7 +43,10 @@ export default function ReceiptScreen() {
     handleSubmitReceipt,
     useApiIntegration,
     setUseApiIntegration,
+    addItemToReceipt,
   } = useReceipt();
+
+  const { items, addItem } = useItems();
 
   const [activeTab, setActiveTab] = useState<TabType>("create");
   const [showAddToReceipt, setShowAddToReceipt] = useState(false);
@@ -234,9 +67,6 @@ export default function ReceiptScreen() {
 
   // SmartScanner state
   const [showSmartScanner, setShowSmartScanner] = useState(false);
-
-  // Items context for adding scanned items
-  const { items, addItem } = useItems();
 
   useEffect(() => {
     if (activeTab === "list") {
@@ -472,41 +302,87 @@ export default function ReceiptScreen() {
   );
 
   // SmartScanner handlers
-  const handleSmartBarcodeDetected = (barcode: string) => {
+  const handleSmartBarcodeDetected = useCallback((barcode: string) => {
+    console.log("Barcode detected:", barcode);
+    
+    // Find item by barcode in inventory
     const item = items.find((item) => item.barcode === barcode);
     if (item) {
-      addItem({
-        ...item,
-        quantity: 1,
-        total: item.price * 1,
-      });
+      // Add item to receipt using the receipt context method
+      addItemToReceipt(item, 1);
+      Alert.alert("Item Added!", `${item.name} has been added to the receipt.`);
     } else {
-      Alert.alert("Not Found", `No item found for barcode: ${barcode}`);
+      Alert.alert(
+        "Item Not Found", 
+        `No item found with barcode: ${barcode}`,
+        [
+          { text: "OK" },
+          { 
+            text: "Add Manually", 
+            onPress: () => setShowAddToReceipt(true) 
+          }
+        ]
+      );
     }
-  };
+    
+    // Close scanner after processing
+    setShowSmartScanner(false);
+  }, [items, addItemToReceipt]);
 
-  const handleSmartOcrDetected = (ocrText: string) => {
-    const lines = ocrText.split("\n");
-    let found = false;
-    lines.forEach((line) => {
-      items.forEach((item) => {
-        if (line.toLowerCase().includes(item.name.toLowerCase())) {
-          found = true;
-          addItem({
-            ...item,
-            quantity: 1,
-            total: item.price * 1,
-          });
-        }
-      });
-    });
-    if (!found) {
-      Alert.alert("No items recognized", "No known items found in OCR result.");
+  const handleSmartOcrDetected = useCallback((ocrText: string) => {
+    console.log("OCR text detected:", ocrText);
+    
+    if (!ocrText || ocrText.trim() === "") {
+      Alert.alert("No Text Found", "No readable text was found in the image.");
+      setShowSmartScanner(false);
+      return;
     }
-  };
+
+    const lines = ocrText.split("\n").map(line => line.trim()).filter(line => line.length > 0);
+    let foundItems: Item[] = [];
+    
+    // Search for items by name matching
+    lines.forEach((line) => {
+      const foundItem = items.find((item) => 
+        item.name.toLowerCase().includes(line.toLowerCase()) ||
+        line.toLowerCase().includes(item.name.toLowerCase())
+      );
+      
+      if (foundItem && !foundItems.find(fi => fi.id === foundItem.id)) {
+        foundItems.push(foundItem);
+      }
+    });
+
+    if (foundItems.length > 0) {
+      // Add all found items to receipt
+      foundItems.forEach(item => {
+        addItemToReceipt(item, 1);
+      });
+      
+      Alert.alert(
+        "Items Added!", 
+        `Found and added ${foundItems.length} item(s): ${foundItems.map(item => item.name).join(", ")}`
+      );
+    } else {
+      Alert.alert(
+        "No Items Recognized", 
+        "No matching items found in the scanned text. You can add items manually.",
+        [
+          { text: "OK" },
+          { 
+            text: "Add Manually", 
+            onPress: () => setShowAddToReceipt(true) 
+          }
+        ]
+      );
+    }
+    
+    // Close scanner after processing
+    setShowSmartScanner(false);
+  }, [items, addItemToReceipt]);
 
   const subtotal = calculateTotal();
-  const tax = calculateTax();
+  const tax = calculateTax(subtotal);
   const total = subtotal + tax;
 
   return (
@@ -614,6 +490,7 @@ export default function ReceiptScreen() {
             <Text style={styles.addItemToReceiptText}>Add Items to Receipt</Text>
           </TouchableOpacity>
 
+          {/* SmartScanner Option */}
           <View style={styles.scannerOptionsContainer}>
             <TouchableOpacity
               style={styles.scannerOptionButton}
@@ -621,6 +498,13 @@ export default function ReceiptScreen() {
             >
               <Ionicons name="scan" size={20} color="#3B82F6" />
               <Text style={styles.scannerOptionText}>Smart Scan</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.scannerOptionButton}
+              onPress={() => setShowAddToReceipt(true)}
+            >
+              <Ionicons name="search" size={20} color="#10B981" />
+              <Text style={[styles.scannerOptionText, { color: "#10B981" }]}>Browse Items</Text>
             </TouchableOpacity>
           </View>
 
@@ -755,7 +639,7 @@ export default function ReceiptScreen() {
               <Ionicons name="receipt-outline" size={64} color="#D1D5DB" />
               <Text style={styles.emptyReceiptTitle}>No Items Added</Text>
               <Text style={styles.emptyReceiptText}>
-                Tap "Add Items to Receipt" to start creating a transaction
+                Tap "Add Items to Receipt" to start creating a transaction, or use "Smart Scan" to quickly scan barcodes and recognize text
               </Text>
             </View>
           )}
@@ -774,8 +658,192 @@ export default function ReceiptScreen() {
         onClose={() => setShowSmartScanner(false)}
         onBarcodeDetected={handleSmartBarcodeDetected}
         onOcrDetected={handleSmartOcrDetected}
-        ocrApiUrl="http://<YOUR_BACKEND_URL>:<PORT>/api/ocr/myanmar"
       />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff" },
+  receiptContainer: { flex: 1, padding: 16 },
+  employeeStats: { flexDirection: "row", marginBottom: 12 },
+  employeeStatCard: {
+    flex: 1,
+    backgroundColor: "#fff7e6",
+    padding: 12,
+    borderRadius: 12,
+    marginHorizontal: 4,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  employeeStatValue: { fontSize: 16, fontWeight: "bold", marginRight: 6 },
+  employeeStatLabel: { fontSize: 13, color: "#6B7280" },
+  addItemToReceiptButton: {
+    flexDirection: "row",
+    backgroundColor: "#F59E0B",
+    padding: 14,
+    borderRadius: 12,
+    marginVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addItemToReceiptText: {
+    color: "#fff",
+    fontWeight: "600",
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  scannerOptionsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginVertical: 10,
+  },
+  scannerOptionButton: {
+    flexDirection: "row",
+    backgroundColor: "#e0e7ff",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 8,
+    flex: 1,
+    justifyContent: "center",
+  },
+  scannerOptionText: {
+    marginLeft: 8,
+    color: "#3B82F6",
+    fontWeight: "500",
+  },
+  receiptInfoCard: {
+    backgroundColor: "#fffbe9",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 14,
+  },
+  receiptInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  receiptInfoItem: { flexDirection: "row", alignItems: "center" },
+  receiptInfoLabel: { fontWeight: "bold", color: "#F59E0B", marginLeft: 6 },
+  receiptInfoValue: { fontWeight: "500", color: "#6B7280" },
+  customerInputSection: { marginTop: 8 },
+  customerInputLabel: { fontWeight: "600", fontSize: 14, marginBottom: 2 },
+  customerInput: { borderColor: "#ddd", borderWidth: 1, borderRadius: 8, padding: 8 },
+  fieldErrorContainer: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  fieldErrorText: { color: "#EF4444", marginLeft: 4, fontSize: 12 },
+  receiptItemsCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    marginVertical: 16,
+    elevation: 2,
+  },
+  receiptItemsTitle: { fontWeight: "bold", fontSize: 16, marginBottom: 10 },
+  receiptItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  receiptItemInfo: {},
+  receiptItemName: { fontWeight: "600", fontSize: 15 },
+  receiptItemPrice: { color: "#6B7280", marginTop: 2, fontSize: 13 },
+  receiptItemControls: { flexDirection: "row", alignItems: "center" },
+  quantityControls: { flexDirection: "row", alignItems: "center", marginRight: 12 },
+  quantityButton: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 6,
+    padding: 2,
+    marginHorizontal: 2,
+  },
+  quantityText: { fontWeight: "bold", fontSize: 15, marginHorizontal: 6 },
+  receiptItemTotal: { fontWeight: "bold", marginRight: 10, fontSize: 15 },
+  removeItemButton: { marginLeft: 3, padding: 2 },
+  receiptTotals: { marginTop: 16 },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", marginVertical: 2 },
+  totalLabel: { fontWeight: "600", fontSize: 14 },
+  totalValue: { fontWeight: "bold", fontSize: 14 },
+  grandTotalRow: { marginTop: 6 },
+  grandTotalLabel: { fontWeight: "bold", fontSize: 16 },
+  grandTotalValue: { fontWeight: "bold", fontSize: 16, color: "#10B981" },
+  submitReceiptButton: { marginTop: 16 },
+  apiToggleButton: {
+    marginTop: 12,
+    alignSelf: "center",
+    backgroundColor: "#e0e7ff",
+    borderRadius: 8,
+    padding: 6,
+    paddingHorizontal: 12,
+  },
+  apiToggleText: { color: "#3B82F6", fontWeight: "600" },
+  errorContainer: { flexDirection: "row", alignItems: "center", marginTop: 8 },
+  errorText: { color: "#EF4444", marginLeft: 6, fontSize: 13 },
+  recentReceiptsSection: { marginTop: 16 },
+  recentReceiptsTitle: { fontSize: 15, fontWeight: "bold", marginBottom: 6 },
+  emptyRecentReceipts: { alignItems: "center", padding: 14 },
+  emptyRecentReceiptsText: { color: "#aaa", fontSize: 13 },
+  recentReceiptsList: { marginTop: 6 },
+  recentReceiptItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    backgroundColor: "#fffbe9",
+    borderRadius: 8,
+    padding: 8,
+  },
+  recentReceiptInfo: {},
+  recentReceiptNumber: { fontWeight: "bold" },
+  recentReceiptCustomer: { color: "#555" },
+  recentReceiptDetails: { alignItems: "flex-end" },
+  recentReceiptTotal: { fontWeight: "bold", color: "#10B981" },
+  recentReceiptDate: { color: "#555", fontSize: 12 },
+  viewAllReceiptsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    alignSelf: "flex-end",
+  },
+  viewAllReceiptsText: { color: "#F59E0B", fontWeight: "bold", marginRight: 4 },
+  emptyReceiptCard: {
+    alignItems: "center",
+    marginVertical: 32,
+    padding: 18,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+  },
+  emptyReceiptTitle: { fontWeight: "bold", fontSize: 17, marginTop: 18 },
+  emptyReceiptText: { color: "#6B7280", marginTop: 4, fontSize: 13, textAlign: "center" },
+  dateFilterContainer: { marginVertical: 10 },
+  dateFilterRow: { flexDirection: "row", marginBottom: 4 },
+  dateFilterField: { flex: 1, marginHorizontal: 4 },
+  clearDateFiltersButton: {
+    alignSelf: "flex-end",
+    margin: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    backgroundColor: "#f3f4f6",
+    borderRadius: 8,
+  },
+  clearDateFiltersText: { color: "#F59E0B", fontWeight: "bold" },
+  employeesList: {},
+  loadingContainer: { alignItems: "center", marginTop: 16 },
+  loadingText: { color: "#F59E0B", marginTop: 8 },
+  errorHeader: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  retryButton: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+    marginTop: 8,
+  },
+  retryButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+});

@@ -268,10 +268,10 @@ export interface UpdateStockRequest {
 
 export interface ProductsListResponse {
   products: Product[];
-  totalItems: number;
   currentPage: number;
   totalPages: number;
   hasMore: boolean;
+  totalItems: number;
 }
 
 export interface SearchProductsParams {
