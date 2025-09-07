@@ -15,7 +15,7 @@ type Props = {
 const SmartScanner: React.FC<Props> = ({ visible, onClose, onBarcodeDetected, onOcrDetected }) => {
   const cameraRef = useRef<Camera>(null);
   const devices = useCameraDevices();
-  const device = devices.back;
+  const device = devices.find((d) => d.position === 'back');
   const [isProcessing, setIsProcessing] = useState(false);
   const [barcodeHandled, setBarcodeHandled] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -40,8 +40,9 @@ const SmartScanner: React.FC<Props> = ({ visible, onClose, onBarcodeDetected, on
     if (!cameraRef.current) return;
     setIsProcessing(true);
     try {
-      const photo = await cameraRef.current.takePhoto({ qualityPrioritization: "quality" });
-      const uri = photo.path ? `file://${photo.path}` : undefined;
+      const photo = await cameraRef.current.takePhoto();
+    //   const uri = photo.path ? `file://${photo.path}` : undefined;
+      const uri = photo.path ? `file://${photo.path}` : null;
       setPhotoUri(uri);
 
       if (uri) {
@@ -91,7 +92,6 @@ const SmartScanner: React.FC<Props> = ({ visible, onClose, onBarcodeDetected, on
           isActive={visible && !isProcessing}
           photo={true}
           frameProcessor={frameProcessor}
-          frameProcessorFps={5}
         />
         <View style={styles.overlay}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
