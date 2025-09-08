@@ -105,21 +105,61 @@ export function OCRScanner({ visible, onClose, onOCRResult }: OCRScannerProps) {
       type,
     } as any);
 
-    // Make the API call to Myanmar OCR endpoint
-    const response = await fetch('/api/ocr/myanmar', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    try {
+      // Make the API call to Myanmar OCR endpoint
+      const response = await fetch('/api/ocr/myanmar', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`OCR API error: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`OCR API error: ${response.status}`);
+      }
+
+      const ocrText = await response.text();
+      return ocrText;
+    } catch (error) {
+      console.log('OCR API not available, using mock data for testing');
+      
+      // Fallback mock OCR results for testing when API is not available
+      const mockReceiptTexts = [
+        `COFFEE SHOP RECEIPT
+---------------------
+Coffee Premium      $4.50
+Croissant          $3.75
+Tea                $3.25
+---------------------
+SUBTOTAL          $11.50
+TAX                $0.92
+TOTAL             $12.42`,
+
+        `GROCERY RECEIPT
+---------------------
+Muffin             $2.99  
+Sandwich           $8.99
+Salad              $6.50
+---------------------
+TOTAL              $18.48`,
+
+        `RESTAURANT RECEIPT
+---------------------
+Coffee             $4.50
+Tea                $3.25
+Croissant          $3.75
+Muffin             $2.99
+---------------------
+SUBTOTAL          $14.49
+TIP               $2.90
+TOTAL             $17.39`
+      ];
+      
+      // Return a random mock receipt for demonstration
+      const randomReceipt = mockReceiptTexts[Math.floor(Math.random() * mockReceiptTexts.length)];
+      return randomReceipt;
     }
-
-    const ocrText = await response.text();
-    return ocrText;
   };
 
   const parseReceiptText = (text: string) => {
@@ -188,6 +228,24 @@ export function OCRScanner({ visible, onClose, onOCRResult }: OCRScannerProps) {
                 <Text style={styles.ocrInstructions}>
                   Take a photo of a receipt or select from gallery to automatically extract items and prices
                 </Text>
+                
+                <View style={{
+                  backgroundColor: '#FFF3CD',
+                  padding: 12,
+                  borderRadius: 8,
+                  marginVertical: 12,
+                  borderWidth: 1,
+                  borderColor: '#FFE69C'
+                }}>
+                  <Text style={{
+                    fontSize: 12,
+                    color: '#856404',
+                    textAlign: 'center',
+                    fontStyle: 'italic'
+                  }}>
+                    Note: This demo uses mock OCR data when the backend is not available
+                  </Text>
+                </View>
                 
                 <View style={styles.scannerOptionsContainer}>
                   <TouchableOpacity
