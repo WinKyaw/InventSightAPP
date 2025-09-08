@@ -9,7 +9,7 @@ import {
   Alert,
   Text,
 } from "react-native";
-import { Camera, CameraType } from "expo-camera";
+import { CameraView, CameraType, Camera } from "expo-camera";
 import { BarCodeScanner, BarCodeScannerResult } from "expo-barcode-scanner";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -26,7 +26,7 @@ const SmartScanner: React.FC<Props> = ({
   onBarcodeDetected,
   onOcrDetected,
 }) => {
-  const cameraRef = useRef<Camera>(null);
+  const cameraRef = useRef<CameraView>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [hasBarcodePermission, setHasBarcodePermission] = useState<boolean | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -130,12 +130,11 @@ const SmartScanner: React.FC<Props> = ({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <Camera
+        <CameraView
           ref={cameraRef}
           style={styles.camera}
-          type={CameraType.back}
-          onBarCodeScanned={barcodeHandled ? undefined : onBarCodeScanned}
-          ratio="16:9"
+          facing="back"
+          onBarcodeScanned={barcodeHandled ? undefined : onBarCodeScanned}
         />
         <View style={styles.overlay}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
