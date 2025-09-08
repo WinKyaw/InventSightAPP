@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Modal, Alert, ScrollView, Image } from 'r
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { styles } from '../../constants/Styles';
+import LiveOCRScanner from './LiveOCRScanner';
 
 interface OCRScannerProps {
   visible: boolean;
@@ -14,6 +15,7 @@ export function OCRScanner({ visible, onClose, onOCRResult }: OCRScannerProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showLiveOcr, setShowLiveOcr] = useState(false);
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -262,6 +264,11 @@ TOTAL             $17.39`
                   >
                     <Ionicons name="images" size={20} color="#6B7280" />
                     <Text style={styles.scannerOptionText}>From Gallery</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.scannerOptionButton} onPress={() => setShowLiveOcr(true)}>
+                    <Ionicons name="scan" size={20} color="#6B7280" />
+                    <Text style={styles.scannerOptionText}>Live OCR</Text>
                   </TouchableOpacity>
                 </View>
                 

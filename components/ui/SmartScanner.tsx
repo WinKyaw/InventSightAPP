@@ -10,7 +10,7 @@ import {
   Text,
 } from "react-native";
 import { CameraView, CameraType, Camera } from "expo-camera";
-import { BarCodeScanner, BarCodeScannerResult } from "expo-barcode-scanner";
+import { BarCodeScannerResult } from "expo-barcode-scanner";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Props = {
