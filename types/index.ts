@@ -9,6 +9,7 @@ export interface Item {
   salesCount: number;
   description?: string;
   sku?: string;
+  barcode?: string;
   minStock?: number;
   maxStock?: number;
   createdAt?: string;

@@ -11,7 +11,7 @@ export interface Item {
   minStock?: number;
   salesCount: number;
   total: number;
-  expanded?: boolean;
+  expanded: boolean;
   imageUrl?: string;
   sku?: string;
   createdAt?: string;

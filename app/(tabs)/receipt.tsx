@@ -16,14 +16,15 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Header from "../../components/ui/Header";
 import SearchBar from "../../components/ui/SearchBar";
 import DatePicker from "../../components/ui/DatePicker";
-import Input from "../../components/ui/Input";
-import Button from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Button } from "../../components/ui/Button";
 import AddItemToReceiptModal from "../../components/modals/AddItemToReceiptModal";
 import SmartScanner from "../../components/ui/SmartScanner";
+import { OCRScanner } from "../../components/ui/OCRScanner";
 
 import { useReceipt } from "../../context/ReceiptContext";
 import { useItems } from "../../context/ItemsContext";
-import { Receipt, Item } from "../../constants/types";
+import { Receipt, Item } from "../../types";
 import ReceiptService from "../../services/api/receiptService";
 
 type TabType = "create" | "list";
@@ -67,6 +68,8 @@ export default function ReceiptScreen() {
 
   // SmartScanner state
   const [showSmartScanner, setShowSmartScanner] = useState(false);
+  // OCRScanner state
+  const [showOCRScanner, setShowOCRScanner] = useState(false);
 
   useEffect(() => {
     if (activeTab === "list") {
@@ -110,12 +113,23 @@ export default function ReceiptScreen() {
       );
     }
     filtered = filtered.sort((a, b) => {
-      let valA: any = a[sortBy];
-      let valB: any = b[sortBy];
+      let valA: any;
+      let valB: any;
+      
       if (sortBy === "date") {
         valA = new Date(a.dateTime || 0).getTime();
         valB = new Date(b.dateTime || 0).getTime();
+      } else if (sortBy === "customer") {
+        valA = a.customerName || "";
+        valB = b.customerName || "";
+      } else if (sortBy === "total") {
+        valA = a.total;
+        valB = b.total;
+      } else {
+        valA = (a as any)[sortBy];
+        valB = (b as any)[sortBy];
       }
+      
       if (valA < valB) return sortOrder === "asc" ? -1 : 1;
       if (valA > valB) return sortOrder === "asc" ? 1 : -1;
       return 0;
@@ -381,6 +395,65 @@ export default function ReceiptScreen() {
     setShowSmartScanner(false);
   }, [items, addItemToReceipt]);
 
+  // Enhanced OCR result handler with better item matching and review capability
+  const handleOCRResult = useCallback((extractedItems: Array<{ name: string; price: number; quantity: number }>) => {
+    console.log("OCR items detected:", extractedItems);
+    
+    if (!extractedItems || extractedItems.length === 0) {
+      Alert.alert("No Items Found", "No items were extracted from the receipt.");
+      return;
+    }
+
+    let matchedItems: Item[] = [];
+    let unmatchedItems: Array<{ name: string; price: number; quantity: number }> = [];
+
+    // Try to match extracted items with inventory
+    extractedItems.forEach((extractedItem) => {
+      const foundItem = items.find((item) => 
+        item.name.toLowerCase().includes(extractedItem.name.toLowerCase()) ||
+        extractedItem.name.toLowerCase().includes(item.name.toLowerCase()) ||
+        // Also try partial matching
+        extractedItem.name.toLowerCase().split(' ').some(word => 
+          item.name.toLowerCase().includes(word) && word.length > 2
+        )
+      );
+      
+      if (foundItem && !matchedItems.find(mi => mi.id === foundItem.id)) {
+        matchedItems.push(foundItem);
+      } else {
+        unmatchedItems.push(extractedItem);
+      }
+    });
+
+    // Add matched items to receipt
+    matchedItems.forEach(item => addItemToReceipt(item, 1));
+
+    // Show results to user
+    let message = "";
+    if (matchedItems.length > 0) {
+      message += `${matchedItems.length} items matched and added:\n${matchedItems.map(item => `• ${item.name}`).join('\n')}`;
+    }
+    
+    if (unmatchedItems.length > 0) {
+      if (message) message += "\n\n";
+      message += `${unmatchedItems.length} items not found in inventory:\n${unmatchedItems.map(item => `• ${item.name} - $${item.price}`).join('\n')}`;
+    }
+
+    Alert.alert(
+      "OCR Processing Complete", 
+      message || "No items could be processed.",
+      [
+        { text: "OK" },
+        ...(unmatchedItems.length > 0 ? [{ 
+          text: "Add Missing Items", 
+          onPress: () => setShowAddToReceipt(true) 
+        }] : [])
+      ]
+    );
+    
+    setShowOCRScanner(false);
+  }, [items, addItemToReceipt]);
+
   const subtotal = calculateTotal();
   const tax = calculateTax(subtotal);
   const total = subtotal + tax;
@@ -494,7 +567,7 @@ export default function ReceiptScreen() {
           <View style={styles.scannerOptionsContainer}>
             <TouchableOpacity
               style={styles.scannerOptionButton}
-              onPress={() => setShowSmartScanner(true)}
+              onPress={() => setShowOCRScanner(true)}
             >
               <Ionicons name="scan" size={20} color="#3B82F6" />
               <Text style={styles.scannerOptionText}>Smart Scan</Text>
@@ -658,6 +731,12 @@ export default function ReceiptScreen() {
         onClose={() => setShowSmartScanner(false)}
         onBarcodeDetected={handleSmartBarcodeDetected}
         onOcrDetected={handleSmartOcrDetected}
+      />
+
+      <OCRScanner
+        visible={showOCRScanner}
+        onClose={() => setShowOCRScanner(false)}
+        onOCRResult={handleOCRResult}
       />
     </SafeAreaView>
   );
