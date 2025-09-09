@@ -210,6 +210,7 @@ TOTAL             $17.39`
   };
 
   return (
+    <>
     <Modal visible={visible} transparent={true} animationType="slide">
       <View style={styles.modalOverlay}>
         <View style={styles.ocrContainer}>
@@ -352,6 +353,15 @@ TOTAL             $17.39`
         </View>
       </View>
     </Modal>
+    <LiveOCRScanner
+        visible={showLiveOcr}
+        onClose={() => setShowLiveOcr(false)}
+        onOCRResult={(text) => {
+          setShowLiveOcr(false);
+          setPreviewText(text);
+        }}
+      />
+    </>
   );
 }
 
