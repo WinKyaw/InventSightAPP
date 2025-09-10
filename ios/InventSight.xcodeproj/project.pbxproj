@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		25E537DD2E051C71586029EF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A81E53CEB5AEB0D75AF3AF77 /* PrivacyInfo.xcprivacy */; };
-		26F5B3C0CE66EE08FAB528FF /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AF5FA439FCBAC32CDCB54D /* ExpoModulesProvider.swift */; };
+		20E73BCA0B0F255C61A31C6D /* libPods-InventSight.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DE4B257ECD3367E4A78D02D3 /* libPods-InventSight.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		A270C49765F38213904E3D1D /* libPods-InventSight.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B91C91755EB18250ACB5643E /* libPods-InventSight.a */; };
+		5B4825B3152B86EB7672D117 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A0A25FAD47CA9E043BC94998 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		BCE972A1350E372FDF3365D0 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBF304793A20F520DD7509F /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -20,13 +20,13 @@
 		13B07F961A680F5B00A75B9A /* InventSight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InventSight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = InventSight/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = InventSight/Info.plist; sourceTree = "<group>"; };
-		A81E53CEB5AEB0D75AF3AF77 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = InventSight/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		80EE7C81CA8C1F1FC00A3508 /* Pods-InventSight.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-InventSight.debug.xcconfig"; path = "Target Support Files/Pods-InventSight/Pods-InventSight.debug.xcconfig"; sourceTree = "<group>"; };
+		9002F3FEB11FFB08EEDD49F1 /* Pods-InventSight.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-InventSight.release.xcconfig"; path = "Target Support Files/Pods-InventSight/Pods-InventSight.release.xcconfig"; sourceTree = "<group>"; };
+		A0A25FAD47CA9E043BC94998 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = InventSight/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = InventSight/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B91C91755EB18250ACB5643E /* libPods-InventSight.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-InventSight.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		BD8805469591CD43150AF9CD /* Pods-InventSight.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-InventSight.release.xcconfig"; path = "Target Support Files/Pods-InventSight/Pods-InventSight.release.xcconfig"; sourceTree = "<group>"; };
-		C2AF5FA439FCBAC32CDCB54D /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-InventSight/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		D7034FBB26818C0AFB0CFF42 /* Pods-InventSight.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-InventSight.debug.xcconfig"; path = "Target Support Files/Pods-InventSight/Pods-InventSight.debug.xcconfig"; sourceTree = "<group>"; };
+		BDBF304793A20F520DD7509F /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-InventSight/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		DE4B257ECD3367E4A78D02D3 /* libPods-InventSight.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-InventSight.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = InventSight/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* InventSight-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "InventSight-Bridging-Header.h"; path = "InventSight/InventSight-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,13 +37,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A270C49765F38213904E3D1D /* libPods-InventSight.a in Frameworks */,
+				20E73BCA0B0F255C61A31C6D /* libPods-InventSight.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0B569B410E060B7CE5DBF7EA /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				3611722FC4A6D81F427D5E5B /* InventSight */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* InventSight */ = {
 			isa = PBXGroup;
 			children = (
@@ -53,7 +61,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				A81E53CEB5AEB0D75AF3AF77 /* PrivacyInfo.xcprivacy */,
+				A0A25FAD47CA9E043BC94998 /* PrivacyInfo.xcprivacy */,
 			);
 			name = InventSight;
 			sourceTree = "<group>";
@@ -62,15 +70,15 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				B91C91755EB18250ACB5643E /* libPods-InventSight.a */,
+				DE4B257ECD3367E4A78D02D3 /* libPods-InventSight.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		7454FA08EAC586AFF1D7B5EF /* InventSight */ = {
+		3611722FC4A6D81F427D5E5B /* InventSight */ = {
 			isa = PBXGroup;
 			children = (
-				C2AF5FA439FCBAC32CDCB54D /* ExpoModulesProvider.swift */,
+				BDBF304793A20F520DD7509F /* ExpoModulesProvider.swift */,
 			);
 			name = InventSight;
 			sourceTree = "<group>";
@@ -89,8 +97,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				AE4016CB69F498025F35E77C /* Pods */,
-				F0CAE40CAEB123B39E403F80 /* ExpoModulesProviders */,
+				B2A9428D64C9853CA1A443FE /* Pods */,
+				0B569B410E060B7CE5DBF7EA /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -105,11 +113,11 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		AE4016CB69F498025F35E77C /* Pods */ = {
+		B2A9428D64C9853CA1A443FE /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				D7034FBB26818C0AFB0CFF42 /* Pods-InventSight.debug.xcconfig */,
-				BD8805469591CD43150AF9CD /* Pods-InventSight.release.xcconfig */,
+				80EE7C81CA8C1F1FC00A3508 /* Pods-InventSight.debug.xcconfig */,
+				9002F3FEB11FFB08EEDD49F1 /* Pods-InventSight.release.xcconfig */,
 			);
 			name = Pods;
 			path = Pods;
@@ -124,14 +132,6 @@
 			path = InventSight/Supporting;
 			sourceTree = "<group>";
 		};
-		F0CAE40CAEB123B39E403F80 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				7454FA08EAC586AFF1D7B5EF /* InventSight */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "InventSight" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				B0C566A9260DA1C35C87A185 /* [Expo] Configure project */,
+				5A4991E869F141571A99BA86 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				914EC9C528E4AA108DB9FF87 /* [CP] Embed Pods Frameworks */,
+				F5DF166B182729265656AFB2 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				25E537DD2E051C71586029EF /* PrivacyInfo.xcprivacy in Resources */,
+				5B4825B3152B86EB7672D117 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,6 +239,25 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		5A4991E869F141571A99BA86 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-InventSight/expo-configure-project.sh\"\n";
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -290,7 +309,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-InventSight/Pods-InventSight-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		914EC9C528E4AA108DB9FF87 /* [CP] Embed Pods Frameworks */ = {
+		F5DF166B182729265656AFB2 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -308,25 +327,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-InventSight/Pods-InventSight-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		B0C566A9260DA1C35C87A185 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-InventSight/expo-configure-project.sh\"\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -335,7 +335,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				26F5B3C0CE66EE08FAB528FF /* ExpoModulesProvider.swift in Sources */,
+				BCE972A1350E372FDF3365D0 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,7 +344,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D7034FBB26818C0AFB0CFF42 /* Pods-InventSight.debug.xcconfig */;
+			baseConfigurationReference = 80EE7C81CA8C1F1FC00A3508 /* Pods-InventSight.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -380,7 +380,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BD8805469591CD43150AF9CD /* Pods-InventSight.release.xcconfig */;
+			baseConfigurationReference = 9002F3FEB11FFB08EEDD49F1 /* Pods-InventSight.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

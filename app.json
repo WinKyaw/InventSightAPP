@@ -14,7 +14,14 @@
     },
     "plugins": [
       "expo-router",
-      "react-native-vision-camera"
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "$(PRODUCT_NAME) needs access to your Camera to scan barcodes and capture images.",
+          "enableCodeScanner": true
+        }
+      ],
+      "expo-secure-store"
     ],
     "assetBundlePatterns": [
       "**/*"
@@ -23,7 +30,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.investsight",
       "infoPlist": {
-        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera"
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your Camera to scan barcodes and capture images."
       }
     },
     "android": {
@@ -33,6 +40,7 @@
       },
       "package": "com.anonymous.investsight",
       "permissions": [
+        "android.permission.CAMERA",
         "android.permission.CAMERA"
       ]
     },
@@ -50,6 +58,10 @@
         "projectId": "07515b01-801a-40fd-8112-12aad188e314"
       }
     },
-    "owner": "kywin"
+    "owner": "kywin",
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/07515b01-801a-40fd-8112-12aad188e314"
+    }
   }
 }
