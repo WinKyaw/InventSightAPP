@@ -333,6 +333,9 @@ PODS:
     - GoogleUtilities/Environment (~> 7.7)
     - nanopb (< 2.30911.0, >= 2.30908.0)
     - PromisesObjC (< 3.0, >= 1.2)
+  - GoogleMLKit/BarcodeScanning (2.2.0):
+    - GoogleMLKit/MLKitCore
+    - MLKitBarcodeScanning (~> 1.3.0)
   - GoogleMLKit/MLKitCore (2.2.0):
     - MLKitCommon (~> 3.0.0)
   - GoogleMLKit/TextRecognition (2.2.0):
@@ -367,6 +370,9 @@ PODS:
     - hermes-engine/Pre-built (= 0.79.6)
   - hermes-engine/Pre-built (0.79.6)
   - MLImage (1.0.0-beta1)
+  - MLKitBarcodeScanning (1.3.0):
+    - MLKitCommon (~> 3.0)
+    - MLKitVision (~> 1.3)
   - MLKitCommon (3.0.0):
     - GoogleDataTransport (~> 9.0)
     - GoogleToolboxForMac/Logger (~> 2.1)
@@ -2365,6 +2371,9 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - SocketRocket (0.7.1)
+  - vision-camera-code-scanner (0.2.0):
+    - GoogleMLKit/BarcodeScanning
+    - React-Core
   - vision-camera-ocr (1.0.0):
     - GoogleMLKit/TextRecognition (= 2.2.0)
     - React-Core
@@ -2487,6 +2496,7 @@ DEPENDENCIES:
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
+  - vision-camera-code-scanner (from `../node_modules/vision-camera-code-scanner`)
   - vision-camera-ocr (from `../node_modules/vision-camera-ocr`)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
@@ -2500,6 +2510,7 @@ SPEC REPOS:
     - GoogleUtilitiesComponents
     - GTMSessionFetcher
     - MLImage
+    - MLKitBarcodeScanning
     - MLKitCommon
     - MLKitTextRecognition
     - MLKitVision
@@ -2705,6 +2716,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-screens"
   RNWorklets:
     :path: "../node_modules/react-native-worklets"
+  vision-camera-code-scanner:
+    :path: "../node_modules/vision-camera-code-scanner"
   vision-camera-ocr:
     :path: "../node_modules/vision-camera-ocr"
   VisionCamera:
@@ -2749,6 +2762,7 @@ SPEC CHECKSUMS:
   GTMSessionFetcher: 5595ec75acf5be50814f81e9189490412bad82ba
   hermes-engine: 44bb6fe76a6eb400d3a992e2d0b21946ae999fa9
   MLImage: 647f3d580c10b3c9a3f6154f5d7baead60c42a0c
+  MLKitBarcodeScanning: 6b998bd1cfe471ae407a7f647d649494617787c0
   MLKitCommon: 6d6be0a2e9a6340aad1c1f2b9449c11dee8af70f
   MLKitTextRecognition: fd52b7b3cef00751c202475f5a147e9752130767
   MLKitVision: 26da299aef93291f24f5200e8372919f73abf3b5
@@ -2824,6 +2838,7 @@ SPEC CHECKSUMS:
   RNScreens: c2e3cc506212228c607b4785b315205e28acbf0f
   RNWorklets: f7a0811d30432d71aa7ca70ecbc3468b720da5b3
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
+  vision-camera-code-scanner: dda884a7f3ec8243a2a6d6489b91860648371bca
   vision-camera-ocr: 484b73b1917f608ff36d6c041b2e2a48dfd290e6
   VisionCamera: 02578a728d4a479d9c47f869efdf906c5680d50b
   Yoga: dc7c21200195acacb62fa920c588e7c2106de45e
