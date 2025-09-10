@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "InventSight",
-    "slug": "pos-app-winkyaw",
+    "slug": "InventSight",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -47,7 +47,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "960f319c-685a-43a6-b432-09c70400c194"
+        "projectId": "07515b01-801a-40fd-8112-12aad188e314"
       }
     },
     "owner": "kywin"

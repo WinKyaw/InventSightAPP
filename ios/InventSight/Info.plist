@@ -34,7 +34,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>exp+pos-app-winkyaw</string>
+          <string>exp+inventsight</string>
         </array>
       </dict>
     </array>
