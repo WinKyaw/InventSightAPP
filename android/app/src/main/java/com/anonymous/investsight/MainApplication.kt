@@ -1,4 +1,4 @@
-package com.anonymous.posappwinkyaw
+package com.anonymous.investsight
 
 import android.app.Application
 import android.content.res.Configuration

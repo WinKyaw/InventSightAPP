@@ -1,4 +1,4 @@
-package com.anonymous.posappwinkyaw
+package com.anonymous.investsight
 
 import android.os.Build
 import android.os.Bundle

@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.posappwinkyaw'
+    namespace 'com.anonymous.investsight'
     defaultConfig {
-        applicationId 'com.anonymous.posappwinkyaw'
+        applicationId 'com.anonymous.investsight'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

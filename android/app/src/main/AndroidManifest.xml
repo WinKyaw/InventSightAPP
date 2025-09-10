@@ -26,7 +26,8 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="pos-app"/>
+        <data android:scheme="invent-sight"/>
+        <data android:scheme="exp+inventsight"/>
         <data android:scheme="exp+pos-app-winkyaw"/>
       </intent-filter>
     </activity>
