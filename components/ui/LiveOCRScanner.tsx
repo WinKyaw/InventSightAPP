@@ -4,6 +4,8 @@ import { Camera, useCameraDevices, useFrameProcessor } from 'react-native-vision
 import { scanOCR } from 'vision-camera-ocr';
 import { runOnJS } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import OCRService from '../../services/ocrService';
+import MyanmarTextUtils from '../../utils/myanmarTextUtils';
 
 interface LiveOCRScannerProps {
   visible: boolean;
@@ -77,10 +79,28 @@ const LiveOCRScanner: React.FC<LiveOCRScannerProps> = ({ visible, onClose, onOCR
     };
   }, []);
 
-  const handleManualCapture = () => {
+  const handleManualCapture = async () => {
     if (recognizedText.trim().length > 0) {
-      onOCRResult(recognizedText);
-      onClose();
+      try {
+        // Process the recognized text through OCRService for additional processing
+        const processedResult = await OCRService.processLiveText(recognizedText, 'myanmar');
+        
+        // Save to history
+        await MyanmarTextUtils.saveToHistory({
+          extractedText: processedResult.extractedText,
+          confidence: processedResult.confidence,
+          language: processedResult.language,
+          items: processedResult.items || [],
+        });
+        
+        onOCRResult(processedResult.extractedText);
+        onClose();
+      } catch (error) {
+        console.error('Error processing live text:', error);
+        // Fallback to original text
+        onOCRResult(recognizedText);
+        onClose();
+      }
     } else {
       Alert.alert('No Text Found', 'Please point the camera at text to scan.');
     }
