@@ -1,3 +1,22 @@
+/**
+ * SmartScanner Component
+ * 
+ * A dual-mode scanner component that supports both barcode/QR code scanning and OCR.
+ * 
+ * MIGRATION NOTES:
+ * - Migrated from expo-camera + expo-barcode-scanner to react-native-vision-camera
+ * - Now uses @mgcrea/vision-camera-barcode-scanner for high-performance barcode detection
+ * - Utilizes frame processors and worklets for optimal performance
+ * - Maintains the same API surface for backward compatibility
+ * 
+ * Features:
+ * - Real-time barcode/QR code scanning with visual highlights
+ * - OCR mode for Myanmar text recognition
+ * - Seamless mode switching with preserved UI/UX
+ * - Modern camera permission handling
+ * - Enhanced performance with worklets-based processing
+ */
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
@@ -9,8 +28,8 @@ import {
   Alert,
   Text,
 } from "react-native";
-import { CameraView, CameraType, Camera } from "expo-camera";
-import { BarCodeScannerResult } from "expo-barcode-scanner";
+import { Camera, useCameraPermission, useCameraDevice } from "react-native-vision-camera";
+import { useBarcodeScanner, Barcode, CameraHighlights } from "@mgcrea/vision-camera-barcode-scanner";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import OCRService from "../../services/ocrService";
 import MyanmarTextUtils from "../../utils/myanmarTextUtils";
@@ -28,8 +47,9 @@ const SmartScanner: React.FC<Props> = ({
   onBarcodeDetected,
   onOcrDetected,
 }) => {
-  const cameraRef = useRef<CameraView>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const cameraRef = useRef<Camera>(null);
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('back');
   const [isProcessing, setIsProcessing] = useState(false);
   const [barcodeHandled, setBarcodeHandled] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -37,13 +57,10 @@ const SmartScanner: React.FC<Props> = ({
 
   // Ask permissions when modal opens
   useEffect(() => {
-    if (visible) {
-      (async () => {
-        const { status: camStatus } = await Camera.requestCameraPermissionsAsync();
-        setHasCameraPermission(camStatus === "granted");
-      })();
+    if (visible && hasPermission === false) {
+      requestPermission();
     }
-  }, [visible]);
+  }, [visible, hasPermission, requestPermission]);
 
   const handleBarcode = useCallback(
     (data: string) => {
@@ -56,24 +73,32 @@ const SmartScanner: React.FC<Props> = ({
     [barcodeHandled, onBarcodeDetected, scanMode]
   );
 
-  const onBarCodeScanned = ({ data }: BarCodeScannerResult) => {
-    if (!barcodeHandled && scanMode === 'barcode') {
-      handleBarcode(data);
+  const onBarcodeScanned = useCallback((barcodes: Barcode[]) => {
+    if (barcodes.length > 0 && !barcodeHandled && scanMode === 'barcode') {
+      const barcode = barcodes[0];
+      if (barcode.value) {
+        handleBarcode(barcode.value);
+      }
     }
-  };
+  }, [handleBarcode, barcodeHandled, scanMode]);
+
+  const { props: cameraProps, highlights } = useBarcodeScanner({
+    fps: 5,
+    barcodeTypes: ['qr', 'ean-13', 'ean-8', 'code-128', 'code-39', 'upc-a', 'upc-e'],
+    onBarcodeScanned,
+    scanMode: barcodeHandled ? 'once' : 'continuous',
+  });
 
   const handleTakePictureAndOcr = async () => {
     if (!cameraRef.current) return;
     setIsProcessing(true);
     
     try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.9, // Higher quality for better OCR
-        base64: false,
-        skipProcessing: false,
+      const photo = await cameraRef.current.takePhoto({
+        qualityPrioritization: 'quality', // Higher quality for better OCR
       });
       
-      const uri = photo.uri;
+      const uri = photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`;
       setPhotoUri(uri);
 
       if (uri) {
@@ -112,7 +137,7 @@ const SmartScanner: React.FC<Props> = ({
 
   if (!visible) return null;
 
-  if (hasCameraPermission === false) {
+  if (hasPermission === false) {
     return (
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
@@ -131,18 +156,45 @@ const SmartScanner: React.FC<Props> = ({
     );
   }
 
+  if (!device) {
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+          <View style={styles.permissionContainer}>
+            <Ionicons name="camera" size={64} color="#6B7280" />
+            <Text style={styles.permissionTitle}>Camera Not Available</Text>
+            <Text style={styles.permissionText}>
+              No camera device found
+            </Text>
+            <TouchableOpacity style={styles.permissionButton} onPress={onClose}>
+              <Text style={styles.permissionButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <CameraView
+        <Camera
           ref={cameraRef}
           style={styles.camera}
-          facing="back"
-          onBarcodeScanned={scanMode === 'barcode' ? (barcodeHandled ? undefined : onBarCodeScanned) : undefined}
-          barcodeScannerSettings={{
-            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'upc_a', 'upc_e'],
-          }}
+          device={device}
+          isActive={visible}
+          photo={scanMode === 'ocr'}
+          {...cameraProps}
         />
+        
+        {/* Barcode highlights - only show in barcode mode */}
+        {scanMode === 'barcode' && highlights.length > 0 && (
+          <CameraHighlights 
+            highlights={highlights} 
+            color="#F59E0B" 
+            style={styles.highlights}
+          />
+        )}
         
         {/* Header with mode indicator and close button */}
         <View style={styles.header}>
@@ -272,6 +324,13 @@ const styles = StyleSheet.create({
   },
   camera: { 
     flex: 1 
+  },
+  highlights: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   header: {
     position: 'absolute',
