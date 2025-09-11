@@ -121,7 +121,6 @@ const SmartScanner: React.FC<Props> = ({
           "Content-Type": "multipart/form-data",
           "Accept": "application/json",
         },
-        timeout: 30000, // 30 second timeout
       });
 
       if (!response.ok) {
@@ -183,7 +182,7 @@ Total            2900 MMK`,
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
           <View style={styles.permissionContainer}>
-            <Ionicons name="camera-off" size={64} color="#6B7280" />
+            <Ionicons name="camera" size={64} color="#6B7280" />
             <Text style={styles.permissionTitle}>Camera Access Required</Text>
             <Text style={styles.permissionText}>
               Please grant camera permission to use the scanner
