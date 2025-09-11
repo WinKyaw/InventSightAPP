@@ -1,3 +1,22 @@
+/**
+ * SmartScanner Component
+ * 
+ * A dual-mode scanner component that supports both barcode/QR code scanning and OCR.
+ * 
+ * MIGRATION NOTES:
+ * - Migrated from expo-camera + expo-barcode-scanner to react-native-vision-camera
+ * - Now uses @mgcrea/vision-camera-barcode-scanner for high-performance barcode detection
+ * - Utilizes frame processors and worklets for optimal performance
+ * - Maintains the same API surface for backward compatibility
+ * 
+ * Features:
+ * - Real-time barcode/QR code scanning with visual highlights
+ * - OCR mode for Myanmar text recognition
+ * - Seamless mode switching with preserved UI/UX
+ * - Modern camera permission handling
+ * - Enhanced performance with worklets-based processing
+ */
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
