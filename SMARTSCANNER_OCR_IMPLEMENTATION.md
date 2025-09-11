@@ -1,32 +1,88 @@
-# SmartScanner OCR Feature Implementation
+# SmartScanner Implementation with VisionCamera and OCR
 
 ## Overview
-This document outlines the implementation of the SmartScanner OCR feature for the InventSightAPP, which allows users to take photos or select images from gallery to automatically extract receipt items and match them with inventory.
+This document outlines the implementation of the SmartScanner feature for the InventSightAPP, which provides both barcode/QR code scanning and OCR capabilities using modern camera APIs. The scanner has been migrated from deprecated Expo Camera to react-native-vision-camera with @mgcrea/vision-camera-barcode-scanner.
+
+## Architecture Changes
+
+### Migration from Expo Camera to VisionCamera
+- **Before**: Used `expo-camera` and `expo-barcode-scanner` (deprecated)
+- **After**: Uses `react-native-vision-camera` with `@mgcrea/vision-camera-barcode-scanner`
+- **Removed**: `vision-camera-code-scanner` (deprecated dependency)
+- **Added**: `@mgcrea/vision-camera-barcode-scanner` for high-performance barcode scanning
+
+### Dependencies Updated
+```json
+{
+  "react-native-vision-camera": "^3.9.2",
+  "@mgcrea/vision-camera-barcode-scanner": "^0.8.5",
+  "vision-camera-ocr": "^1.0.0"
+}
+```
+
+**Removed Dependencies:**
+- `expo-camera`
+- `expo-barcode-scanner`
+- `vision-camera-code-scanner`
 
 ## Features Implemented
 
-### 1. Enhanced OCRScanner Component (`components/ui/OCRScanner.tsx`)
+### 1. Enhanced SmartScanner Component (`components/ui/SmartScanner.tsx`)
 
-#### Camera and Gallery Integration
-- Uses `expo-image-picker` for camera and gallery access
-- Proper permission handling for camera and media library
-- Image editing capabilities (cropping, quality adjustment)
-- Support for both camera capture and gallery selection
+#### Dual Mode Scanner
+- **Barcode Mode**: High-performance barcode and QR code scanning using VisionCamera
+- **OCR Mode**: Myanmar text recognition for receipt processing
+- **Mode Toggle**: Seamless switching between scanning modes
+- **Visual Feedback**: Real-time barcode highlighting and scanning indicators
+
+#### Camera Integration
+- Uses `react-native-vision-camera` for optimal performance
+- `@mgcrea/vision-camera-barcode-scanner` for frame processor-based scanning
+- Proper permission handling with `useCameraPermission` hook
+- Device selection with `useCameraDevice` hook
+
+#### Barcode Scanning Features
+- **High Performance**: 30fps scanning with customizable detection fps
+- **Multiple Formats**: Supports QR, EAN-13, EAN-8, Code-128, Code-39, UPC-A, UPC-E
+- **Real-time Highlighting**: Visual feedback with barcode detection overlay
+- **Scan Control**: Configurable scan modes (continuous/once) with re-scan delay
+- **Frame Processing**: Utilizes worklets for optimal performance
 
 #### OCR Processing
-- Integrates with `/api/ocr/myanmar` endpoint using multipart/form-data
-- Fallback mock data for testing when backend is unavailable
-- Loading states with visual indicators
+- Integrates with `vision-camera-ocr` for Myanmar text recognition
+- High-quality photo capture for better OCR accuracy
+- Processing states with visual indicators
 - Error handling with user-friendly messages
 
 #### UI/UX Features
-- Clean, intuitive interface with camera and gallery options
-- Image preview before and after processing
-- Tips for better OCR results
-- Visual feedback during processing
-- Review screen for extracted text
+- **Unified Interface**: Single component handles both barcode and OCR scanning
+- **Mode Indicators**: Clear visual indicators for current scanning mode
+- **Real-time Feedback**: Live barcode detection with highlighting
+- **Processing Overlay**: Myanmar OCR processing indicator
+- **Photo Preview**: Captured image preview for OCR mode
+- **Permission Handling**: Graceful permission request and error states
 
-### 2. Intelligent Item Matching
+### 2. Technical Implementation
+
+#### VisionCamera Integration
+- **Frame Processors**: Uses worklets for high-performance barcode detection
+- **Camera Configuration**: Optimized settings for both barcode and photo capture
+- **Permission Management**: Modern permission handling with React hooks
+- **Device Management**: Automatic back camera selection
+
+#### Barcode Scanner Features
+- **useBarcodeScanner Hook**: Efficient hook-based implementation
+- **CameraHighlights Component**: Real-time barcode highlighting
+- **Configurable Detection**: Customizable barcode types and scan regions
+- **Performance Optimized**: 5fps detection rate for optimal battery usage
+
+#### Performance Optimizations
+- **Worklets**: JavaScript worklets for UI thread operations
+- **Frame Processing**: Efficient frame analysis without blocking UI
+- **Memory Management**: Proper cleanup and resource management
+- **Battery Optimization**: Configurable detection rates
+
+### 3. Intelligent Item Matching
 
 #### Matching Algorithm
 The system uses a sophisticated matching algorithm to find inventory items:
@@ -41,12 +97,26 @@ The system uses a sophisticated matching algorithm to find inventory items:
 - Offers options to add missing items manually
 - Prevents duplicate additions of the same item
 
-### 3. Receipt Screen Integration (`app/(tabs)/receipt.tsx`)
+### 4. Migration Benefits
+
+#### Performance Improvements
+- **Native Performance**: VisionCamera leverages native camera APIs
+- **Frame Processing**: Hardware-accelerated barcode detection
+- **Reduced Dependencies**: Fewer dependencies with better maintenance
+- **Future-Proof**: Modern architecture with active development
+
+#### Enhanced Features
+- **Real-time Highlighting**: Visual feedback for detected barcodes
+- **Better Error Handling**: Improved permission and device management
+- **Unified Interface**: Single component for all scanning needs
+- **Configurable Detection**: Customizable scan parameters
+
+### 5. Receipt Screen Integration (`app/(tabs)/receipt.tsx`)
 
 #### Smart Scan Button
-- Replaces complex camera-only functionality with user-friendly options
-- Integrated with existing receipt creation flow
-- Maintains compatibility with existing barcode scanning
+- Integrates with both barcode and OCR scanning modes
+- Maintains existing receipt creation flow
+- Compatible with legacy barcode scanning workflows
 
 #### Context Integration
 - Works seamlessly with existing receipt context
@@ -55,8 +125,34 @@ The system uses a sophisticated matching algorithm to find inventory items:
 
 ## Technical Implementation
 
-### Dependencies Added
-- `expo-image-picker`: For camera and gallery functionality
+### Dependencies Management
+```typescript
+// Core camera functionality
+import { Camera, useCameraPermission, useCameraDevice } from "react-native-vision-camera";
+
+// Barcode scanning
+import { useBarcodeScanner, Barcode, CameraHighlights } from "@mgcrea/vision-camera-barcode-scanner";
+
+// OCR processing (unchanged)
+import OCRService from "../../services/ocrService";
+```
+
+### Camera Configuration
+```typescript
+const { props: cameraProps, highlights } = useBarcodeScanner({
+  fps: 5,
+  barcodeTypes: ['qr', 'ean-13', 'ean-8', 'code-128', 'code-39', 'upc-a', 'upc-e'],
+  onBarcodeScanned,
+  scanMode: barcodeHandled ? 'once' : 'continuous',
+});
+```
+
+### Photo Capture for OCR
+```typescript
+const photo = await cameraRef.current.takePhoto({
+  qualityPrioritization: 'quality', // Higher quality for better OCR
+});
+```
 
 ### Type System Updates
 - Fixed inconsistencies between different Item interfaces
@@ -70,16 +166,27 @@ The system uses a sophisticated matching algorithm to find inventory items:
 
 ## Usage Flow
 
-1. **User opens receipt creation screen**
-2. **Clicks "Smart Scan" button**
-3. **Chooses between "Take Photo" or "From Gallery"**
-4. **Selects/captures image with built-in editing tools**
-5. **Image is processed via OCR API (or mock data)**
-6. **System shows extracted text and image preview**
-7. **User reviews extracted text**
-8. **System matches items with inventory**
-9. **Shows results: matched items added, unmatched items listed**
-10. **User can add missing items manually if needed**
+### Barcode Scanning Flow
+1. **User opens SmartScanner in barcode mode**
+2. **Camera activates with real-time barcode detection**
+3. **Visual highlights appear around detected barcodes**
+4. **Barcode value is captured and processed**
+5. **Scanner provides feedback and triggers callback**
+6. **Re-scan delay prevents duplicate detections**
+
+### OCR Scanning Flow
+1. **User toggles to OCR mode**
+2. **Camera switches to photo capture mode**
+3. **User takes high-quality photo of receipt**
+4. **Image is processed via OCR service**
+5. **Extracted text is reviewed and processed**
+6. **Items are matched with inventory**
+7. **Results are returned to calling component**
+
+### Mode Switching
+- **Toggle Button**: Easy switching between barcode and OCR modes
+- **Visual Indicators**: Clear mode identification
+- **State Preservation**: Maintains scan settings across mode changes
 
 ## Error Handling
 
