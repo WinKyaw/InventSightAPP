@@ -9,6 +9,7 @@ import {
   Alert,
   StatusBar,
   StyleSheet,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -26,6 +27,8 @@ import { useReceipt } from "../../context/ReceiptContext";
 import { useItems } from "../../context/ItemsContext";
 import { Receipt, Item } from "../../types";
 import ReceiptService from "../../services/api/receiptService";
+import MyanmarTextUtils from "../../utils/myanmarTextUtils";
+import { OCRHistoryEntry } from "../../services/ocrService";
 
 type TabType = "create" | "list";
 
@@ -70,6 +73,13 @@ export default function ReceiptScreen() {
   const [showSmartScanner, setShowSmartScanner] = useState(false);
   // OCRScanner state
   const [showOCRScanner, setShowOCRScanner] = useState(false);
+  
+  // Advanced OCR state
+  const [ocrHistory, setOcrHistory] = useState<OCRHistoryEntry[]>([]);
+  const [showOcrHistory, setShowOcrHistory] = useState(false);
+  const [ocrLanguage, setOcrLanguage] = useState<'myanmar' | 'english'>('myanmar');
+  const [scannerMode, setScannerMode] = useState<'camera' | 'gallery' | 'live'>('camera');
+  const [showScannerOptions, setShowScannerOptions] = useState(false);
 
   useEffect(() => {
     if (activeTab === "list") {
@@ -79,6 +89,7 @@ export default function ReceiptScreen() {
 
   useEffect(() => {
     loadReceipts();
+    loadOcrHistory();
   }, []);
 
   const loadReceipts = async (showRefreshing = false) => {
@@ -93,6 +104,15 @@ export default function ReceiptScreen() {
     } finally {
       setLoadingReceipts(false);
       setRefreshing(false);
+    }
+  };
+
+  const loadOcrHistory = async () => {
+    try {
+      const history = await MyanmarTextUtils.getHistory();
+      setOcrHistory(history);
+    } catch (error) {
+      console.error('Failed to load OCR history:', error);
     }
   };
 
@@ -395,7 +415,7 @@ export default function ReceiptScreen() {
     setShowSmartScanner(false);
   }, [items, addItemToReceipt]);
 
-  // Enhanced OCR result handler with better item matching and review capability
+  // Enhanced OCR result handler with fuzzy Myanmar matching and review capability
   const handleOCRResult = useCallback((extractedItems: Array<{ name: string; price: number; quantity: number }>) => {
     console.log("OCR items detected:", extractedItems);
     
@@ -404,55 +424,103 @@ export default function ReceiptScreen() {
       return;
     }
 
-    let matchedItems: Item[] = [];
-    let unmatchedItems: Array<{ name: string; price: number; quantity: number }> = [];
-
-    // Try to match extracted items with inventory
-    extractedItems.forEach((extractedItem) => {
-      const foundItem = items.find((item) => 
-        item.name.toLowerCase().includes(extractedItem.name.toLowerCase()) ||
-        extractedItem.name.toLowerCase().includes(item.name.toLowerCase()) ||
-        // Also try partial matching
-        extractedItem.name.toLowerCase().split(' ').some(word => 
-          item.name.toLowerCase().includes(word) && word.length > 2
-        )
-      );
-      
-      if (foundItem && !matchedItems.find(mi => mi.id === foundItem.id)) {
-        matchedItems.push(foundItem);
-      } else {
-        unmatchedItems.push(extractedItem);
+    // Use Myanmar text utils for advanced fuzzy matching
+    const matchingResult = MyanmarTextUtils.performFuzzyMatching(
+      extractedItems,
+      items,
+      {
+        exactMatchThreshold: 0.9,
+        partialMatchThreshold: 0.6,
+        enableMyanmarMatching: true,
+        enablePhoneticMatching: true,
       }
-    });
+    );
+
+    const { matchedItems, partialMatches, unmatchedItems } = matchingResult;
 
     // Add matched items to receipt
-    matchedItems.forEach(item => addItemToReceipt(item, 1));
+    matchedItems.forEach(({ item, ocrItem }) => {
+      addItemToReceipt(item, ocrItem.quantity);
+    });
 
-    // Show results to user
+    // Show results to user with detailed matching info
     let message = "";
     if (matchedItems.length > 0) {
-      message += `${matchedItems.length} items matched and added:\n${matchedItems.map(item => `• ${item.name}`).join('\n')}`;
+      message += `✅ ${matchedItems.length} items automatically matched and added:\n`;
+      message += matchedItems.map(({ item, confidence }) => 
+        `• ${item.name} (${Math.round(confidence * 100)}% match)`
+      ).join('\n');
+    }
+    
+    if (partialMatches.length > 0) {
+      if (message) message += "\n\n";
+      message += `⚠️ ${partialMatches.length} items with partial matches:\n`;
+      message += partialMatches.map(({ item, confidence, ocrItem }) => 
+        `• "${ocrItem.name}" → ${item.name} (${Math.round(confidence * 100)}% match)`
+      ).join('\n');
     }
     
     if (unmatchedItems.length > 0) {
       if (message) message += "\n\n";
-      message += `${unmatchedItems.length} items not found in inventory:\n${unmatchedItems.map(item => `• ${item.name} - $${item.price}`).join('\n')}`;
+      message += `❌ ${unmatchedItems.length} items not found in inventory:\n`;
+      message += unmatchedItems.map(item => 
+        `• ${item.name} - ${MyanmarTextUtils.formatMyanmarCurrency(item.price)}`
+      ).join('\n');
+    }
+
+    const alertButtons: any[] = [{ text: "OK" }];
+    
+    // Add button to review partial matches
+    if (partialMatches.length > 0) {
+      alertButtons.push({
+        text: "Review Matches",
+        onPress: () => showPartialMatchReview(partialMatches)
+      });
+    }
+    
+    // Add button for unmatched items
+    if (unmatchedItems.length > 0) {
+      alertButtons.push({
+        text: "Add Missing Items",
+        onPress: () => setShowAddToReceipt(true)
+      });
     }
 
     Alert.alert(
       "OCR Processing Complete", 
       message || "No items could be processed.",
-      [
-        { text: "OK" },
-        ...(unmatchedItems.length > 0 ? [{ 
-          text: "Add Missing Items", 
-          onPress: () => setShowAddToReceipt(true) 
-        }] : [])
-      ]
+      alertButtons
     );
     
     setShowOCRScanner(false);
+    
+    // Refresh OCR history
+    loadOcrHistory();
   }, [items, addItemToReceipt]);
+
+  // Function to show partial match review
+  const showPartialMatchReview = useCallback((partialMatches: Array<{ item: Item; confidence: number; ocrItem: any }>) => {
+    const matchText = partialMatches.map(({ item, confidence, ocrItem }, index) => 
+      `${index + 1}. "${ocrItem.name}" → ${item.name}\n   Confidence: ${Math.round(confidence * 100)}%`
+    ).join('\n\n');
+
+    Alert.alert(
+      "Review Partial Matches",
+      `These items had partial matches. Would you like to add them?\n\n${matchText}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Add All", 
+          onPress: () => {
+            partialMatches.forEach(({ item, ocrItem }) => {
+              addItemToReceipt(item, ocrItem.quantity);
+            });
+            Alert.alert("Success", `Added ${partialMatches.length} partially matched items.`);
+          }
+        }
+      ]
+    );
+  }, [addItemToReceipt]);
 
   const subtotal = calculateTotal();
   const tax = calculateTax(subtotal);
@@ -563,15 +631,85 @@ export default function ReceiptScreen() {
             <Text style={styles.addItemToReceiptText}>Add Items to Receipt</Text>
           </TouchableOpacity>
 
-          {/* SmartScanner Option */}
+          {/* Enhanced SmartScanner Options */}
           <View style={styles.scannerOptionsContainer}>
             <TouchableOpacity
-              style={styles.scannerOptionButton}
-              onPress={() => setShowOCRScanner(true)}
+              style={[styles.scannerOptionButton, styles.smartScanButton]}
+              onPress={() => setShowScannerOptions(!showScannerOptions)}
             >
               <Ionicons name="scan" size={20} color="#3B82F6" />
               <Text style={styles.scannerOptionText}>Smart Scan</Text>
+              <Ionicons 
+                name={showScannerOptions ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color="#3B82F6" 
+              />
             </TouchableOpacity>
+            
+            {showScannerOptions && (
+              <View style={styles.scannerDropdown}>
+                <TouchableOpacity
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setScannerMode('camera');
+                    setShowOCRScanner(true);
+                    setShowScannerOptions(false);
+                  }}
+                >
+                  <Ionicons name="camera" size={18} color="#6B7280" />
+                  <Text style={styles.dropdownText}>Take Photo ({ocrLanguage})</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setScannerMode('gallery');
+                    setShowOCRScanner(true);
+                    setShowScannerOptions(false);
+                  }}
+                >
+                  <Ionicons name="images" size={18} color="#6B7280" />
+                  <Text style={styles.dropdownText}>From Gallery ({ocrLanguage})</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setShowSmartScanner(true);
+                    setShowScannerOptions(false);
+                  }}
+                >
+                  <Ionicons name="barcode" size={18} color="#6B7280" />
+                  <Text style={styles.dropdownText}>Barcode Scanner</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setShowOcrHistory(true);
+                    setShowScannerOptions(false);
+                  }}
+                >
+                  <Ionicons name="time" size={18} color="#6B7280" />
+                  <Text style={styles.dropdownText}>Scan History ({ocrHistory.length})</Text>
+                </TouchableOpacity>
+                
+                <View style={styles.dropdownDivider} />
+                
+                <TouchableOpacity
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setOcrLanguage(ocrLanguage === 'myanmar' ? 'english' : 'myanmar');
+                  }}
+                >
+                  <Ionicons name="language" size={18} color="#F59E0B" />
+                  <Text style={[styles.dropdownText, { color: '#F59E0B', fontWeight: '600' }]}>
+                    Switch to {ocrLanguage === 'myanmar' ? 'English' : 'မြန်မာ'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            
             <TouchableOpacity
               style={styles.scannerOptionButton}
               onPress={() => setShowAddToReceipt(true)}
@@ -738,6 +876,120 @@ export default function ReceiptScreen() {
         onClose={() => setShowOCRScanner(false)}
         onOCRResult={handleOCRResult}
       />
+
+      {/* OCR History Modal */}
+      <Modal visible={showOcrHistory} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.historyContainer}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyTitle}>OCR Scan History</Text>
+              <View style={styles.historyHeaderButtons}>
+                <TouchableOpacity
+                  style={styles.clearHistoryButton}
+                  onPress={async () => {
+                    Alert.alert(
+                      "Clear History",
+                      "Are you sure you want to clear all OCR scan history?",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Clear",
+                          style: "destructive",
+                          onPress: async () => {
+                            await MyanmarTextUtils.clearHistory();
+                            setOcrHistory([]);
+                            Alert.alert("Success", "OCR history cleared.");
+                          }
+                        }
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons name="trash" size={20} color="#EF4444" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowOcrHistory(false)}>
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            <ScrollView style={styles.historyContent}>
+              {ocrHistory.length === 0 ? (
+                <View style={styles.emptyHistory}>
+                  <Ionicons name="time-outline" size={48} color="#D1D5DB" />
+                  <Text style={styles.emptyHistoryTitle}>No Scan History</Text>
+                  <Text style={styles.emptyHistoryText}>
+                    Your OCR scan history will appear here
+                  </Text>
+                </View>
+              ) : (
+                ocrHistory.map((entry) => (
+                  <TouchableOpacity
+                    key={entry.id}
+                    style={styles.historyItem}
+                    onPress={() => {
+                      setShowOcrHistory(false);
+                      if (entry.items.length > 0) {
+                        handleOCRResult(entry.items);
+                      } else {
+                        Alert.alert(
+                          "Scan History",
+                          `Extracted Text:\n\n${entry.extractedText}`,
+                          [
+                            { text: "OK" },
+                            {
+                              text: "Process Again",
+                              onPress: () => {
+                                // Re-process the text through OCR result handler
+                                // This will trigger the fuzzy matching again
+                                const mockItems = entry.extractedText
+                                  .split('\n')
+                                  .filter(line => MyanmarTextUtils.isLikelyReceiptItem(line))
+                                  .map(line => {
+                                    const price = MyanmarTextUtils.parsePrice(line) || 0;
+                                    const name = line.replace(/[\d\s\-=ကျပ်MMKKyat]/g, '').trim();
+                                    return { name, price, quantity: 1 };
+                                  })
+                                  .filter(item => item.name.length > 2);
+                                
+                                if (mockItems.length > 0) {
+                                  handleOCRResult(mockItems);
+                                }
+                              }
+                            }
+                          ]
+                        );
+                      }
+                    }}
+                  >
+                    <View style={styles.historyItemHeader}>
+                      <Text style={styles.historyItemDate}>
+                        {new Date(entry.timestamp).toLocaleDateString()} {new Date(entry.timestamp).toLocaleTimeString()}
+                      </Text>
+                      <View style={styles.historyItemBadges}>
+                        <Text style={[styles.historyItemBadge, { backgroundColor: entry.language === 'myanmar' ? '#FEF3C7' : '#DBEAFE' }]}>
+                          {entry.language === 'myanmar' ? 'မြန်မာ' : 'EN'}
+                        </Text>
+                        {entry.items.length > 0 && (
+                          <Text style={[styles.historyItemBadge, { backgroundColor: '#D1FAE5' }]}>
+                            {entry.items.length} items
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                    <Text style={styles.historyItemText} numberOfLines={3}>
+                      {entry.extractedText}
+                    </Text>
+                    <Text style={styles.historyItemConfidence}>
+                      Confidence: {Math.round(entry.confidence * 100)}%
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -924,5 +1176,145 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
     fontWeight: "500",
+  },
+  // Enhanced Smart Scan UI styles
+  smartScanButton: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  scannerDropdown: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+    padding: 8,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  dropdownText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 4,
+  },
+  // OCR History Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyContainer: {
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  historyHeaderButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  clearHistoryButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+  },
+  historyContent: {
+    flex: 1,
+    padding: 16,
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyHistoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 12,
+  },
+  emptyHistoryText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  historyItem: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  historyItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  historyItemDate: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  historyItemBadges: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  historyItemBadge: {
+    fontSize: 10,
+    fontWeight: '600',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  historyItemText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  historyItemConfidence: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
   },
 });

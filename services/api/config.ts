@@ -82,6 +82,14 @@ export const API_ENDPOINTS = {
     SEARCH: '/employees/search',
     CREATE: '/employees',
   },
+  // OCR endpoints
+  OCR: {
+    PROCESS: '/api/ocr/process',
+    PROCESS_TEXT: '/api/ocr/process-text',
+    MYANMAR: '/api/ocr/myanmar',
+    EXTRACT_ITEMS: '/api/ocr/extract-items',
+    BATCH_PROCESS: '/api/ocr/batch',
+  },
 };
 
 // Session Information

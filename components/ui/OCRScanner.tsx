@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { styles } from '../../constants/Styles';
 import LiveOCRScanner from './LiveOCRScanner';
+import OCRService, { OCRItem } from '../../services/ocrService';
+import MyanmarTextUtils from '../../utils/myanmarTextUtils';
 
 interface OCRScannerProps {
   visible: boolean;
@@ -17,6 +19,7 @@ export function OCRScanner({ visible, onClose, onOCRResult }: OCRScannerProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showLiveOcr, setShowLiveOcr] = useState(false);
   const [ocrLanguage, setOcrLanguage] = useState<'myanmar' | 'english'>('myanmar');
+  const [extractedItems, setExtractedItems] = useState<OCRItem[]>([]);
 
   // Configuration for your backend API
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080';
@@ -89,10 +92,28 @@ export function OCRScanner({ visible, onClose, onOCRResult }: OCRScannerProps) {
   const processImage = async (imageUri: string) => {
     setIsProcessing(true);
     setPreviewText(null);
+    setExtractedItems([]);
     
     try {
-      const ocrResult = await sendImageForOCR(imageUri);
+      const ocrResult = await OCRService.processImage(imageUri, {
+        language: ocrLanguage,
+        imageType: 'receipt',
+        preprocessImage: true,
+        confidenceThreshold: 0.7,
+      });
+      
       setPreviewText(ocrResult.extractedText);
+      setExtractedItems(ocrResult.items || []);
+      
+      // Save to history
+      await MyanmarTextUtils.saveToHistory({
+        imageUri,
+        extractedText: ocrResult.extractedText,
+        confidence: ocrResult.confidence,
+        language: ocrResult.language,
+        items: ocrResult.items || [],
+      });
+      
     } catch (error) {
       Alert.alert('OCR Error', 'Failed to process image. Please try again.');
       console.error('OCR error:', error);
@@ -101,97 +122,7 @@ export function OCRScanner({ visible, onClose, onOCRResult }: OCRScannerProps) {
     }
   };
 
-  const sendImageForOCR = async (imageUri: string): Promise<{
-    extractedText: string;
-    confidence: number;
-    language: string;
-  }> => {
-    try {
-      // Create form data for the image
-      const formData = new FormData();
-      const filename = imageUri.split('/').pop() || 'receipt.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-      formData.append('file', {
-        uri: imageUri,
-        name: filename,
-        type,
-      } as any);
-
-      // Add OCR parameters
-      formData.append('language', ocrLanguage);
-      formData.append('imageType', 'receipt');
-      formData.append('preprocessImage', 'true');
-
-      console.log('Sending OCR request to:', OCR_ENDPOINT);
-      
-      const response = await fetch(OCR_ENDPOINT, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`OCR API error: ${response.status} - ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'OCR processing failed');
-      }
-
-      return {
-        extractedText: result.extractedText || '',
-        confidence: result.confidence || 0,
-        language: result.detectedLanguage || ocrLanguage,
-      };
-
-    } catch (error) {
-      console.error('OCR API error:', error);
-      
-      // Enhanced fallback with Myanmar text examples
-      const mockReceiptTexts = [
-        `မြန်မာစာမေးပွဲ ဆိုင် ရေစာ့
----------------------
-ကော်ဖီ              ၁၅၀၀ ကျပ်
-နွေးကြော်ခြောက်        ၃၀၀ ကျပ်  
-လက်ဖက်ရည်          ၈၀၀ ကျပ်
----------------------
-စုစုပေါင်း          ၂၆၀၀ ကျပ်`,
-
-        `MYANMAR CAFE RECEIPT
----------------------
-Coffee Premium      1500 MMK
-Croissant          800 MMK
-Tea                600 MMK
----------------------
-SUBTOTAL          2900 MMK
-TAX                290 MMK
-TOTAL             3190 MMK`,
-
-        `ရေစာ့ - Receipt
----------------------
-မုန့်                ၅၀၀ ကျပ်
-ဆန္ဒွစ်              ၂၀၀၀ ကျပ်
-သုပ်                ၁၂၀၀ ကျပ်
----------------------
-စုစုပေါင်း          ၃၇၀၀ ကျပ်`
-      ];
-      
-      const randomReceipt = mockReceiptTexts[Math.floor(Math.random() * mockReceiptTexts.length)];
-      
-      return {
-        extractedText: randomReceipt,
-        confidence: 0.85,
-        language: 'myanmar'
-      };
-    }
-  };
 
   const parseReceiptText = (text: string) => {
     const lines = text.split('\n');
@@ -242,7 +173,25 @@ TOTAL             3190 MMK`,
   };
 
   const handleConfirmOCR = () => {
-    if (previewText) {
+    if (extractedItems.length > 0) {
+      // Convert OCRItems to the expected format
+      const formattedItems = extractedItems.map(item => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }));
+      
+      onOCRResult(formattedItems);
+      onClose();
+      resetState();
+      
+      Alert.alert(
+        'OCR Complete!',
+        `Successfully extracted ${formattedItems.length} item${formattedItems.length > 1 ? 's' : ''} from receipt`,
+        [{ text: 'OK' }]
+      );
+    } else if (previewText) {
+      // Fallback to text parsing if no items were extracted by OCR service
       const parsedItems = parseReceiptText(previewText);
       
       if (parsedItems.length === 0) {
@@ -276,6 +225,7 @@ TOTAL             3190 MMK`,
   const resetState = () => {
     setPreviewText(null);
     setSelectedImage(null);
+    setExtractedItems([]);
     setIsProcessing(false);
   };
 
@@ -461,7 +411,7 @@ TOTAL             3190 MMK`,
       <LiveOCRScanner
         visible={showLiveOcr}
         onClose={() => setShowLiveOcr(false)}
-        onOCRResult={(text) => {
+        onOCRResult={(text: string) => {
           setShowLiveOcr(false);
           setPreviewText(text);
         }}

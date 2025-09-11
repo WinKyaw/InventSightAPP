@@ -12,6 +12,8 @@ import {
 import { CameraView, CameraType, Camera } from "expo-camera";
 import { BarCodeScannerResult } from "expo-barcode-scanner";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import OCRService from "../../services/ocrService";
+import MyanmarTextUtils from "../../utils/myanmarTextUtils";
 
 type Props = {
   visible: boolean;
@@ -32,10 +34,6 @@ const SmartScanner: React.FC<Props> = ({
   const [barcodeHandled, setBarcodeHandled] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [scanMode, setScanMode] = useState<'barcode' | 'ocr'>('barcode');
-
-  // Configuration for your backend API
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-  const OCR_ENDPOINT = `${API_BASE_URL}/api/ocr/process`;
 
   // Ask permissions when modal opens
   useEffect(() => {
@@ -79,7 +77,22 @@ const SmartScanner: React.FC<Props> = ({
       setPhotoUri(uri);
 
       if (uri) {
-        const ocrResult = await sendImageForOcr(uri);
+        const ocrResult = await OCRService.processImage(uri, {
+          language: 'myanmar',
+          imageType: 'receipt',
+          preprocessImage: true,
+          confidenceThreshold: 0.7,
+        });
+        
+        // Save to history
+        await MyanmarTextUtils.saveToHistory({
+          imageUri: uri,
+          extractedText: ocrResult.extractedText,
+          confidence: ocrResult.confidence,
+          language: ocrResult.language,
+          items: ocrResult.items || [],
+        });
+        
         onOcrDetected(ocrResult.extractedText);
       }
     } catch (e: any) {
@@ -89,86 +102,7 @@ const SmartScanner: React.FC<Props> = ({
     setIsProcessing(false);
   };
 
-  // Enhanced OCR API call to your Spring Boot backend
-  const sendImageForOcr = async (imageUri: string): Promise<{
-    extractedText: string;
-    confidence: number;
-    detectedLanguage: string;
-  }> => {
-    try {
-      const filename = imageUri.split("/").pop() || "photo.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
 
-      const formData = new FormData();
-      formData.append("file", {
-        uri: imageUri,
-        name: filename,
-        type,
-      } as any);
-
-      // Add OCR parameters for better processing
-      formData.append("language", "mya+eng"); // Support Myanmar and English
-      formData.append("imageType", "receipt");
-      formData.append("preprocessImage", "true");
-
-      console.log('Sending OCR request to:', OCR_ENDPOINT);
-
-      const response = await fetch(OCR_ENDPOINT, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-          "Accept": "application/json",
-        },
-        timeout: 30000, // 30 second timeout
-      });
-
-      if (!response.ok) {
-        throw new Error(`OCR API error: ${response.status} - ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'OCR processing failed');
-      }
-
-      return {
-        extractedText: result.extractedText || '',
-        confidence: result.confidence || 0,
-        detectedLanguage: result.detectedLanguage || 'unknown',
-      };
-
-    } catch (error) {
-      console.error('OCR API call failed:', error);
-      
-      // Fallback mock data for testing
-      const mockTexts = [
-        `Coffee Shop Receipt
-================
-Coffee Premium    1500 MMK
-Croissant         800 MMK  
-Tea               600 MMK
-================
-Total            2900 MMK`,
-        
-        `မြန်မာစာမေးပွဲ ဆိုင်
-================
-ကော်ဖီ              ၁၅၀၀ ကျပ်
-နွေးကြော်ခြောက်        ၈၀၀ ကျပ်  
-လက်ဖက်ရည်          ၆၀၀ ကျပ်
-================
-စုစုပေါင်း          ၂၉၀၀ ကျပ်`
-      ];
-      
-      return {
-        extractedText: mockTexts[Math.floor(Math.random() * mockTexts.length)],
-        confidence: 0.85,
-        detectedLanguage: 'myanmar'
-      };
-    }
-  };
 
   const toggleScanMode = () => {
     setScanMode(current => current === 'barcode' ? 'ocr' : 'barcode');
@@ -183,7 +117,7 @@ Total            2900 MMK`,
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
           <View style={styles.permissionContainer}>
-            <Ionicons name="camera-off" size={64} color="#6B7280" />
+            <Ionicons name="camera" size={64} color="#6B7280" />
             <Text style={styles.permissionTitle}>Camera Access Required</Text>
             <Text style={styles.permissionText}>
               Please grant camera permission to use the scanner

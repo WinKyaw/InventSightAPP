@@ -7,6 +7,7 @@ export { default as ActivityService } from './api/activityService';
 export { default as DashboardService } from './api/dashboardService';
 export { default as ReceiptService } from './api/receiptService';
 export { default as CalendarService } from './api/calendarService';
+export { default as OCRService } from './ocrService';
 
 // HTTP Clients
 export { httpClient } from './api/httpClient';
