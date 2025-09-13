@@ -39,8 +39,10 @@ yarn-error.*
 *.tsbuildinfo
 
 # Backend build artifacts
+backend/target/
 backend/dist/
 backend/node_modules/
 backend/*.db
+backend/logs/
 backend/.env
 backend/coverage/
