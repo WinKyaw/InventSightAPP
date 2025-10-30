@@ -26,7 +26,7 @@ export function WarehouseInventoryList({ inventory, onItemPress }: WarehouseInve
             <Text style={styles.itemName}>{item.productName}</Text>
             {isLowStock && (
               <View style={styles.lowStockBadge}>
-                <Ionicons name="warning" size={12} color="#fff" />
+                <Ionicons name="warning" size={12} color="#fff" style={styles.lowStockIcon} />
                 <Text style={styles.lowStockText}>Low</Text>
               </View>
             )}
@@ -122,7 +122,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    gap: 4,
+  },
+  lowStockIcon: {
+    marginRight: 4,
   },
   lowStockText: {
     color: '#fff',

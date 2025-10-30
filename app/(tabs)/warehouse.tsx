@@ -358,12 +358,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    gap: 6,
   },
   warehouseButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    marginLeft: 6,
   },
   listWrapper: {
     flex: 1,
@@ -422,10 +422,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 12,
   },
   warehouseItemText: {
     flex: 1,
+    marginLeft: 12,
   },
   warehouseName: {
     fontSize: 16,

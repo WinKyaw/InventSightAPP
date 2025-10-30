@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { apiClient } from './apiClient';
 import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability } from '../../types/warehouse';
 
@@ -16,7 +17,7 @@ export async function getWarehouses(): Promise<WarehouseSummary[]> {
     return response || [];
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
-    if ((error as any)?.response?.status === 404) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
       console.warn('Warehouses endpoint not yet available');
       return [];
     }
