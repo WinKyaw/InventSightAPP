@@ -49,6 +49,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       color: '#10B981'
     },
     {
+      key: 'warehouse',
+      title: 'Warehouse',
+      icon: 'cube',
+      screen: '/(tabs)/warehouse',
+      color: '#6366F1'
+    },
+    {
       key: 'setting',
       title: 'Settings',
       icon: 'settings',
