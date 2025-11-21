@@ -30,7 +30,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     } else {
       offlineSyncService.stopSync();
     }
-  }, [checkIsOnline()]);
+  }, [checkIsOnline]);
 
   // Subscribe to sync status
   useEffect(() => {
@@ -52,14 +52,15 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 
   // Start sync on mount if online
   useEffect(() => {
-    if (checkIsOnline()) {
+    const isCurrentlyOnline = checkIsOnline();
+    if (isCurrentlyOnline) {
       offlineSyncService.startSync();
     }
 
     return () => {
       offlineSyncService.stopSync();
     };
-  }, []);
+  }, [checkIsOnline]);
 
   const queueRequest = async (request: any) => {
     await offlineQueue.enqueue(request);

@@ -12,17 +12,21 @@ export function OfflineIndicator() {
   const { isOnline } = useNetworkStatus();
   const [slideAnim] = useState(new Animated.Value(-60));
   const [isVisible, setIsVisible] = useState(false);
+  const [wasOffline, setWasOffline] = useState(false);
 
   useEffect(() => {
-    if (isOnline() === false) {
+    const online = isOnline();
+    
+    if (online === false && !wasOffline) {
       // Show banner
       setIsVisible(true);
+      setWasOffline(true);
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
-    } else if (isVisible) {
+    } else if (online && wasOffline) {
       // Hide banner
       Animated.timing(slideAnim, {
         toValue: -60,
@@ -30,11 +34,13 @@ export function OfflineIndicator() {
         useNativeDriver: true,
       }).start(() => {
         setIsVisible(false);
+        setWasOffline(false);
       });
     }
-  }, [isOnline()]);
+  }, [isOnline]);
 
-  if (!isVisible && isOnline() !== false) {
+  const online = isOnline();
+  if (!isVisible && online !== false) {
     return null;
   }
 

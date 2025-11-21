@@ -10,34 +10,37 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { AuthErrorBoundary } from '../components/ui/AuthErrorBoundary';
 import { ItemsProvider } from '../context/ItemsContext';
 import { ActivityTrackerWrapper } from '../components/ActivityTrackerWrapper';
+import { OfflineProvider } from '../context/OfflineContext';
 
 export default function RootLayout() {
   return (
     <ErrorBoundary>
       <AuthErrorBoundary>
         <AuthProvider>
-          <ActivityTrackerWrapper>
-            <ItemsProvider>
-              <NavigationProvider>
-                <ItemsApiProvider>
-                  <EmployeesProvider>
-                    <ReportsProvider>
-                      <ReceiptProvider>
-                        <CalendarProvider>
-                          <Stack screenOptions={{ headerShown: false }}>
-                            <Stack.Screen name="index" options={{ headerShown: false }} />
-                            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                            <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
-                          </Stack>
-                        </CalendarProvider>
-                      </ReceiptProvider>
-                    </ReportsProvider>
-                  </EmployeesProvider>
-                </ItemsApiProvider>
-              </NavigationProvider>
-            </ItemsProvider>
-          </ActivityTrackerWrapper>
+          <OfflineProvider>
+            <ActivityTrackerWrapper>
+              <ItemsProvider>
+                <NavigationProvider>
+                  <ItemsApiProvider>
+                    <EmployeesProvider>
+                      <ReportsProvider>
+                        <ReceiptProvider>
+                          <CalendarProvider>
+                            <Stack screenOptions={{ headerShown: false }}>
+                              <Stack.Screen name="index" options={{ headerShown: false }} />
+                              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                              <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+                            </Stack>
+                          </CalendarProvider>
+                        </ReceiptProvider>
+                      </ReportsProvider>
+                    </EmployeesProvider>
+                  </ItemsApiProvider>
+                </NavigationProvider>
+              </ItemsProvider>
+            </ActivityTrackerWrapper>
+          </OfflineProvider>
         </AuthProvider>
       </AuthErrorBoundary>
     </ErrorBoundary>

@@ -4,6 +4,8 @@ import { TouchableOpacity, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { HamburgerMenu } from '../../components/shared/HamburgerMenu';
+import { OfflineIndicator } from '../../components/OfflineIndicator';
+import { SyncStatus } from '../../components/SyncStatus';
 
 // Import with error boundary
 let useNavigation: any = null;
@@ -54,6 +56,8 @@ export default function TabsLayout() {
 
   return (
     <>
+      <OfflineIndicator />
+      <SyncStatus />
       <Tabs
         screenOptions={{
           headerShown: false,
