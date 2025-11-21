@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Alert, SafeAreaView, StatusBar, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Alert, SafeAreaView, StatusBar, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,8 @@ import { DemoInfo } from '../../components/ui/DemoInfo';
 import { styles } from '../../constants/Styles';
 import { validateLoginForm, getFieldError } from '../../utils/validation';
 import { LoginCredentials } from '../../types/auth';
+import { biometricService } from '../../services/biometricService';
+import { Colors } from '../../constants/Colors';
 
 export default function LoginScreen() {
   const [credentials, setCredentials] = useState<LoginCredentials>({
@@ -17,6 +19,10 @@ export default function LoginScreen() {
   });
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricType, setBiometricType] = useState<string>('Biometric');
+  const [checkingBiometric, setCheckingBiometric] = useState(true);
   const { user, isAuthenticated, login } = useAuth();
   const router = useRouter();
 
@@ -29,6 +35,84 @@ export default function LoginScreen() {
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated, user, isSubmitting, router]);
+
+  // Check biometric availability on mount
+  useEffect(() => {
+    checkBiometricAvailability();
+  }, []);
+
+  const checkBiometricAvailability = async () => {
+    try {
+      setCheckingBiometric(true);
+
+      // Check if biometric hardware is available
+      const available = await biometricService.isAvailable();
+      setBiometricAvailable(available);
+
+      if (!available) {
+        setCheckingBiometric(false);
+        return;
+      }
+
+      // Check if biometric login is enabled
+      const enabled = await biometricService.isBiometricLoginEnabled();
+      setBiometricEnabled(enabled);
+
+      if (enabled) {
+        // Get stored email to pre-fill
+        const storedEmail = await biometricService.getStoredUserEmail();
+        if (storedEmail) {
+          setCredentials(prev => ({ ...prev, email: storedEmail }));
+        }
+
+        // Get biometric type for display
+        const types = await biometricService.getSupportedTypes();
+        if (types.length > 0) {
+          const typeName = biometricService.getBiometricTypeName(types[0]);
+          setBiometricType(typeName);
+        }
+      }
+
+      setCheckingBiometric(false);
+    } catch (error) {
+      console.error('Failed to check biometric availability:', error);
+      setCheckingBiometric(false);
+      setBiometricAvailable(false);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      setIsSubmitting(true);
+
+      // Get stored credentials with biometric authentication
+      const storedCredentials = await biometricService.getStoredCredentials();
+
+      if (!storedCredentials) {
+        Alert.alert(
+          'Authentication Failed',
+          'Could not retrieve stored credentials. Please login with password.',
+          [{ text: 'OK' }]
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Login with stored credentials
+      await login(storedCredentials);
+
+      // Success is handled by useEffect above
+    } catch (error: any) {
+      console.error('Biometric login error:', error);
+      
+      Alert.alert(
+        'Biometric Login Failed',
+        'Please login with your password.',
+        [{ text: 'OK' }]
+      );
+      setIsSubmitting(false);
+    }
+  };
 
   const handleInputChange = (field: keyof LoginCredentials, value: string) => {
     setCredentials(prev => ({ ...prev, [field]: value }));
@@ -92,6 +176,47 @@ export default function LoginScreen() {
           </View>
           
           <View style={styles.inputContainer}>
+            {/* Biometric login button */}
+            {biometricAvailable && biometricEnabled && !checkingBiometric && (
+              <TouchableOpacity
+                style={{
+                  backgroundColor: Colors.primary,
+                  padding: 16,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 16,
+                }}
+                onPress={handleBiometricLogin}
+                disabled={isSubmitting}
+              >
+                <Ionicons
+                  name={biometricType === 'Face ID' || biometricType === 'Face Recognition' ? 'scan' : 'finger-print'}
+                  size={24}
+                  color="white"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
+                  Sign In with {biometricType}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {checkingBiometric && (
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+              </View>
+            )}
+
+            {biometricAvailable && biometricEnabled && !checkingBiometric && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: Colors.border }} />
+                <Text style={{ marginHorizontal: 16, color: Colors.textSecondary || '#6B7280' }}>or</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: Colors.border }} />
+              </View>
+            )}
+
             <Input
               placeholder="Email"
               value={credentials.email}
