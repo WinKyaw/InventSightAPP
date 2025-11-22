@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { CameraView, CameraType, Camera } from "expo-camera";
 import { BarCodeScannerResult } from "expo-barcode-scanner";
+import * as BarCodeScanner from "expo-barcode-scanner";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Props = {
