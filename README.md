@@ -36,6 +36,8 @@ npm start
 
 React Native applications **cannot connect to `localhost`** from physical devices or certain emulators because `localhost` resolves to the device's localhost, not your development machine.
 
+**📖 For detailed network troubleshooting, see [NETWORK_TROUBLESHOOTING.md](./NETWORK_TROUBLESHOOTING.md)**
+
 ### Automatic Configuration
 
 The app automatically detects the appropriate API URL based on your platform:
@@ -137,6 +139,33 @@ Ensure your Spring Boot backend is running on port 8080. The backend should:
 - This is expected on physical devices
 - Use automatic configuration or set proper IP in `.env`
 
+#### "Connected but no internet access" / "timeout of 10000ms exceeded"
+This error indicates the app can connect to the network but cannot reach the backend server. Common causes:
+
+1. **Backend Server Not Running**
+   - Verify your backend is running: `curl http://localhost:8080/api/dashboard/summary`
+   - Check backend logs for errors
+
+2. **Wrong IP Address**
+   - The app may be using an incorrect IP address (e.g., `http://10.0.0.125:8080`)
+   - Find your current machine's IP address (see below)
+   - Update the API_BASE_URL in your `.env` file
+
+3. **Network Change**
+   - If you changed WiFi networks, your IP address may have changed
+   - Re-check your machine's IP address
+   - Restart the app after updating `.env`
+
+4. **Firewall Blocking**
+   - Ensure your firewall allows incoming connections on port 8080
+   - On Windows: Check Windows Defender Firewall settings
+   - On macOS: Check System Preferences → Security & Privacy → Firewall
+
+#### "Missing Native Module - ExpoBarCodeScanner" (Fixed in SDK 54)
+- This error occurred in previous versions when using deprecated `expo-barcode-scanner`
+- **Resolution**: Updated to use built-in barcode scanning from `expo-camera`
+- If you still see this error, ensure you're on Expo SDK 54 and the app is properly rebuilt
+
 ### Debugging Network Issues
 
 1. **Check network configuration**:
@@ -156,6 +185,39 @@ Ensure your Spring Boot backend is running on port 8080. The backend should:
 
 3. **Verify backend CORS configuration**
 
+### How to Find Your Machine's IP Address
+
+#### Windows:
+```cmd
+ipconfig
+```
+Look for "IPv4 Address" under your active WiFi or Ethernet adapter (usually starts with 192.168.x.x or 10.0.x.x)
+
+#### macOS:
+```bash
+ifconfig | grep "inet " | grep -v 127.0.0.1
+```
+Or check System Preferences → Network → Select your connection → Advanced → TCP/IP
+
+#### Linux:
+```bash
+ip addr show | grep "inet " | grep -v 127.0.0.1
+```
+Or:
+```bash
+hostname -I
+```
+
+### Quick Network Troubleshooting Checklist
+
+1. ✅ Backend server is running on port 8080
+2. ✅ Found correct IP address of development machine
+3. ✅ Updated `API_BASE_URL` in `.env` file with correct IP
+4. ✅ Development machine and mobile device on same WiFi network
+5. ✅ Firewall allows connections on port 8080
+6. ✅ Restarted the Expo app after changing `.env`
+7. ✅ Backend CORS is configured to accept requests from any origin
+
 ## 📱 Supported Platforms
 
 - ✅ Android (Emulator & Physical Device)
@@ -174,6 +236,25 @@ The app supports:
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+## 📝 Recent Updates
+
+### Expo SDK 54 Migration (Latest)
+
+The app has been updated to Expo SDK 54 with the following changes:
+
+#### Breaking Changes Fixed
+- ✅ **Barcode Scanner**: Migrated from deprecated `expo-barcode-scanner` to built-in `expo-camera` barcode scanning
+- ✅ **SafeAreaView**: Updated all components to use `react-native-safe-area-context` instead of deprecated React Native SafeAreaView
+- ✅ **Permissions**: Simplified permission handling - only camera permission needed (barcode permission now included)
+
+#### What This Means for You
+- Barcode scanning now uses the camera's native barcode detection
+- No separate barcode scanner permission needed
+- Improved performance and reliability
+- Fully compatible with Expo SDK 54
+
+For more details on the migration, see the commit history.
 
 ## 🤝 Contributing
 
