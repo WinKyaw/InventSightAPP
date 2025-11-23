@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployees } from '../../context/EmployeesContext';
 import { Header } from '../../components/shared/Header';
