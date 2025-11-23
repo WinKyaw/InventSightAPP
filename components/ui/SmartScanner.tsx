@@ -9,9 +9,7 @@ import {
   Alert,
   Text,
 } from "react-native";
-import { CameraView, CameraType, Camera } from "expo-camera";
-import { BarCodeScannerResult } from "expo-barcode-scanner";
-import * as BarCodeScanner from "expo-barcode-scanner";
+import { CameraView, CameraType, Camera, BarcodeScanningResult } from "expo-camera";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Props = {
@@ -29,7 +27,6 @@ const SmartScanner: React.FC<Props> = ({
 }) => {
   const cameraRef = useRef<CameraView>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [hasBarcodePermission, setHasBarcodePermission] = useState<boolean | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [barcodeHandled, setBarcodeHandled] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -38,10 +35,8 @@ const SmartScanner: React.FC<Props> = ({
   useEffect(() => {
     if (visible) {
       (async () => {
-        const { status: camStatus } = await Camera.requestCameraPermissionsAsync();
-        setHasCameraPermission(camStatus === "granted");
-        const { status: barStatus } = await BarCodeScanner.requestPermissionsAsync();
-        setHasBarcodePermission(barStatus === "granted");
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        setHasCameraPermission(status === "granted");
       })();
     }
   }, [visible]);
@@ -57,7 +52,7 @@ const SmartScanner: React.FC<Props> = ({
     [barcodeHandled, onBarcodeDetected]
   );
 
-  const onBarCodeScanned = ({ data }: BarCodeScannerResult) => {
+  const onBarCodeScanned = ({ data }: BarcodeScanningResult) => {
     if (!barcodeHandled) {
       handleBarcode(data);
     }
@@ -113,12 +108,12 @@ const SmartScanner: React.FC<Props> = ({
 
   if (!visible) return null;
 
-  if (hasCameraPermission === false || hasBarcodePermission === false) {
+  if (hasCameraPermission === false) {
     return (
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
           <Text style={{ color: "#333", marginBottom: 12, fontSize: 16, fontWeight: "600" }}>
-            Camera / Barcode permission denied
+            Camera permission denied
           </Text>
           <TouchableOpacity style={styles.permissionButton} onPress={onClose}>
             <Text style={{ color: "#fff", fontWeight: "600" }}>Close</Text>
@@ -136,6 +131,9 @@ const SmartScanner: React.FC<Props> = ({
           style={styles.camera}
           facing="back"
           onBarcodeScanned={barcodeHandled ? undefined : onBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ["qr", "ean13", "ean8", "upc_a", "upc_e", "code128", "code39"],
+          }}
         />
         <View style={styles.overlay}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>

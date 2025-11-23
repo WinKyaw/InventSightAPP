@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
-import { Modal as RNModal, View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
+import { Modal as RNModal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ModalProps {
