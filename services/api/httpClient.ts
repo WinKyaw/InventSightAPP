@@ -193,9 +193,10 @@ const createHttpClient = (): AxiosInstance => {
         
         // Show user-friendly error alert
         if (Platform.OS !== 'web') {
+          const topSuggestions = diagnostics.suggestions.slice(0, 3).map((s, i) => `${i + 1}. ${s}`).join('\n');
           Alert.alert(
             'Connection Error',
-            `${diagnostics.message}\n\nPlease check:\n${diagnostics.suggestions.slice(0, 3).join('\n')}`,
+            `${diagnostics.message}\n\nPlease check:\n${topSuggestions}`,
             [{ text: 'OK' }]
           );
         }
