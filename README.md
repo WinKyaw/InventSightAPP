@@ -9,6 +9,7 @@ A modern React Native point of sale application with inventory management capabi
 - npm or yarn
 - Expo CLI (`npm install -g expo-cli`)
 - React Native development environment
+- **InventSight backend server** (see [Backend Setup](#-backend-setup-required) below)
 
 ### Installation
 
@@ -23,12 +24,66 @@ cd InventSightAPP
 npm install
 ```
 
-3. Configure API connection (see [API Setup](#-api-setup) below)
+3. **⚠️ IMPORTANT: Configure backend** (see [Backend Setup](#-backend-setup-required) below)
 
-4. Start the development server:
+4. Configure API connection:
+```bash
+cp .env.example .env
+# Edit .env with your backend IP address
+```
+
+5. Start the development server:
 ```bash
 npm start
 ```
+
+## 🔧 Backend Setup (Required)
+
+**⚠️ CRITICAL**: This mobile app requires the InventSight backend server to be running with **local authentication enabled**.
+
+### Quick Backend Setup
+
+1. **Enable local authentication** in backend `application.yml`:
+   ```yaml
+   # backend/src/main/resources/application.yml
+   inventsight:
+     security:
+       local-login:
+         enabled: true  # ← REQUIRED! Without this, login endpoint doesn't exist
+   ```
+
+2. **Start backend server:**
+   ```bash
+   cd ../InventSight
+   mvn spring-boot:run
+   ```
+
+3. **Find your backend IP:**
+   ```bash
+   # Mac/Linux
+   ipconfig getifaddr en0
+   
+   # Windows
+   ipconfig
+   ```
+
+4. **Update mobile app config:**
+   ```bash
+   # Edit .env file
+   API_BASE_URL=http://YOUR_IP_HERE:8080
+   API_TIMEOUT=30000
+   ```
+
+5. **Start mobile app:**
+   ```bash
+   npm start
+   ```
+
+**📖 See [BACKEND_SETUP.md](./BACKEND_SETUP.md) for complete setup instructions**
+
+### Why Backend Setup is Critical
+
+The backend's `AuthController` is **disabled by default**. The `/api/auth/login` endpoint literally doesn't exist unless you enable it in `application.yml`. This is the #1 cause of "Network Error - No response received" errors.
 
 ## 🔧 API Setup
 
@@ -130,41 +185,57 @@ Ensure your Spring Boot backend is running on port 8080. The backend should:
 ### Common Issues
 
 #### "Network Error - No response received"
+
+**Most Common Cause:** Backend AuthController is disabled!
+
+**Solution:**
+1. ✅ **Enable local-login** in backend `application.yml`:
+   ```yaml
+   inventsight:
+     security:
+       local-login:
+         enabled: true
+   ```
+2. ✅ Restart backend server
+3. ✅ Verify endpoint exists: `curl -X POST http://localhost:8080/api/auth/login`
+
+**Other Causes:**
 - **Physical Device**: Check that `API_BASE_URL` uses your machine's IP, not `localhost`
 - **Backend Not Running**: Ensure Spring Boot backend is running on port 8080
 - **Firewall**: Check if firewall is blocking connections on port 8080
 - **Network**: Ensure device and development machine are on same network
 
+#### "timeout of 30000ms exceeded"
+
+**Symptom:** Request sent but no response received
+
+**Solutions:**
+1. ✅ **Backend running?** Check: `curl http://localhost:8080/actuator/health`
+2. ✅ **local-login enabled?** Check `application.yml` (see above)
+3. ✅ **Correct IP address?** Run `ipconfig getifaddr en0` (Mac) or `ipconfig` (Windows)
+4. ✅ **Same WiFi network?** Ensure mobile device and backend are connected to same WiFi
+5. ✅ **Firewall allows port 8080?** Check firewall settings
+
+#### "404 Not Found" on login
+
+**Problem:** AuthController is not enabled in backend!
+
+**Solution:** See "Network Error - No response received" above
+
 #### "Cannot connect to localhost"
 - This is expected on physical devices
 - Use automatic configuration or set proper IP in `.env`
 
-#### "Connected but no internet access" / "timeout of 10000ms exceeded"
-This error indicates the app can connect to the network but cannot reach the backend server. Common causes:
+#### "Connected but no internet access"
+This error indicates the app can connect to the network but cannot reach the backend server.
 
-1. **Backend Server Not Running**
-   - Verify your backend is running: `curl http://localhost:8080/api/dashboard/summary`
-   - Check backend logs for errors
-
-2. **Wrong IP Address**
-   - The app may be using an incorrect IP address (e.g., `http://10.0.0.125:8080`)
-   - Find your current machine's IP address (see below)
-   - Update the API_BASE_URL in your `.env` file
-
-3. **Network Change**
-   - If you changed WiFi networks, your IP address may have changed
-   - Re-check your machine's IP address
-   - Restart the app after updating `.env`
-
-4. **Firewall Blocking**
-   - Ensure your firewall allows incoming connections on port 8080
-   - On Windows: Check Windows Defender Firewall settings
-   - On macOS: Check System Preferences → Security & Privacy → Firewall
-
-#### "Missing Native Module - ExpoBarCodeScanner" (Fixed in SDK 54)
-- This error occurred in previous versions when using deprecated `expo-barcode-scanner`
-- **Resolution**: Updated to use built-in barcode scanning from `expo-camera`
-- If you still see this error, ensure you're on Expo SDK 54 and the app is properly rebuilt
+**Quick Fix Checklist:**
+1. ✅ Backend is running: `curl http://localhost:8080/actuator/health`
+2. ✅ Found correct IP: `ipconfig` (Windows) or `ipconfig getifaddr en0` (Mac)
+3. ✅ Updated `.env`: `API_BASE_URL=http://YOUR_IP:8080`
+4. ✅ Same WiFi network: Check both devices
+5. ✅ Firewall allows port 8080
+6. ✅ Restarted Expo app after changing `.env`
 
 ### Debugging Network Issues
 
@@ -210,13 +281,19 @@ hostname -I
 
 ### Quick Network Troubleshooting Checklist
 
-1. ✅ Backend server is running on port 8080
-2. ✅ Found correct IP address of development machine
-3. ✅ Updated `API_BASE_URL` in `.env` file with correct IP
-4. ✅ Development machine and mobile device on same WiFi network
-5. ✅ Firewall allows connections on port 8080
-6. ✅ Restarted the Expo app after changing `.env`
-7. ✅ Backend CORS is configured to accept requests from any origin
+1. ✅ **local-login enabled in backend** - Check `application.yml` (MOST IMPORTANT!)
+2. ✅ Backend server is running on port 8080
+3. ✅ Found correct IP address of development machine
+4. ✅ Updated `API_BASE_URL` in `.env` file with correct IP
+5. ✅ Development machine and mobile device on same WiFi network
+6. ✅ Firewall allows connections on port 8080
+7. ✅ Restarted the Expo app after changing `.env`
+8. ✅ Backend CORS is configured to accept requests from any origin
+
+### Complete Troubleshooting Guides
+
+- **Backend Setup:** See [BACKEND_SETUP.md](./BACKEND_SETUP.md) for complete backend configuration
+- **Network Issues:** See [NETWORK_TROUBLESHOOTING.md](./NETWORK_TROUBLESHOOTING.md) for detailed network debugging
 
 ## 📱 Supported Platforms
 

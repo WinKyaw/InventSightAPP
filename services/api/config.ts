@@ -4,8 +4,22 @@ import { getApiBaseUrl, getNetworkInfo } from '../../utils/networkConfig';
 // API Configuration
 export const API_CONFIG = {
   BASE_URL: getApiBaseUrl(8080, 'http'),
-  TIMEOUT: parseInt(process.env.API_TIMEOUT || '10000'),
+  TIMEOUT: parseInt(process.env.API_TIMEOUT || '30000'), // Increased from 10s to 30s
   USER_LOGIN: process.env.USER_LOGIN || 'WinKyaw',
+};
+
+// Network Configuration
+export const NETWORK_CONFIG = {
+  // Backend API base URL
+  // IMPORTANT: Update this with your backend server IP
+  API_BASE_URL: API_CONFIG.BASE_URL,
+  
+  // Timeout configuration
+  TIMEOUT: API_CONFIG.TIMEOUT,
+  
+  // Retry configuration
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 1000, // 1 second between retries
 };
 
 // Log network configuration in development for debugging
@@ -325,3 +339,61 @@ export interface CreateEmployeeRequest {
   status?: string;
   bonus?: number;
 }
+
+// Helper to detect common network issues
+export const getNetworkDiagnostics = (error: any) => {
+  if (error.code === 'ECONNABORTED') {
+    return {
+      issue: 'timeout',
+      message: 'Connection timeout. Your backend might not be running or is taking too long to respond.',
+      suggestions: [
+        '✓ Check if InventSight backend is running on port 8080',
+        '✓ Verify inventsight.security.local-login.enabled=true in backend config',
+        '✓ Check your network connection',
+        '✓ Verify the backend IP address is correct: ' + NETWORK_CONFIG.API_BASE_URL,
+        '✓ See BACKEND_SETUP.md for detailed setup instructions'
+      ]
+    };
+  }
+  
+  if (error.code === 'ECONNREFUSED' || error.message?.includes('Network Error')) {
+    return {
+      issue: 'connection_refused',
+      message: 'Cannot connect to backend server.',
+      suggestions: [
+        '✓ Ensure InventSight backend is running',
+        '✓ Verify backend IP address: Currently set to ' + NETWORK_CONFIG.API_BASE_URL,
+        '✓ Check if local-login is enabled in backend application.yml',
+        '✓ Verify you are on the same WiFi network as the backend',
+        '✓ Check firewall allows connections on port 8080'
+      ]
+    };
+  }
+  
+  if (error.response?.status === 404) {
+    return {
+      issue: 'endpoint_not_found',
+      message: 'Login endpoint not found. The backend AuthController may be disabled.',
+      suggestions: [
+        '⚠️  CRITICAL: Backend AuthController is likely DISABLED',
+        '✓ Edit backend application.yml and add:',
+        '   inventsight:',
+        '     security:',
+        '       local-login:',
+        '         enabled: true',
+        '✓ Restart backend server',
+        '✓ See BACKEND_SETUP.md for complete instructions'
+      ]
+    };
+  }
+  
+  return {
+    issue: 'unknown',
+    message: error.message || 'Unknown network error',
+    suggestions: [
+      '✓ Check backend logs for more details',
+      '✓ Verify backend configuration',
+      '✓ See BACKEND_SETUP.md and NETWORK_TROUBLESHOOTING.md'
+    ]
+  };
+};

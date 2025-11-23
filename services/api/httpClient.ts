@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { API_CONFIG, getSessionInfo, ApiResponse } from './config';
+import { Platform, Alert } from 'react-native';
+import { API_CONFIG, getSessionInfo, ApiResponse, getNetworkDiagnostics } from './config';
 import { tokenManager } from '../../utils/tokenManager';
 
 // Track if we're currently refreshing token to avoid multiple refresh calls
@@ -180,6 +181,24 @@ const createHttpClient = (): AxiosInstance => {
         console.error('❌ Network Error - No response received');
         console.error(`📅 Current Date and Time (UTC): ${sessionInfo.timestamp}`);
         console.error(`👤 Current User's Login: ${sessionInfo.userLogin}`);
+        
+        // Add network diagnostics
+        const diagnostics = getNetworkDiagnostics(error);
+        console.error(`🔍 Network Issue: ${diagnostics.issue}`);
+        console.error(`💡 ${diagnostics.message}`);
+        console.error(`📋 Suggestions:`);
+        diagnostics.suggestions.forEach((suggestion, index) => {
+          console.error(`   ${index + 1}. ${suggestion}`);
+        });
+        
+        // Show user-friendly error alert
+        if (Platform.OS !== 'web') {
+          Alert.alert(
+            'Connection Error',
+            `${diagnostics.message}\n\nPlease check:\n${diagnostics.suggestions.slice(0, 3).join('\n')}`,
+            [{ text: 'OK' }]
+          );
+        }
       } else {
         console.error('❌ Request Setup Error:', error.message);
       }
