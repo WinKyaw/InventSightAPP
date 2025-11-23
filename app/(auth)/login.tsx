@@ -46,20 +46,24 @@ export default function LoginScreen() {
     try {
       setCheckingBiometric(true);
 
-      // Check if biometric hardware is available
-      const available = await biometricService.isAvailable();
-      setBiometricAvailable(available);
-
-      if (!available) {
+      // ✅ FIX: First check if biometric login is enabled (silent check)
+      const enabled = await biometricService.isBiometricLoginEnabled();
+      
+      if (!enabled) {
+        // User hasn't enabled biometric login - skip all checks
+        console.log('ℹ️ Login: Biometric login not enabled, skipping checks');
+        setBiometricAvailable(false);
+        setBiometricEnabled(false);
         setCheckingBiometric(false);
         return;
       }
-
-      // Check if biometric login is enabled
-      const enabled = await biometricService.isBiometricLoginEnabled();
+      
+      // Only proceed with hardware checks if biometric is enabled
+      const available = await biometricService.isAvailable();
+      setBiometricAvailable(available);
       setBiometricEnabled(enabled);
 
-      if (enabled) {
+      if (available && enabled) {
         // Get stored email to pre-fill
         const storedEmail = await biometricService.getStoredUserEmail();
         if (storedEmail) {
@@ -76,9 +80,10 @@ export default function LoginScreen() {
 
       setCheckingBiometric(false);
     } catch (error) {
-      console.error('Failed to check biometric availability:', error);
+      console.error('❌ Login: Failed to check biometric availability:', error);
       setCheckingBiometric(false);
       setBiometricAvailable(false);
+      setBiometricEnabled(false);
     }
   };
 
