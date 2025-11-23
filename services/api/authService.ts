@@ -111,8 +111,32 @@ class AuthService {
     console.log('we are in the catch');
     console.error('❌ AuthService: Login failed:', error);
     
+    // Network/connection errors
+    if (error.code === 'ECONNABORTED' || error.code === 'ECONNREFUSED') {
+      throw new Error(
+        'Cannot connect to InventSight backend server.\n\n' +
+        'Please ensure:\n' +
+        '1. Backend is running on port 8080\n' +
+        '2. local-login is enabled in application.yml\n' +
+        '3. You are on the same network\n\n' +
+        'See BACKEND_SETUP.md for setup instructions.'
+      );
+    }
+    
+    // HTTP error responses
     if (error.response?.status === 401) {
-      throw new Error('Invalid email or password');
+      throw new Error(error.response.data?.message || 'Invalid email or password');
+    } else if (error.response?.status === 404) {
+      throw new Error(
+        'Login endpoint not found.\n\n' +
+        '⚠️ CRITICAL: Backend AuthController is likely DISABLED.\n\n' +
+        'Fix: Edit backend application.yml and add:\n' +
+        'inventsight:\n' +
+        '  security:\n' +
+        '    local-login:\n' +
+        '      enabled: true\n\n' +
+        'Then restart backend. See BACKEND_SETUP.md for details.'
+      );
     } else if (error.response?.status === 429) {
       throw new Error('Too many login attempts. Please try again later');
     } else if (error.response?.data?.message) {
