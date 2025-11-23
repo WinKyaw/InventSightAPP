@@ -39,8 +39,20 @@ class BiometricService {
     }
     
     // Check for invalid characters (anything except alphanumeric, '.', '-', '_')
+    // Hyphen is placed at the end to avoid being interpreted as a range operator
     const validKeyPattern = /^[a-zA-Z0-9._-]+$/;
     return validKeyPattern.test(key);
+  }
+
+  /**
+   * Validate all biometric SecureStore keys
+   */
+  private validateAllKeys(): boolean {
+    return (
+      this.isValidSecureStoreKey(BIOMETRIC_KEYS.ENABLED) &&
+      this.isValidSecureStoreKey(BIOMETRIC_KEYS.CREDENTIALS) &&
+      this.isValidSecureStoreKey(BIOMETRIC_KEYS.USER_EMAIL)
+    );
   }
 
   /**
@@ -155,9 +167,7 @@ class BiometricService {
   async enableBiometricLogin(email: string, password: string): Promise<void> {
     try {
       // Validate keys before using
-      if (!this.isValidSecureStoreKey(BIOMETRIC_KEYS.ENABLED) ||
-          !this.isValidSecureStoreKey(BIOMETRIC_KEYS.CREDENTIALS) ||
-          !this.isValidSecureStoreKey(BIOMETRIC_KEYS.USER_EMAIL)) {
+      if (!this.validateAllKeys()) {
         throw new Error('Invalid SecureStore key configuration');
       }
       
@@ -199,9 +209,7 @@ class BiometricService {
   async disableBiometricLogin(): Promise<void> {
     try {
       // Validate keys before using
-      if (!this.isValidSecureStoreKey(BIOMETRIC_KEYS.ENABLED) ||
-          !this.isValidSecureStoreKey(BIOMETRIC_KEYS.CREDENTIALS) ||
-          !this.isValidSecureStoreKey(BIOMETRIC_KEYS.USER_EMAIL)) {
+      if (!this.validateAllKeys()) {
         console.warn('⚠️ BiometricService: Invalid key configuration, skipping disable');
         return;
       }
