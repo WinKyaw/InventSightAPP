@@ -11,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
@@ -18,10 +19,27 @@ import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInve
 import { WarehouseSummary, WarehouseInventoryRow } from '../../types/warehouse';
 import { getWarehouses, getWarehouseInventory } from '../../services/api/warehouse';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
+import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../constants/Colors';
 import { styles as commonStyles } from '../../constants/Styles';
 
 export default function WarehouseScreen() {
+  // ✅ SECURITY FIX: Add authentication check
+  const { isAuthenticated, isInitialized } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      console.log('🔐 Warehouse: Unauthorized access blocked, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized]);
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const { isReady, isAuthenticating, isUnauthenticated } = useApiReadiness();
   
   const [warehouses, setWarehouses] = useState<WarehouseSummary[]>([]);

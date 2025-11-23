@@ -419,29 +419,53 @@ class AuthService {
 
   /**
    * Verify if current stored authentication is valid
+   * ✅ SECURITY FIX: Verifies token with backend server, not just local storage
    */
   async verifyAuthentication(): Promise<boolean> {
     try {
       const { accessToken, refreshToken, isExpired } = await tokenManager.getAuthData();
       
       if (!accessToken || !refreshToken) {
+        console.log('🔐 AuthService: No tokens found');
         return false;
       }
 
-      // If token is expired, try to refresh
-      if (isExpired) {
-        try {
-          await this.refreshToken();
+      // ✅ SECURITY FIX: Verify token with backend server
+      try {
+        // Make a lightweight API call to verify token validity
+        const response = await httpClient.get(API_ENDPOINTS.AUTH.PROFILE);
+        
+        if (response.data) {
+          console.log('✅ AuthService: Token verified with server');
           return true;
-        } catch (refreshError) {
-          console.error('❌ AuthService: Token refresh during verification failed:', refreshError);
-          return false;
         }
+        
+        return false;
+      } catch (verifyError: any) {
+        console.error('❌ AuthService: Token verification failed:', verifyError);
+        
+        // If token is expired, try to refresh
+        if (verifyError.response?.status === 401 && refreshToken) {
+          console.log('🔄 AuthService: Token expired, attempting refresh');
+          try {
+            await this.refreshToken();
+            console.log('✅ AuthService: Token refreshed successfully');
+            return true;
+          } catch (refreshError) {
+            console.error('❌ AuthService: Token refresh failed:', refreshError);
+            // Clear invalid tokens
+            await tokenManager.clearAuthData();
+            return false;
+          }
+        }
+        
+        // For any other error, clear tokens and require re-login
+        await tokenManager.clearAuthData();
+        return false;
       }
-
-      return true;
     } catch (error) {
       console.error('❌ AuthService: Authentication verification failed:', error);
+      await tokenManager.clearAuthData();
       return false;
     }
   }

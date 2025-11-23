@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCalendar } from '../../context/CalendarContext';
+import { useAuth } from '../../context/AuthContext';
 import { Header } from '../../components/shared/Header';
 import { CalendarView } from '../../components/calendar/CalendarView';
 import { AddReminderModal } from '../../components/modals/AddReminderModal';
@@ -10,6 +12,22 @@ import { DayDetailsModal } from '../../components/modals/DayDetailsModal';
 import { styles } from '../../constants/Styles';
 
 export default function CalendarScreen() {
+  // ✅ SECURITY FIX: Add authentication check
+  const { isAuthenticated, isInitialized } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      console.log('🔐 Calendar: Unauthorized access blocked, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized]);
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const { 
     reminders, 
     loading, 
