@@ -3,9 +3,9 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const BIOMETRIC_KEYS = {
-  ENABLED: '@biometric_enabled',
-  CREDENTIALS: '@biometric_credentials',
-  USER_EMAIL: '@biometric_user_email',
+  ENABLED: 'biometric.enabled',
+  CREDENTIALS: 'biometric.credentials',
+  USER_EMAIL: 'biometric.user_email',
 };
 
 interface BiometricCredentials {
@@ -27,6 +27,32 @@ class BiometricService {
       BiometricService.instance = new BiometricService();
     }
     return BiometricService.instance;
+  }
+
+  /**
+   * Validate SecureStore key format
+   * Keys must only contain alphanumeric characters, ".", "-", and "_"
+   */
+  private isValidSecureStoreKey(key: string): boolean {
+    if (!key || typeof key !== 'string' || key.trim().length === 0) {
+      return false;
+    }
+    
+    // Check for invalid characters (anything except alphanumeric, '.', '-', '_')
+    // Hyphen is placed at the end to avoid being interpreted as a range operator
+    const validKeyPattern = /^[a-zA-Z0-9._-]+$/;
+    return validKeyPattern.test(key);
+  }
+
+  /**
+   * Validate all biometric SecureStore keys
+   */
+  private validateAllKeys(): boolean {
+    return (
+      this.isValidSecureStoreKey(BIOMETRIC_KEYS.ENABLED) &&
+      this.isValidSecureStoreKey(BIOMETRIC_KEYS.CREDENTIALS) &&
+      this.isValidSecureStoreKey(BIOMETRIC_KEYS.USER_EMAIL)
+    );
   }
 
   /**
@@ -113,10 +139,24 @@ class BiometricService {
    */
   async isBiometricLoginEnabled(): Promise<boolean> {
     try {
+      // Check if key is valid before accessing SecureStore
+      if (!this.isValidSecureStoreKey(BIOMETRIC_KEYS.ENABLED)) {
+        console.warn('⚠️ BiometricService: Invalid ENABLED key');
+        return false;
+      }
+      
       const enabled = await SecureStore.getItemAsync(BIOMETRIC_KEYS.ENABLED);
+      
+      // For first-time users, enabled will be null
+      if (enabled === null) {
+        console.log('ℹ️ BiometricService: Biometric login not configured (first-time user)');
+        return false;
+      }
+      
       return enabled === 'true';
     } catch (error) {
-      console.error('Failed to check biometric login status:', error);
+      console.error('❌ BiometricService: Failed to check biometric login status:', error);
+      // Return false to skip biometric login on error
       return false;
     }
   }
@@ -126,6 +166,11 @@ class BiometricService {
    */
   async enableBiometricLogin(email: string, password: string): Promise<void> {
     try {
+      // Validate keys before using
+      if (!this.validateAllKeys()) {
+        throw new Error('Invalid SecureStore key configuration');
+      }
+      
       // First verify device supports biometrics
       const available = await this.isAvailable();
       if (!available) {
@@ -163,6 +208,12 @@ class BiometricService {
    */
   async disableBiometricLogin(): Promise<void> {
     try {
+      // Validate keys before using
+      if (!this.validateAllKeys()) {
+        console.warn('⚠️ BiometricService: Invalid key configuration, skipping disable');
+        return;
+      }
+      
       await Promise.all([
         SecureStore.deleteItemAsync(BIOMETRIC_KEYS.CREDENTIALS),
         SecureStore.deleteItemAsync(BIOMETRIC_KEYS.ENABLED),
@@ -181,6 +232,12 @@ class BiometricService {
    */
   async getStoredCredentials(): Promise<BiometricCredentials | null> {
     try {
+      // Validate key before using
+      if (!this.isValidSecureStoreKey(BIOMETRIC_KEYS.CREDENTIALS)) {
+        console.warn('⚠️ BiometricService: Invalid CREDENTIALS key');
+        return null;
+      }
+      
       // First check if biometric login is enabled
       const enabled = await this.isBiometricLoginEnabled();
       if (!enabled) {
@@ -212,6 +269,12 @@ class BiometricService {
    */
   async getStoredUserEmail(): Promise<string | null> {
     try {
+      // Validate key before using
+      if (!this.isValidSecureStoreKey(BIOMETRIC_KEYS.USER_EMAIL)) {
+        console.warn('⚠️ BiometricService: Invalid USER_EMAIL key');
+        return null;
+      }
+      
       const email = await SecureStore.getItemAsync(BIOMETRIC_KEYS.USER_EMAIL);
       return email;
     } catch (error) {
