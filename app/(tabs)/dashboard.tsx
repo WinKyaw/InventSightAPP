@@ -19,7 +19,7 @@ export default function DashboardScreen() {
       console.log('🔐 Dashboard: Unauthorized access blocked, redirecting to login');
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated, isInitialized]);
+  }, [isAuthenticated, isInitialized, router]);
 
   // Early return if not authenticated
   if (!isAuthenticated) {

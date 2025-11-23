@@ -21,7 +21,7 @@ export default function CalendarScreen() {
       console.log('🔐 Calendar: Unauthorized access blocked, redirecting to login');
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated, isInitialized]);
+  }, [isAuthenticated, isInitialized, router]);
 
   // Early return if not authenticated
   if (!isAuthenticated) {

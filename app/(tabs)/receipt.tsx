@@ -41,7 +41,7 @@ export default function ReceiptScreen() {
       console.log('🔐 Receipt: Unauthorized access blocked, redirecting to login');
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated, isInitialized]);
+  }, [isAuthenticated, isInitialized, router]);
 
   // Early return if not authenticated
   if (!isAuthenticated) {

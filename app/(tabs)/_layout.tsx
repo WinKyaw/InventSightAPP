@@ -36,7 +36,7 @@ export default function TabsLayout() {
       console.log('🔐 TabsLayout: User not authenticated, redirecting to login');
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated, isInitialized, isLoading]);
+  }, [isAuthenticated, isInitialized, isLoading, router]);
 
   // ✅ SOLUTION 1: Call hook at component top level with error handling
   let navContext = null;
