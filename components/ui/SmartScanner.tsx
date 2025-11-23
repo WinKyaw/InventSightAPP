@@ -17,6 +17,7 @@ type Props = {
   onClose: () => void;
   onBarcodeDetected: (barcode: string) => void;
   onOcrDetected: (ocrText: string) => void;
+  supportedBarcodeTypes?: string[];
 };
 
 const SmartScanner: React.FC<Props> = ({
@@ -24,6 +25,7 @@ const SmartScanner: React.FC<Props> = ({
   onClose,
   onBarcodeDetected,
   onOcrDetected,
+  supportedBarcodeTypes = ["qr", "ean13", "ean8", "upc_a", "upc_e", "code128", "code39"],
 }) => {
   const cameraRef = useRef<CameraView>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -132,7 +134,7 @@ const SmartScanner: React.FC<Props> = ({
           facing="back"
           onBarcodeScanned={barcodeHandled ? undefined : onBarCodeScanned}
           barcodeScannerSettings={{
-            barcodeTypes: ["qr", "ean13", "ean8", "upc_a", "upc_e", "code128", "code39"],
+            barcodeTypes: supportedBarcodeTypes,
           }}
         />
         <View style={styles.overlay}>
