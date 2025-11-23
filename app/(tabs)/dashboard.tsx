@@ -1,13 +1,31 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useReports } from '../../context/ReportsContext';
 import { useEmployees } from '../../context/EmployeesContext';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
+import { useAuth } from '../../context/AuthContext';
 import { Header } from '../../components/shared/Header';
 import { styles } from '../../constants/Styles';
 
 export default function DashboardScreen() {
+  // ✅ SECURITY FIX: Add authentication check
+  const { isAuthenticated, isInitialized } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      console.log('🔐 Dashboard: Unauthorized access blocked, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized, router]);
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   // Add null check for useApiReadiness result
   const apiReadinessResult = useApiReadiness();
   const { isReady: apiReady, isAuthenticating, canMakeApiCalls } = apiReadinessResult || {

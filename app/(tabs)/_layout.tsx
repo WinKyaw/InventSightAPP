@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { TouchableOpacity, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { HamburgerMenu } from '../../components/shared/HamburgerMenu';
 import { OfflineIndicator } from '../../components/OfflineIndicator';
 import { SyncStatus } from '../../components/SyncStatus';
+import { useAuth } from '../../context/AuthContext';
 
 // Import with error boundary
 let useNavigation: any = null;
@@ -23,9 +24,19 @@ const FALLBACK_NAV_ITEMS = [
 ];
 
 export default function TabsLayout() {
+  const { isAuthenticated, isInitialized, isLoading } = useAuth();
+  const router = useRouter();
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [selectedNavItems, setSelectedNavItems] = useState(FALLBACK_NAV_ITEMS);
+
+  // ✅ SECURITY FIX: Redirect to login if not authenticated
+  useEffect(() => {
+    if (isInitialized && !isLoading && !isAuthenticated) {
+      console.log('🔐 TabsLayout: User not authenticated, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized, isLoading, router]);
 
   // ✅ SOLUTION 1: Call hook at component top level with error handling
   let navContext = null;
@@ -44,7 +55,22 @@ export default function TabsLayout() {
     setIsReady(true);
   }, [navContext]);
 
-  // Show loading state while initializing
+  // ✅ SECURITY FIX: Show loading while checking authentication
+  if (!isInitialized || isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={{ marginTop: 10, color: Colors.gray }}>Verifying authentication...</Text>
+      </View>
+    );
+  }
+  
+  // ✅ SECURITY FIX: If not authenticated after initialization, don't render tabs
+  if (!isAuthenticated) {
+    return null; // Router will handle redirect
+  }
+
+  // Show loading state while initializing navigation
   if (!isReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>

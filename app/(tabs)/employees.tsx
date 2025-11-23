@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployees } from '../../context/EmployeesContext';
+import { useAuth } from '../../context/AuthContext';
 import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
 import { AddEmployeeModal } from '../../components/modals/AddEmployeeModal';
@@ -11,6 +13,22 @@ import { Employee } from '../../types';
 import { styles } from '../../constants/Styles';
 
 export default function EmployeesScreen() {
+  // ✅ SECURITY FIX: Add authentication check
+  const { isAuthenticated, isInitialized } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      console.log('🔐 Employees: Unauthorized access blocked, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized, router]);
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const { 
     employees, 
     loading, 

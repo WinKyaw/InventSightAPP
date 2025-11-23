@@ -57,29 +57,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
-      // Check if user has valid authentication
+      // ✅ SECURITY FIX: Verify authentication with server (not just local storage)
       const isAuthenticated = await authService.verifyAuthentication();
       
       if (!isMountedRef.current) return;
       
       if (isAuthenticated) {
-        // Get stored user data
-        const user = await tokenManager.getUser();
-        if (user && isMountedRef.current) {
-          console.log('✅ AuthContext: User authenticated:', user.email);
-          setAuthState({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-            isInitialized: true,
-            tokens: null, // We don't need to expose tokens in context
-          });
-          return;
+        // ✅ SECURITY FIX: Fetch fresh user data from server, don't trust cached data
+        try {
+          const user = await authService.getCurrentUser();
+          
+          if (user && isMountedRef.current) {
+            console.log('✅ AuthContext: User authenticated and verified:', user.email);
+            setAuthState({
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+              isInitialized: true,
+              tokens: null,
+            });
+            return;
+          }
+        } catch (userError) {
+          console.error('❌ AuthContext: Failed to fetch user after token verification:', userError);
+          // Clear invalid state
+          await authService.logout();
         }
       }
 
+      // Authentication failed or user fetch failed
       if (isMountedRef.current) {
-        console.log('ℹ️ AuthContext: No valid authentication found');
+        console.log('🚫 AuthContext: Authentication failed - redirecting to login');
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -91,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('❌ AuthContext: Auth initialization failed:', error);
       if (isMountedRef.current) {
+        // Clear any potentially invalid tokens
+        await authService.logout();
         setAuthState({
           user: null,
           isAuthenticated: false,

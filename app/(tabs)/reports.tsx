@@ -1,12 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/shared/Header';
 import { useReports } from '../../context/ReportsContext';
+import { useAuth } from '../../context/AuthContext';
 import { styles } from '../../constants/Styles';
 
 export default function ReportsScreen() {
+  // ✅ SECURITY FIX: Add authentication check
+  const { isAuthenticated, isInitialized } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      console.log('🔐 Reports: Unauthorized access blocked, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized, router]);
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const { 
     dashboardData, 
     loading, 

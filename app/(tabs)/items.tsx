@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useItemsApi } from '../../context/ItemsApiContext';
+import { useAuth } from '../../context/AuthContext';
 import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
 import { FilterSortBar } from '../../components/shared/FilterSortBar';
@@ -16,6 +18,22 @@ import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
 
 export default function ItemsScreen() {
+  // ✅ SECURITY FIX: Add authentication check
+  const { isAuthenticated, isInitialized } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      console.log('🔐 Items: Unauthorized access blocked, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized, router]);
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const {
     products,
     loading,

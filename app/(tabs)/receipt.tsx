@@ -11,6 +11,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import Header from "../../components/ui/Header";
@@ -24,12 +25,29 @@ import { OCRScanner } from "../../components/ui/OCRScanner";
 
 import { useReceipt } from "../../context/ReceiptContext";
 import { useItems } from "../../context/ItemsContext";
+import { useAuth } from "../../context/AuthContext";
 import { Receipt, Item } from "../../types";
 import ReceiptService from "../../services/api/receiptService";
 
 type TabType = "create" | "list";
 
 export default function ReceiptScreen() {
+  // ✅ SECURITY FIX: Add authentication check
+  const { isAuthenticated, isInitialized } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      console.log('🔐 Receipt: Unauthorized access blocked, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized, router]);
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const {
     receiptItems,
     customerName,
