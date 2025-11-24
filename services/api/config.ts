@@ -338,6 +338,7 @@ export interface CreateEmployeeRequest {
   startDate: string;
   status?: string;
   bonus?: number;
+  storeId: string; // UUID required by backend
 }
 
 // Helper to detect common network issues

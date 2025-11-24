@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployees } from '../../context/EmployeesContext';
 import { Modal } from '../ui/Modal';
@@ -18,6 +18,7 @@ interface ValidationErrors {
   hourlyRate?: string;
   phone?: string;
   title?: string;
+  storeId?: string;
 }
 
 export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
@@ -29,10 +30,18 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
     phone: '',
     title: '',
     bonus: '',
-    startDate: new Date().toISOString().split('T')[0]
+    startDate: new Date().toISOString().split('T')[0],
+    storeId: ''
   });
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Mock stores - In production, this would come from API or user context
+  const availableStores = [
+    { id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', name: 'Main Store' },
+    { id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901', name: 'Downtown Branch' },
+    { id: 'c3d4e5f6-a7b8-9012-cdef-123456789012', name: 'West Side Store' },
+  ];
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
@@ -84,6 +93,11 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
       errors.title = 'Title must be less than 100 characters';
     }
 
+    // Store ID validation
+    if (!newEmployee.storeId.trim()) {
+      errors.storeId = 'Store selection is required';
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -117,6 +131,7 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
         status: 'Active',
         title: newEmployee.title.trim() || 'Staff',
         bonus: parseFloat(newEmployee.bonus) || 0,
+        storeId: newEmployee.storeId,
       });
       
       // Reset form
@@ -127,7 +142,8 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
         phone: '', 
         title: '', 
         bonus: '', 
-        startDate: new Date().toISOString().split('T')[0] 
+        startDate: new Date().toISOString().split('T')[0],
+        storeId: ''
       });
       setValidationErrors({});
       onClose();
@@ -222,6 +238,40 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
             <View style={styles.fieldErrorContainer}>
               <Ionicons name="alert-circle" size={16} color="#EF4444" />
               <Text style={styles.fieldErrorText}>{validationErrors.phone}</Text>
+            </View>
+          )}
+        </View>
+        
+        {/* Store Selection */}
+        <View style={{ marginBottom: 16 }}>
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerLabel}>Select Store *</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.pickerRow}>
+                {availableStores.map((store) => (
+                  <TouchableOpacity
+                    key={store.id}
+                    style={[
+                      styles.pickerOption, 
+                      newEmployee.storeId === store.id && styles.pickerOptionSelected
+                    ]}
+                    onPress={() => handleInputChange('storeId', store.id)}
+                  >
+                    <Text style={[
+                      styles.pickerOptionText, 
+                      newEmployee.storeId === store.id && styles.pickerOptionTextSelected
+                    ]}>
+                      {store.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+          {validationErrors.storeId && (
+            <View style={styles.fieldErrorContainer}>
+              <Ionicons name="alert-circle" size={16} color="#EF4444" />
+              <Text style={styles.fieldErrorText}>{validationErrors.storeId}</Text>
             </View>
           )}
         </View>

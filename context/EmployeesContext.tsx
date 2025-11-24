@@ -41,6 +41,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   // Effect to sync API data with local state when API integration is enabled
   useEffect(() => {
     if (useApiIntegration && apiEmployees && Array.isArray(apiEmployees)) {
+      // Empty arrays are valid responses - set them without error
       setEmployees(apiEmployees);
     } else if (!useApiIntegration) {
       // Only fallback to mock data when API integration is explicitly disabled
@@ -65,7 +66,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
     setEmployees(prev => [...prev, employee]);
   }, []);
 
-  const addEmployee = useCallback(async (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
+  const addEmployee = useCallback(async (newEmployee: Omit<Employee, 'id' | 'expanded'> & { storeId?: string }) => {
     if (useApiIntegration && canMakeApiCalls) {
       try {
         const createData: CreateEmployeeRequest = {
@@ -77,14 +78,15 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
           startDate: newEmployee.startDate,
           status: newEmployee.status,
           bonus: newEmployee.bonus,
+          storeId: newEmployee.storeId || '00000000-0000-0000-0000-000000000000', // Default UUID if not provided
         };
         
         const createdEmployee = await EmployeeService.createEmployee(createData);
         setEmployees(prev => [...prev, createdEmployee]);
       } catch (error) {
         console.error('Failed to create employee via API:', error);
-        // Fallback to local creation if API fails
-        fallbackAddEmployee(newEmployee);
+        // Re-throw error so UI can show proper error message
+        throw error;
       }
     } else {
       fallbackAddEmployee(newEmployee);
