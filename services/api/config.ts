@@ -341,6 +341,9 @@ export interface CreateEmployeeRequest {
   storeId: string; // UUID required by backend
 }
 
+// Default store ID for fallback when no store is selected
+export const DEFAULT_STORE_ID = '00000000-0000-0000-0000-000000000000';
+
 // Helper to detect common network issues
 export const getNetworkDiagnostics = (error: any) => {
   if (error.code === 'ECONNABORTED') {

@@ -5,6 +5,7 @@ import { useEmployees } from '../../context/EmployeesContext';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { mockStores } from '../../constants/Data';
 import { styles } from '../../constants/Styles';
 
 interface AddEmployeeModalProps {
@@ -35,13 +36,6 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
   });
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Mock stores - In production, this would come from API or user context
-  const availableStores = [
-    { id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', name: 'Main Store' },
-    { id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901', name: 'Downtown Branch' },
-    { id: 'c3d4e5f6-a7b8-9012-cdef-123456789012', name: 'West Side Store' },
-  ];
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
@@ -248,7 +242,7 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
             <Text style={styles.pickerLabel}>Select Store *</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.pickerRow}>
-                {availableStores.map((store) => (
+                {mockStores.map((store) => (
                   <TouchableOpacity
                     key={store.id}
                     style={[

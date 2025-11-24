@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { Employee } from '../types';
 import { initialEmployees } from '../constants/Data';
-import { EmployeeService, CreateEmployeeRequest } from '../services';
+import { EmployeeService, CreateEmployeeRequest, DEFAULT_STORE_ID } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 
 interface EmployeesContextType {
@@ -78,14 +78,14 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
           startDate: newEmployee.startDate,
           status: newEmployee.status,
           bonus: newEmployee.bonus,
-          storeId: newEmployee.storeId || '00000000-0000-0000-0000-000000000000', // Default UUID if not provided
+          storeId: newEmployee.storeId || DEFAULT_STORE_ID, // Use constant for fallback UUID
         };
         
         const createdEmployee = await EmployeeService.createEmployee(createData);
         setEmployees(prev => [...prev, createdEmployee]);
       } catch (error) {
         console.error('Failed to create employee via API:', error);
-        // Re-throw error so UI can show proper error message
+        // Re-throw error so UI can show proper error message to user
         throw error;
       }
     } else {
