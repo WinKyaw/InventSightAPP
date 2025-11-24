@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { Employee } from '../types';
 import { initialEmployees } from '../constants/Data';
-import { EmployeeService, CreateEmployeeRequest } from '../services';
+import { EmployeeService, CreateEmployeeRequest, DEFAULT_STORE_ID } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 
 interface EmployeesContextType {
@@ -41,6 +41,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   // Effect to sync API data with local state when API integration is enabled
   useEffect(() => {
     if (useApiIntegration && apiEmployees && Array.isArray(apiEmployees)) {
+      // Empty arrays are valid responses - set them without error
       setEmployees(apiEmployees);
     } else if (!useApiIntegration) {
       // Only fallback to mock data when API integration is explicitly disabled
@@ -65,7 +66,7 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
     setEmployees(prev => [...prev, employee]);
   }, []);
 
-  const addEmployee = useCallback(async (newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
+  const addEmployee = useCallback(async (newEmployee: Omit<Employee, 'id' | 'expanded'> & { storeId?: string }) => {
     if (useApiIntegration && canMakeApiCalls) {
       try {
         const createData: CreateEmployeeRequest = {
@@ -77,14 +78,18 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
           startDate: newEmployee.startDate,
           status: newEmployee.status,
           bonus: newEmployee.bonus,
+          storeId: newEmployee.storeId || DEFAULT_STORE_ID, // Use constant for fallback UUID
         };
         
         const createdEmployee = await EmployeeService.createEmployee(createData);
         setEmployees(prev => [...prev, createdEmployee]);
       } catch (error) {
         console.error('Failed to create employee via API:', error);
-        // Fallback to local creation if API fails
-        fallbackAddEmployee(newEmployee);
+        // Wrap error in user-friendly message before re-throwing
+        const userMessage = error instanceof Error 
+          ? error.message 
+          : 'Failed to create employee. Please check your connection and try again.';
+        throw new Error(userMessage);
       }
     } else {
       fallbackAddEmployee(newEmployee);

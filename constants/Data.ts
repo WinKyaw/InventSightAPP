@@ -1,5 +1,17 @@
 import { Item, Employee, Reminder } from '../types';
 
+// Mock stores for employee assignment (until backend provides store list API)
+export interface Store {
+  id: string;
+  name: string;
+}
+
+export const mockStores: Store[] = [
+  { id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', name: 'Main Store' },
+  { id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901', name: 'Downtown Branch' },
+  { id: 'c3d4e5f6-a7b8-9012-cdef-123456789012', name: 'West Side Store' },
+];
+
 export const initialItems: Item[] = [
   { 
     id: 1, 

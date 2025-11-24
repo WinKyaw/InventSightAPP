@@ -124,8 +124,8 @@ export default function EmployeesScreen() {
           </View>
         )}
 
-        {/* Error State */}
-        {error && (
+        {/* Error State - Show when there's an API error */}
+        {error && !loading && (
           <View style={styles.errorContainer}>
             <View style={styles.errorHeader}>
               <Ionicons name="alert-circle" size={16} color="#EF4444" />
@@ -163,13 +163,19 @@ export default function EmployeesScreen() {
             </View>
           )}
 
-          {!loading && filteredEmployees.length === 0 && searchTerm.length === 0 && (
+          {!loading && !error && filteredEmployees.length === 0 && searchTerm.length === 0 && (
             <View style={styles.emptyStateContainer}>
               <Ionicons name="people-outline" size={64} color="#D1D5DB" />
               <Text style={styles.emptyStateTitle}>No Employees Yet</Text>
               <Text style={styles.emptyStateText}>
                 Add your first employee to get started with team management
               </Text>
+              <TouchableOpacity 
+                style={[styles.headerButton, { marginTop: 16, backgroundColor: '#8B5CF6' }]}
+                onPress={() => setShowAddModal(true)}
+              >
+                <Text style={styles.headerButtonText}>Add Employee</Text>
+              </TouchableOpacity>
             </View>
           )}
 
