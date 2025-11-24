@@ -124,8 +124,8 @@ export default function EmployeesScreen() {
           </View>
         )}
 
-        {/* Error State - Only show for actual API errors, not empty arrays */}
-        {error && employees.length === 0 && (
+        {/* Error State - Show when there's an API error */}
+        {error && !loading && (
           <View style={styles.errorContainer}>
             <View style={styles.errorHeader}>
               <Ionicons name="alert-circle" size={16} color="#EF4444" />

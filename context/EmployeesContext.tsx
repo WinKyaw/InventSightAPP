@@ -85,8 +85,11 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
         setEmployees(prev => [...prev, createdEmployee]);
       } catch (error) {
         console.error('Failed to create employee via API:', error);
-        // Re-throw error so UI can show proper error message to user
-        throw error;
+        // Wrap error in user-friendly message before re-throwing
+        const userMessage = error instanceof Error 
+          ? error.message 
+          : 'Failed to create employee. Please check your connection and try again.';
+        throw new Error(userMessage);
       }
     } else {
       fallbackAddEmployee(newEmployee);
