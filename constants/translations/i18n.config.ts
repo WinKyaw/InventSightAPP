@@ -120,7 +120,7 @@ initI18n();
 
 /**
  * Change the current language
- * @param language Language code (en, es, zh, ja)
+ * @param language Language code (en, es, zh, ja, my)
  */
 export const changeLanguage = async (language: string): Promise<void> => {
   try {
