@@ -88,10 +88,11 @@ const initI18n = async () => {
     
     // Validate saved language is supported
     let initialLanguage = storedLanguage || deviceLocale;
-    const isSupported = AVAILABLE_LANGUAGES.find(lang => lang.code === initialLanguage);
-    if (!isSupported) {
+    let languageInfo = AVAILABLE_LANGUAGES.find(lang => lang.code === initialLanguage);
+    if (!languageInfo) {
       console.warn(`⚠️ Language "${initialLanguage}" not supported, falling back to English`);
       initialLanguage = 'en';
+      languageInfo = AVAILABLE_LANGUAGES.find(lang => lang.code === 'en')!;
     }
 
     await i18next
@@ -115,7 +116,7 @@ const initI18n = async () => {
         },
       });
 
-    console.log(`✅ i18n initialized with language: ${initialLanguage} (${AVAILABLE_LANGUAGES.find(l => l.code === initialLanguage)?.name})`);
+    console.log(`✅ i18n initialized with language: ${initialLanguage} (${languageInfo.name})`);
   } catch (error) {
     console.error('❌ Error initializing i18n:', error);
     // Fallback initialization
