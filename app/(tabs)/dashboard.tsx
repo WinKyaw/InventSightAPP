@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useReports } from '../../context/ReportsContext';
 import { useEmployees } from '../../context/EmployeesContext';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
@@ -10,6 +11,7 @@ import { Header } from '../../components/shared/Header';
 import { styles } from '../../constants/Styles';
 
 export default function DashboardScreen() {
+  const { t } = useTranslation();
   // ✅ SECURITY FIX: Add authentication check
   const { isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
@@ -53,7 +55,7 @@ export default function DashboardScreen() {
       console.log('🔐 Dashboard: Authentication verified, loading dashboard data');
       refreshDashboardData().catch((error) => {
         console.error('Failed to load dashboard data:', error);
-        Alert.alert('Error', 'Failed to load data from API. Please check your network connection.');
+        Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
       });
     } else if (isAuthenticating) {
       console.log('🔐 Dashboard: Waiting for authentication to complete');
@@ -63,7 +65,7 @@ export default function DashboardScreen() {
   const handleRefresh = useCallback(async () => {
     // Check authentication before allowing refresh
     if (!canMakeApiCalls) {
-      Alert.alert('Authentication Required', 'Please log in to refresh data.');
+      Alert.alert(t('errors.authenticationRequired'), t('errors.loginToRefresh'));
       return;
     }
 
@@ -72,11 +74,11 @@ export default function DashboardScreen() {
       await refreshDashboardData();
     } catch (error) {
       console.error('Failed to refresh dashboard data:', error);
-      Alert.alert('Error', 'Failed to refresh data from API. Please check your network connection.');
+      Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
     } finally {
       setRefreshing(false);
     }
-  }, [canMakeApiCalls, refreshDashboardData]);
+  }, [canMakeApiCalls, refreshDashboardData, t]);
 
   // Helper functions for displaying data with empty state handling
   const getDisplayValue = useCallback((value: number | undefined, defaultValue: number = 0): string => {
@@ -160,7 +162,7 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#3B82F6" barStyle="light-content" />
       <Header 
-        title="Sales Dashboard" 
+        title={t('dashboard.title')} 
         subtitle="Live Data from InventSight API"
         backgroundColor="#3B82F6"
         showProfileButton={true}
@@ -182,7 +184,7 @@ export default function DashboardScreen() {
         {isAuthenticating && (
           <View style={[styles.kpiCard, { alignItems: 'center', paddingVertical: 20 }]}>
             <ActivityIndicator size="large" color="#3B82F6" />
-            <Text style={[styles.kpiLabel, { marginTop: 8 }]}>Verifying authentication...</Text>
+            <Text style={[styles.kpiLabel, { marginTop: 8 }]}>{t('dashboard.verifyingAuth')}</Text>
           </View>
         )}
 
@@ -190,7 +192,7 @@ export default function DashboardScreen() {
         {(reportsLoading || employeesLoading) && canMakeApiCalls && (
           <View style={[styles.kpiCard, { alignItems: 'center', paddingVertical: 20 }]}>
             <ActivityIndicator size="large" color="#3B82F6" />
-            <Text style={[styles.kpiLabel, { marginTop: 8 }]}>Loading dashboard data...</Text>
+            <Text style={[styles.kpiLabel, { marginTop: 8 }]}>{t('dashboard.loading')}</Text>
           </View>
         )}
 
@@ -203,12 +205,12 @@ export default function DashboardScreen() {
               onPress={() => {
                 refreshDashboardData().catch((error) => {
                   console.error('Failed to retry dashboard data:', error);
-                  Alert.alert('Error', 'Failed to load data from API. Please check your network connection.');
+                  Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
                 });
               }} 
               style={{ marginTop: 8 }}
             >
-              <Text style={[styles.kpiLabel, { color: '#3B82F6', fontSize: 14 }]}>Tap to retry</Text>
+              <Text style={[styles.kpiLabel, { color: '#3B82F6', fontSize: 14 }]}>{t('common.refresh')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -228,7 +230,7 @@ export default function DashboardScreen() {
           <View style={styles.kpiContainer}>
             <View style={styles.kpiRow}>
               <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Monthly Revenue</Text>
+                <Text style={styles.kpiLabel}>{t('dashboard.revenue')}</Text>
                 <Text style={styles.kpiValue}>${getDisplayValue(dashboardData?.totalRevenue)}</Text>
                 <Text style={[styles.kpiTrend, { color: parseFloat(getRevenueGrowth()) >= 0 ? '#10B981' : '#EF4444' }]}>
                   {parseFloat(getRevenueGrowth()) >= 0 ? '↗' : '↘'} {Math.abs(parseFloat(getRevenueGrowth()))}%
@@ -236,7 +238,7 @@ export default function DashboardScreen() {
               </View>
               
               <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Total Orders</Text>
+                <Text style={styles.kpiLabel}>{t('dashboard.orders')}</Text>
                 <Text style={[styles.kpiValue, { color: '#3B82F6' }]}>{getDisplayValue(dashboardData?.totalOrders)}</Text>
                 <View style={styles.progressBar}>
                   <View style={[styles.progressFill, { width: `${Math.min(85, 100)}%` }]} />
@@ -246,21 +248,21 @@ export default function DashboardScreen() {
 
             <View style={styles.kpiRowSmall}>
               <View style={styles.kpiCardSmall}>
-                <Text style={styles.kpiLabelSmall}>Total Products</Text>
+                <Text style={styles.kpiLabelSmall}>{t('dashboard.products')}</Text>
                 <Text style={[styles.kpiValueSmall, { color: '#10B981' }]}>
                   {getDisplayValue(dashboardData?.totalProducts)}
                 </Text>
               </View>
             
             <View style={styles.kpiCardSmall}>
-              <Text style={styles.kpiLabelSmall}>Low Stock Items</Text>
+              <Text style={styles.kpiLabelSmall}>{t('dashboard.lowStock')}</Text>
               <Text style={[styles.kpiValueSmall, { color: '#F59E0B' }]}>
                 {getDisplayValue(dashboardData?.lowStockCount)}
               </Text>
             </View>
             
             <View style={styles.kpiCardSmall}>
-              <Text style={styles.kpiLabelSmall}>Categories</Text>
+              <Text style={styles.kpiLabelSmall}>{t('inventory.category')}</Text>
               <Text style={[styles.kpiValueSmall, { color: '#8B5CF6' }]}>
                 {getDisplayValue(dashboardData?.totalCategories)}
               </Text>
@@ -268,12 +270,12 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.performanceCard}>
-            <Text style={styles.performanceTitle}>📈 Best Performer This Month</Text>
+            <Text style={styles.performanceTitle}>📈 {t('dashboard.bestPerformer')}</Text>
             <View style={styles.performanceRow}>
               <View>
                 <Text style={[styles.performanceName, { color: '#10B981' }]}>{bestItem.name}</Text>
                 <Text style={styles.performanceUnits}>
-                  {bestItem.quantity} units sold
+                  {bestItem.quantity} {t('common.units')} sold
                 </Text>
               </View>
               <View style={styles.performanceRight}>
@@ -286,7 +288,7 @@ export default function DashboardScreen() {
 
           <View style={styles.topItemsCard}>
             <Text style={styles.topItemsTitle}>
-              🏆 Recent Activities
+              🏆 {t('dashboard.recentOrders')}
             </Text>
             {topItems.length > 0 ? (
               topItems.map((item, index) => (
@@ -295,7 +297,7 @@ export default function DashboardScreen() {
                     <Text style={styles.topItemRank}>#{index + 1}</Text>
                     <View>
                       <Text style={styles.topItemName}>{item.name}</Text>
-                      <Text style={styles.topItemUnits}>{item.quantity} units</Text>
+                      <Text style={styles.topItemUnits}>{item.quantity} {t('common.units')}</Text>
                     </View>
                   </View>
                   <View style={styles.topItemRight}>
@@ -308,7 +310,7 @@ export default function DashboardScreen() {
             ) : (
               <View style={{ padding: 20, alignItems: 'center' }}>
                 <Text style={[styles.kpiLabelSmall, { color: '#9CA3AF' }]}>
-                  No recent activities available
+                  {t('reports.noData')}
                 </Text>
               </View>
             )}

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { TouchableOpacity, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '../../constants/Colors';
 import { HamburgerMenu } from '../../components/shared/HamburgerMenu';
 import { OfflineIndicator } from '../../components/OfflineIndicator';
@@ -24,6 +25,7 @@ const FALLBACK_NAV_ITEMS = [
 ];
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   const { isAuthenticated, isInitialized, isLoading } = useAuth();
   const router = useRouter();
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
@@ -60,7 +62,7 @@ export default function TabsLayout() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={{ marginTop: 10, color: Colors.gray }}>Verifying authentication...</Text>
+        <Text style={{ marginTop: 10, color: Colors.gray }}>{t('dashboard.verifyingAuth')}</Text>
       </View>
     );
   }
@@ -75,7 +77,7 @@ export default function TabsLayout() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={{ marginTop: 10, color: Colors.gray }}>Loading...</Text>
+        <Text style={{ marginTop: 10, color: Colors.gray }}>{t('dashboard.loading')}</Text>
       </View>
     );
   }
@@ -106,7 +108,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="dashboard"
           options={{
-            title: 'Dashboard',
+            title: t('tabs.dashboard'),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="analytics" size={size} color={color} />
             ),
@@ -117,7 +119,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="items"
           options={{
-            title: 'Items',
+            title: t('tabs.items'),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="cube" size={size} color={color} />
             ),
@@ -158,7 +160,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="menu"
           options={{
-            title: 'Menu',
+            title: t('tabs.menu'),
             tabBarButton: (props) => (
               <TouchableOpacity
                 onPress={() => setShowHamburgerMenu(true)}
@@ -174,7 +176,7 @@ export default function TabsLayout() {
               >
                 <Ionicons name="menu" size={20} color={Colors.gray} />
                 <Text style={{ fontSize: 9, marginTop: 2, color: Colors.gray }}>
-                  Menu
+                  {t('tabs.menu')}
                 </Text>
               </TouchableOpacity>
             ),

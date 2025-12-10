@@ -3,6 +3,7 @@ import { View, Text, Alert, StatusBar, TouchableOpacity, ScrollView, Animated, K
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -14,6 +15,7 @@ import { validateSignupForm, getFieldError, validateEmail, validatePassword, val
 import { SignupCredentials } from '../../types/auth';
 
 export default function SignUpScreen() {
+  const { t } = useTranslation();
   const [credentials, setCredentials] = useState<SignupCredentials>({
     firstName: '',
     lastName: '',
@@ -116,7 +118,7 @@ export default function SignUpScreen() {
       
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
-        Alert.alert('Validation Error', 'Please correct the errors below and try again.');
+        Alert.alert(t('errors.validationError'), t('errors.correctErrorsBelow'));
         return;
       }
 
@@ -131,13 +133,13 @@ export default function SignUpScreen() {
     } catch (error: any) {
       console.error('Signup error:', error);
       
-      let errorMessage = 'Signup failed. Please try again.';
+      let errorMessage = t('errors.signupFailed');
       
       if (error.message) {
         errorMessage = error.message;
       }
       
-      Alert.alert('Signup Failed', errorMessage, [{ text: 'OK' }]);
+      Alert.alert(t('errors.signupFailed'), errorMessage, [{ text: t('common.ok') }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -215,13 +217,13 @@ export default function SignUpScreen() {
               <View style={[styles.logo, { backgroundColor: '#10B981' }]}>
                 <Ionicons name="person-add" size={32} color="white" />
               </View>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Join us and start managing your inventory efficiently.</Text>
+              <Text style={styles.title}>{t('auth.createAccount')}</Text>
+              <Text style={styles.subtitle}>{t('auth.joinUs')}</Text>
             </View>
             
             <View style={styles.inputContainer}>
               <Input
-                placeholder="First Name"
+                placeholder={t('auth.firstName')}
                 value={credentials.firstName}
                 onChangeText={(value) => handleInputChange('firstName', value)}
                 onBlur={() => handleInputBlur('firstName')}
@@ -236,7 +238,7 @@ export default function SignUpScreen() {
               
               <Input
                 ref={lastNameInputRef}
-                placeholder="Last Name"
+                placeholder={t('auth.lastName')}
                 value={credentials.lastName}
                 onChangeText={(value) => handleInputChange('lastName', value)}
                 onBlur={() => handleInputBlur('lastName')}
@@ -251,7 +253,7 @@ export default function SignUpScreen() {
               
               <Input
                 ref={emailInputRef}
-                placeholder="Email"
+                placeholder={t('auth.email')}
                 value={credentials.email}
                 onChangeText={(value) => handleInputChange('email', value)}
                 onBlur={() => handleInputBlur('email')}
@@ -269,7 +271,7 @@ export default function SignUpScreen() {
               <View>
                 <Input
                   ref={passwordInputRef}
-                  placeholder="Password"
+                  placeholder={t('auth.password')}
                   value={credentials.password}
                   onChangeText={(value) => handleInputChange('password', value)}
                   onBlur={() => handleInputBlur('password')}
@@ -289,7 +291,7 @@ export default function SignUpScreen() {
               
               <Input
                 ref={confirmPasswordInputRef}
-                placeholder="Confirm Password"
+                placeholder={t('auth.confirmPassword')}
                 value={credentials.confirmPassword}
                 onChangeText={(value) => handleInputChange('confirmPassword', value)}
                 onBlur={() => handleInputBlur('confirmPassword')}
@@ -310,11 +312,11 @@ export default function SignUpScreen() {
               />
               
               <Button 
-                title={isSubmitting ? "Creating Account..." : "Create Account"} 
+                title={isSubmitting ? t('auth.creatingAccount') : t('auth.createAccount')} 
                 onPress={handleSignUp} 
                 color="#10B981" 
                 disabled={isSubmitting}
-                accessibilityLabel={isSubmitting ? "Creating account, please wait" : "Create account"}
+                accessibilityLabel={isSubmitting ? t('auth.creatingAccount') : t('auth.createAccount')}
                 accessibilityHint="Register a new account with the provided information"
                 style={{ 
                   opacity: isSubmitting ? 0.7 : 1,
@@ -323,7 +325,7 @@ export default function SignUpScreen() {
               />
               
               <View style={styles.linkContainer}>
-                <Text style={styles.linkText}>Already have an account? </Text>
+                <Text style={styles.linkText}>{t('auth.alreadyHaveAccount')} </Text>
                 <TouchableOpacity 
                   onPress={() => router.push('/(auth)/login')}
                   disabled={isSubmitting}
@@ -331,7 +333,7 @@ export default function SignUpScreen() {
                   accessibilityLabel="Go to sign in"
                   accessibilityHint="Navigate to the sign in screen"
                 >
-                  <Text style={[styles.link, { color: '#10B981' }]}>Sign In</Text>
+                  <Text style={[styles.link, { color: '#10B981' }]}>{t('auth.signIn')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
