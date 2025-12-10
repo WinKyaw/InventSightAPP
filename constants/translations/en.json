@@ -211,7 +211,9 @@
     "upload": "Upload",
     "download": "Download",
     "print": "Print",
-    "share": "Share"
+    "share": "Share",
+    "error": "Error",
+    "units": "units"
   },
   "errors": {
     "required": "This field is required",
