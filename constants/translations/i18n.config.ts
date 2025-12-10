@@ -8,6 +8,7 @@ import en from './en.json';
 import es from './es.json';
 import zh from './zh.json';
 import ja from './ja.json';
+import my from './my.json';
 
 // Language storage key
 const LANGUAGE_STORAGE_KEY = '@app_language';
@@ -18,6 +19,7 @@ export const AVAILABLE_LANGUAGES = [
   { code: 'es', name: 'Spanish', nativeName: 'Español' },
   { code: 'zh', name: 'Chinese', nativeName: '中文' },
   { code: 'ja', name: 'Japanese', nativeName: '日本語' },
+  { code: 'my', name: 'Myanmar', nativeName: 'မြန်မာ' },
 ];
 
 // Get device locale or fallback to English
@@ -72,6 +74,7 @@ const initI18n = async () => {
           es: { translation: es },
           zh: { translation: zh },
           ja: { translation: ja },
+          my: { translation: my },
         },
         lng: initialLanguage,
         fallbackLng: 'en',
@@ -96,6 +99,7 @@ const initI18n = async () => {
           es: { translation: es },
           zh: { translation: zh },
           ja: { translation: ja },
+          my: { translation: my },
         },
         lng: 'en',
         fallbackLng: 'en',
