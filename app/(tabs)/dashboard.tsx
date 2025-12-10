@@ -55,7 +55,7 @@ export default function DashboardScreen() {
       console.log('🔐 Dashboard: Authentication verified, loading dashboard data');
       refreshDashboardData().catch((error) => {
         console.error('Failed to load dashboard data:', error);
-        Alert.alert(t('common.error'), t('errors.checkNetworkConnection'));
+        Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
       });
     } else if (isAuthenticating) {
       console.log('🔐 Dashboard: Waiting for authentication to complete');
@@ -74,7 +74,7 @@ export default function DashboardScreen() {
       await refreshDashboardData();
     } catch (error) {
       console.error('Failed to refresh dashboard data:', error);
-      Alert.alert(t('common.error'), t('errors.checkNetworkConnection'));
+      Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
     } finally {
       setRefreshing(false);
     }
@@ -205,7 +205,7 @@ export default function DashboardScreen() {
               onPress={() => {
                 refreshDashboardData().catch((error) => {
                   console.error('Failed to retry dashboard data:', error);
-                  Alert.alert(t('common.error'), t('errors.checkNetworkConnection'));
+                  Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
                 });
               }} 
               style={{ marginTop: 8 }}
