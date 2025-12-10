@@ -25,15 +25,37 @@ export const AVAILABLE_LANGUAGES = [
 // Get device locale or fallback to English
 const getDeviceLocale = (): string => {
   try {
-    const locale = Localization.locale;
-    // Extract language code (e.g., 'en-US' -> 'en')
-    const languageCode = locale.split('-')[0];
+    // Try method 1: getLocales() - Most reliable
+    const locales = Localization.getLocales();
+    if (locales && locales.length > 0) {
+      const primaryLocale = locales[0];
+      if (primaryLocale.languageCode) {
+        const languageCode = primaryLocale.languageCode.toLowerCase();
+        const supportedLanguage = AVAILABLE_LANGUAGES.find(lang => lang.code === languageCode);
+        if (supportedLanguage) {
+          console.log(`✅ Device locale detected: ${languageCode}`);
+          return languageCode;
+        }
+      }
+    }
     
-    // Check if we support this language
-    const supportedLanguage = AVAILABLE_LANGUAGES.find(lang => lang.code === languageCode);
-    return supportedLanguage ? languageCode : 'en';
+    // Try method 2: Localization.locale (fallback)
+    const locale = Localization.locale;
+    if (locale && typeof locale === 'string') {
+      // Extract language code (e.g., 'en-US' -> 'en')
+      const languageCode = locale.split('-')[0].toLowerCase();
+      const supportedLanguage = AVAILABLE_LANGUAGES.find(lang => lang.code === languageCode);
+      if (supportedLanguage) {
+        console.log(`✅ Device locale detected (fallback): ${languageCode}`);
+        return languageCode;
+      }
+    }
+    
+    // Fallback to English
+    console.log('⚠️ Could not detect device locale, defaulting to English');
+    return 'en';
   } catch (error) {
-    console.error('Error getting device locale:', error);
+    console.error('❌ Error getting device locale:', error);
     return 'en';
   }
 };
@@ -63,7 +85,15 @@ const initI18n = async () => {
     // Get stored language or device locale
     const storedLanguage = await getStoredLanguage();
     const deviceLocale = getDeviceLocale();
-    const initialLanguage = storedLanguage || deviceLocale;
+    
+    // Validate saved language is supported
+    let initialLanguage = storedLanguage || deviceLocale;
+    let languageInfo = AVAILABLE_LANGUAGES.find(lang => lang.code === initialLanguage);
+    if (!languageInfo) {
+      console.warn(`⚠️ Language "${initialLanguage}" not supported, falling back to English`);
+      initialLanguage = 'en';
+      languageInfo = AVAILABLE_LANGUAGES.find(lang => lang.code === 'en')!;
+    }
 
     await i18next
       .use(initReactI18next)
@@ -86,9 +116,9 @@ const initI18n = async () => {
         },
       });
 
-    console.log(`i18n initialized with language: ${initialLanguage}`);
+    console.log(`✅ i18n initialized with language: ${initialLanguage} (${languageInfo.name})`);
   } catch (error) {
-    console.error('Error initializing i18n:', error);
+    console.error('❌ Error initializing i18n:', error);
     // Fallback initialization
     await i18next
       .use(initReactI18next)
@@ -110,6 +140,7 @@ const initI18n = async () => {
           useSuspense: false,
         },
       });
+    console.log('✅ i18n initialized with fallback language: en (English)');
   }
 };
 
@@ -124,11 +155,11 @@ initI18n();
  */
 export const changeLanguage = async (language: string): Promise<void> => {
   try {
-    // Validate language
-    const supportedLanguage = AVAILABLE_LANGUAGES.find(lang => lang.code === language);
-    if (!supportedLanguage) {
-      console.error(`Language ${language} is not supported`);
-      return;
+    // Validate language is supported
+    const isSupported = AVAILABLE_LANGUAGES.find(lang => lang.code === language);
+    if (!isSupported) {
+      console.error(`❌ Language "${language}" is not supported`);
+      throw new Error(`Language "${language}" is not supported`);
     }
 
     // Change language in i18next
@@ -137,9 +168,10 @@ export const changeLanguage = async (language: string): Promise<void> => {
     // Store preference
     await storeLanguage(language);
     
-    console.log(`Language changed to: ${language}`);
+    console.log(`✅ Language changed to: ${language} (${isSupported.name})`);
   } catch (error) {
-    console.error('Error changing language:', error);
+    console.error('❌ Error changing language:', error);
+    throw error;
   }
 };
 
