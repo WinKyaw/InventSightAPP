@@ -3,6 +3,7 @@ import { View, Text, Alert, StatusBar, TouchableOpacity, KeyboardAvoidingView, P
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -14,6 +15,7 @@ import { biometricService } from '../../services/biometricService';
 import { Colors } from '../../constants/Colors';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
     password: '',
@@ -96,9 +98,9 @@ export default function LoginScreen() {
 
       if (!storedCredentials) {
         Alert.alert(
-          'Authentication Failed',
-          'Could not retrieve stored credentials. Please login with password.',
-          [{ text: 'OK' }]
+          t('errors.authenticationFailed'),
+          t('errors.couldNotRetrieveCredentials'),
+          [{ text: t('common.ok') }]
         );
         setIsSubmitting(false);
         return;
@@ -112,9 +114,9 @@ export default function LoginScreen() {
       console.error('Biometric login error:', error);
       
       Alert.alert(
-        'Biometric Login Failed',
-        'Please login with your password.',
-        [{ text: 'OK' }]
+        t('errors.biometricLoginFailed'),
+        t('errors.pleaseLoginWithPassword'),
+        [{ text: t('common.ok') }]
       );
       setIsSubmitting(false);
     }
@@ -136,7 +138,7 @@ export default function LoginScreen() {
       
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
-        Alert.alert('Validation Error', 'Please correct the errors below');
+        Alert.alert(t('errors.validationError'), t('errors.correctErrorsBelow'));
         return;
       }
 
@@ -150,13 +152,13 @@ export default function LoginScreen() {
     } catch (error: any) {
       console.error('Login error:', error);
       
-      let errorMessage = 'Login failed. Please try again.';
+      let errorMessage = t('errors.loginFailed');
       
       if (error.message) {
         errorMessage = error.message;
       }
       
-      Alert.alert('Login Failed', errorMessage, [{ text: 'OK' }]);
+      Alert.alert(t('errors.loginFailed'), errorMessage, [{ text: t('common.ok') }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -177,8 +179,8 @@ export default function LoginScreen() {
             <View style={styles.logo}>
               <Ionicons name="cube" size={32} color="white" />
             </View>
-            <Text style={styles.title}>Point of Sale</Text>
-            <Text style={styles.subtitle}>Welcome back! Please sign in.</Text>
+            <Text style={styles.title}>{t('auth.pointOfSale')}</Text>
+            <Text style={styles.subtitle}>{t('auth.welcomeBack')}</Text>
           </View>
           
           <View style={styles.inputContainer}>
@@ -204,7 +206,7 @@ export default function LoginScreen() {
                   style={{ marginRight: 8 }}
                 />
                 <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
-                  Sign In with {biometricType}
+                  {t('auth.signInWith', { type: biometricType })}
                 </Text>
               </TouchableOpacity>
             )}
@@ -218,13 +220,13 @@ export default function LoginScreen() {
             {biometricAvailable && biometricEnabled && !checkingBiometric && (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <View style={{ flex: 1, height: 1, backgroundColor: Colors.border }} />
-                <Text style={{ marginHorizontal: 16, color: Colors.textSecondary || '#6B7280' }}>or</Text>
+                <Text style={{ marginHorizontal: 16, color: Colors.textSecondary || '#6B7280' }}>{t('auth.or')}</Text>
                 <View style={{ flex: 1, height: 1, backgroundColor: Colors.border }} />
               </View>
             )}
 
             <Input
-              placeholder="Email"
+              placeholder={t('auth.email')}
               value={credentials.email}
               onChangeText={(value) => handleInputChange('email', value)}
               keyboardType="email-address"
@@ -236,7 +238,7 @@ export default function LoginScreen() {
             />
             
             <Input
-              placeholder="Password"
+              placeholder={t('auth.password')}
               value={credentials.password}
               onChangeText={(value) => handleInputChange('password', value)}
               secureTextEntry
@@ -247,15 +249,15 @@ export default function LoginScreen() {
             />
             
             <Button 
-              title={isSubmitting ? "Signing In..." : "Sign In"} 
+              title={isSubmitting ? t('auth.signingIn') : t('auth.signIn')} 
               onPress={handleLogin} 
               disabled={isSubmitting}
-              accessibilityLabel={isSubmitting ? "Signing in, please wait" : "Sign in"}
+              accessibilityLabel={isSubmitting ? t('auth.signingIn') : t('auth.signIn')}
               accessibilityHint="Authenticate with your email and password"
             />
             
             <View style={styles.linkContainer}>
-              <Text style={styles.linkText}>Don't have an account? </Text>
+              <Text style={styles.linkText}>{t('auth.dontHaveAccount')} </Text>
               <TouchableOpacity 
                 onPress={() => router.push('/(auth)/signup')}
                 disabled={isSubmitting}
@@ -263,7 +265,7 @@ export default function LoginScreen() {
                 accessibilityLabel="Go to sign up"
                 accessibilityHint="Navigate to the sign up screen"
               >
-                <Text style={styles.link}>Sign Up</Text>
+                <Text style={styles.link}>{t('auth.signUp')}</Text>
               </TouchableOpacity>
             </View>
             
