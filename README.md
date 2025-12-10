@@ -310,6 +310,29 @@ The app supports:
 - Automatic token refresh
 - Demo mode for development
 
+## 🌐 Internationalization (i18n)
+
+The app includes full internationalization support with the following languages:
+
+- 🇬🇧 **English** (en)
+- 🇪🇸 **Spanish / Español** (es)
+- 🇨🇳 **Chinese / 中文** (zh)
+- 🇯🇵 **Japanese / 日本語** (ja)
+- 🇲🇲 **Myanmar / မြန်မာ** (my)
+
+### Features:
+- Automatic language detection based on device settings
+- Language preference persistence across app restarts
+- Language selector in Settings/Profile screen
+- Full UI translation coverage
+- RTL and Unicode support for all scripts
+
+### Changing Language:
+1. Navigate to **Settings** or **Profile** tab
+2. Select **Language** option
+3. Choose your preferred language from the list
+4. Language changes take effect immediately
+
 ## 📄 License
 
 This project is licensed under the MIT License.
