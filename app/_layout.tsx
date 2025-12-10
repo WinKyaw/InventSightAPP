@@ -1,3 +1,4 @@
+import '../constants/translations/i18n.config';
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
 import { ItemsApiProvider } from '../context/ItemsApiContext';
