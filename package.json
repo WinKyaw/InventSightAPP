@@ -36,7 +36,7 @@
     "react-native-safe-area-context": "5.6.2",
     "react-native-screens": "~4.16.0",
     "react-native-vision-camera": "^4.7.2",
-    "react-native-worklets": "0.5.1",
+    "react-native-worklets": "^0.7.1",
     "vision-camera-ocr": "^1.0.0",
     "zod": "^3.25.76"
   },
@@ -44,6 +44,12 @@
     "@babel/core": "^7.20.0",
     "@types/react": "~19.1.0",
     "typescript": "~5.8.3"
+  },
+  "overrides": {
+    "react-native-worklets": "^0.7.1"
+  },
+  "resolutions": {
+    "react-native-worklets": "^0.7.1"
   },
   "private": true
 }
