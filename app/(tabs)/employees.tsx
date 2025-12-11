@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -44,12 +44,22 @@ export default function EmployeesScreen() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
+  const loadedRef = useRef(false);
+
   // ✅ LAZY LOADING: Load employees only when Employees screen is focused
   useFocusEffect(
     React.useCallback(() => {
+      // Prevent loading if already loaded or currently loading
+      if (loadedRef.current || loading) {
+        console.log('⏭️  Employees: Skipping load (already loaded or loading)');
+        return;
+      }
+
       console.log('👥 Employees screen focused - loading employees');
+      loadedRef.current = true;
       refreshEmployees();
-    }, [refreshEmployees])
+    }, [refreshEmployees, loading])
   );
 
   const toggleEmployeeExpansion = (id: number) => {

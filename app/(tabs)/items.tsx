@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -66,13 +66,23 @@ export default function ItemsScreen() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [stockManagementProduct, setStockManagementProduct] = useState<Product | null>(null);
 
+  // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
+  const loadedRef = useRef(false);
+
   // ✅ LAZY LOADING: Load products and categories only when Items screen is focused
   useFocusEffect(
     React.useCallback(() => {
+      // Prevent loading if already loaded or currently loading
+      if (loadedRef.current || loading) {
+        console.log('⏭️  Items: Skipping load (already loaded or loading)');
+        return;
+      }
+
       console.log('📦 Items screen focused - loading products and categories');
+      loadedRef.current = true;
       loadProducts();
       loadCategories();
-    }, [loadProducts, loadCategories])
+    }, [loadProducts, loadCategories, loading])
   );
 
   // Convert products to items for UI compatibility
