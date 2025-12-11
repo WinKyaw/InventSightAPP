@@ -13,6 +13,7 @@ import { validateLoginForm, getFieldError } from '../../utils/validation';
 import { LoginCredentials } from '../../types/auth';
 import { biometricService } from '../../services/biometricService';
 import { Colors } from '../../constants/Colors';
+import { clearStoredToken } from '../../services/api/authService';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
@@ -270,6 +271,40 @@ export default function LoginScreen() {
             </View>
             
             <DemoInfo />
+            
+            {/* Dev Tools - Only in development */}
+            {__DEV__ && (
+              <View style={{
+                marginTop: 20,
+                padding: 16,
+                backgroundColor: '#fef3c7',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#fbbf24',
+              }}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    await clearStoredToken();
+                    Alert.alert('✅ Token Cleared', 'Old token has been removed. You can now login fresh.');
+                  }}
+                  style={{
+                    padding: 12,
+                    backgroundColor: '#f59e0b',
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <Text style={{
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    fontSize: 14,
+                  }}>
+                    🔧 Clear Old Token
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>

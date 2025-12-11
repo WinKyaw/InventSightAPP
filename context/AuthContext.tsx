@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
+import { useRouter, useSegments } from 'expo-router';
 import { 
   AuthUser, 
   AuthState, 
@@ -36,6 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Ref to track if component is mounted to prevent state updates after unmount
   const isMountedRef = useRef(true);
+  
+  // Get current route segments to determine if on auth page
+  const segments = useSegments();
+  const router = useRouter();
+  
+  // Check if we're on an auth screen (login/signup)
+  const inAuthGroup = segments[0] === '(auth)';
 
   useEffect(() => {
     return () => {
@@ -48,14 +56,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     initializeAuth();
-  }, []);
+  }, [inAuthGroup]);
 
   const initializeAuth = useCallback(async () => {
     try {
-      console.log('🔐 AuthContext: Initializing authentication...');
+      const currentRoute = segments.join('/') || 'index';
+      console.log(`🔐 AuthContext: Initializing on route: /${currentRoute}`);
+      
       if (!isMountedRef.current) return;
       
+      // Skip token verification if on login/signup pages
+      if (inAuthGroup) {
+        console.log('⏭️  AuthContext: On auth page, skipping token verification');
+        if (isMountedRef.current) {
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            isInitialized: true,
+            tokens: null,
+          });
+        }
+        return;
+      }
+      
       setAuthState(prev => ({ ...prev, isLoading: true }));
+
+      // Check for stored token
+      const token = await tokenManager.getAccessToken();
+      
+      if (!token) {
+        console.log('ℹ️  AuthContext: No valid token found - showing login');
+        if (isMountedRef.current) {
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            isInitialized: true,
+            tokens: null,
+          });
+        }
+        return;
+      }
 
       // ✅ SECURITY FIX: Verify authentication with server (not just local storage)
       const isAuthenticated = await authService.verifyAuthentication();
@@ -68,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const user = await authService.getCurrentUser();
           
           if (user && isMountedRef.current) {
-            console.log('✅ AuthContext: User authenticated and verified:', user.email);
+            console.log(`✅ AuthContext: Token valid for user: ${user.email}`);
             setAuthState({
               user,
               isAuthenticated: true,
@@ -78,8 +120,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
             return;
           }
-        } catch (userError) {
-          console.error('❌ AuthContext: Failed to fetch user after token verification:', userError);
+        } catch (userError: any) {
+          const status = userError.response?.status;
+          const errorMsg = userError.response?.data?.error || userError.message;
+          
+          console.error(`❌ AuthContext: Token verification failed (${status}): ${errorMsg}`);
           // Clear invalid state
           await authService.logout();
         }
@@ -110,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     }
-  }, []);
+  }, [inAuthGroup, segments]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {

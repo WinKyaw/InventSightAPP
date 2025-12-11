@@ -99,6 +99,22 @@ const createHttpClient = (): AxiosInstance => {
         console.error(`📅 Current Date and Time (UTC): ${sessionInfo.timestamp}`);
         console.error(`👤 Current User's Login: ${sessionInfo.userLogin}`);
         
+        // Handle 400 errors with tenant_id missing
+        if (error.response.status === 400) {
+          const errorData: any = error.response.data;
+          
+          // Check if error is about missing tenant_id
+          if (errorData?.error?.includes('tenant_id') || errorData?.error?.includes('JWT')) {
+            console.warn('⚠️ Invalid JWT token detected - clearing and redirecting to login');
+            
+            // Clear the invalid token
+            await tokenManager.clearAuthData();
+            
+            // Don't retry - just fail and let AuthContext handle redirect
+            return Promise.reject(error);
+          }
+        }
+        
         // Handle token refresh for 401 errors
         if (error.response.status === 401 && !originalRequest._retry) {
           const isRefreshRequest = error.config?.url?.includes('/auth/refresh');
@@ -113,7 +129,7 @@ const createHttpClient = (): AxiosInstance => {
           // Check if we have a refresh token
           const refreshToken = await tokenManager.getRefreshToken();
           if (!refreshToken) {
-            console.error('🚫 No refresh token available - redirecting to login');
+            console.warn('🚫 No refresh token available - clearing token');
             await tokenManager.clearAuthData();
             return Promise.reject(error);
           }

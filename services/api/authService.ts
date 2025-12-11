@@ -9,6 +9,7 @@ import {
 import { httpClient } from './httpClient';
 import { API_ENDPOINTS, API_CONFIG } from './config';
 import { tokenManager } from '../../utils/tokenManager';
+import { jwtDecode } from 'jwt-decode';
 
 // Demo mode configuration
 const DEMO_MODE = process.env.DEMO_MODE === 'true' || (process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL);
@@ -44,6 +45,60 @@ const generateRandomId = () => {
   }
   return id;
 }
+
+/**
+ * Validate and get stored token
+ * Checks for required claims and expiration
+ */
+const getStoredToken = async (): Promise<string | null> => {
+  try {
+    const token = await tokenManager.getAccessToken();
+    
+    if (!token) {
+      return null;
+    }
+
+    // Validate token has required claims
+    try {
+      const decoded: any = jwtDecode(token);
+      
+      // Check for required claims
+      if (!decoded.tenant_id) {
+        console.warn('⚠️ Token missing tenant_id claim - clearing invalid token');
+        await tokenManager.clearAuthData();
+        return null;
+      }
+
+      // Check if expired
+      if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        console.warn('⚠️ Token expired - clearing');
+        await tokenManager.clearAuthData();
+        return null;
+      }
+
+      return token;
+    } catch (decodeError) {
+      console.error('❌ Failed to decode token - clearing invalid token');
+      await tokenManager.clearAuthData();
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ Error getting stored token:', error);
+    return null;
+  }
+};
+
+/**
+ * Clear stored token
+ */
+const clearStoredToken = async (): Promise<void> => {
+  try {
+    await tokenManager.clearAuthData();
+    console.log('✅ Token cleared from storage');
+  } catch (error) {
+    console.error('❌ Error clearing token:', error);
+  }
+};
 
 /**
  * Authentication Service
@@ -350,6 +405,12 @@ class AuthService {
     } catch (error: any) {
       console.error('❌ AuthService: Failed to fetch user profile:', error);
       
+      // Clear token on verification failure
+      if (error.response?.status === 400 || error.response?.status === 401) {
+        console.warn('⚠️ Token verification failed - clearing token');
+        await clearStoredToken();
+      }
+      
       if (error.response?.status === 401) {
         throw new Error('Session expired. Please login again');
       } else {
@@ -447,10 +508,12 @@ class AuthService {
    */
   async verifyAuthentication(): Promise<boolean> {
     try {
-      const { accessToken, refreshToken, isExpired } = await tokenManager.getAuthData();
+      // Use the new helper that validates token claims
+      const accessToken = await getStoredToken();
+      const refreshToken = await tokenManager.getRefreshToken();
       
       if (!accessToken || !refreshToken) {
-        console.log('🔐 AuthService: No tokens found');
+        console.log('🔐 AuthService: No tokens found or token invalid');
         return false;
       }
 
@@ -478,18 +541,25 @@ class AuthService {
           } catch (refreshError) {
             console.error('❌ AuthService: Token refresh failed:', refreshError);
             // Clear invalid tokens
-            await tokenManager.clearAuthData();
+            await clearStoredToken();
             return false;
           }
         }
         
+        // For 400 errors (including tenant_id issues), clear tokens
+        if (verifyError.response?.status === 400) {
+          console.warn('⚠️ Invalid token (400 error) - clearing');
+          await clearStoredToken();
+          return false;
+        }
+        
         // For any other error, clear tokens and require re-login
-        await tokenManager.clearAuthData();
+        await clearStoredToken();
         return false;
       }
     } catch (error) {
       console.error('❌ AuthService: Authentication verification failed:', error);
-      await tokenManager.clearAuthData();
+      await clearStoredToken();
       return false;
     }
   }
@@ -497,3 +567,6 @@ class AuthService {
 
 // Export singleton instance
 export const authService = AuthService.getInstance();
+
+// Export helper functions
+export { clearStoredToken };
