@@ -49,12 +49,9 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
     }
   }, [useApiIntegration, apiEmployees]);
 
-  // Auto-fetch employees when API integration is enabled
-  useEffect(() => {
-    if (useApiIntegration && canMakeApiCalls) {
-      fetchEmployees();
-    }
-  }, [useApiIntegration, canMakeApiCalls]);
+  // ✅ LAZY LOADING: Don't auto-fetch - let screens control when to fetch
+  // Removed automatic loading on mount
+  // Screens will use useFocusEffect to load employees when focused
 
   const fallbackAddEmployee = useCallback((newEmployee: Omit<Employee, 'id' | 'expanded'>) => {
     const employee: Employee = {

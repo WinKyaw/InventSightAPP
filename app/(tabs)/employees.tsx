@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployees } from '../../context/EmployeesContext';
 import { useAuth } from '../../context/AuthContext';
@@ -43,6 +43,14 @@ export default function EmployeesScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // ✅ LAZY LOADING: Load employees only when Employees screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('👥 Employees screen focused - loading employees');
+      refreshEmployees();
+    }, [refreshEmployees])
+  );
 
   const toggleEmployeeExpansion = (id: number) => {
     const employee = employees.find(emp => emp.id === id);

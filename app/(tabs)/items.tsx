@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useItemsApi } from '../../context/ItemsApiContext';
 import { useAuth } from '../../context/AuthContext';
@@ -47,6 +47,7 @@ export default function ItemsScreen() {
     hasMore,
     currentPage,
     loadProducts,
+    loadCategories,
     refreshProducts,
     deleteProduct,
     setSearchQuery,
@@ -64,6 +65,15 @@ export default function ItemsScreen() {
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [stockManagementProduct, setStockManagementProduct] = useState<Product | null>(null);
+
+  // ✅ LAZY LOADING: Load products and categories only when Items screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('📦 Items screen focused - loading products and categories');
+      loadProducts();
+      loadCategories();
+    }, [loadProducts, loadCategories])
+  );
 
   // Convert products to items for UI compatibility
   const items = (products ?? []).map(productToItem);
