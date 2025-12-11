@@ -35,7 +35,11 @@ interface ReportsContextType {
 
 const ReportsContext = createContext<ReportsContextType | undefined>(undefined);
 
-// Helper function for empty dashboard data (new stores)
+// Helper function for empty dashboard data
+// Used when: 
+// - New stores with no products/transactions yet
+// - API returns 404 (endpoint not implemented)
+// - Max retries reached and no data available
 function getEmptyDashboardData(): ComprehensiveDashboardData {
   return {
     totalRevenue: 0,
@@ -143,6 +147,8 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
         const errorMsg = `Failed to load dashboard. Retry ${retryCountRef.current}/${MAX_RETRIES}`;
         console.log(`🔄 Will retry on next load (${retryCountRef.current}/${MAX_RETRIES})`);
         setCustomError(errorMsg);
+        // Note: Manual retry only - caller must invoke refreshDashboardData() again
+        // The dashboard screen's error button will reset load guards and call this again
         throw new Error(errorMsg);
       } else {
         const errorMsg = 'Failed to load dashboard after multiple attempts.';

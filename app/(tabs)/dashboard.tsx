@@ -59,13 +59,25 @@ export default function DashboardScreen() {
     useCallback(() => {
       const now = Date.now();
       
-      // Prevent loading if:
-      // 1. Already loaded once
-      // 2. Last load was less than 5 seconds ago
-      // 3. Currently loading
-      // 4. Not ready to make API calls
-      if (loadedRef.current || (now - lastLoadTime.current) < MIN_LOAD_INTERVAL || reportsLoading || !canMakeApiCalls) {
-        console.log('⏭️  Dashboard: Skipping load (already loaded or too soon or not ready)');
+      // Prevent loading with multiple guard conditions
+      // Check each condition and log specific reason for skipping
+      if (loadedRef.current) {
+        console.log('⏭️  Dashboard: Skipping load - already loaded once');
+        return;
+      }
+      
+      if ((now - lastLoadTime.current) < MIN_LOAD_INTERVAL) {
+        console.log('⏭️  Dashboard: Skipping load - too soon (< 5 seconds since last load)');
+        return;
+      }
+      
+      if (reportsLoading) {
+        console.log('⏭️  Dashboard: Skipping load - currently loading');
+        return;
+      }
+      
+      if (!canMakeApiCalls) {
+        console.log('⏭️  Dashboard: Skipping load - not authenticated or not ready');
         return;
       }
 
@@ -75,8 +87,9 @@ export default function DashboardScreen() {
       
       refreshDashboardData().catch((error) => {
         console.error('❌ Dashboard load failed:', error);
-        // Don't retry automatically on error
-        loadedRef.current = false; // Allow manual retry
+        // Reset loadedRef to allow manual retry via refresh button
+        // Note: Does NOT automatically retry - requires user action
+        loadedRef.current = false;
       });
 
       // Cleanup function
