@@ -447,10 +447,12 @@ class AuthService {
    */
   async verifyAuthentication(): Promise<boolean> {
     try {
-      const { accessToken, refreshToken, isExpired } = await tokenManager.getAuthData();
+      // First check if we have a valid token locally (with silent validation)
+      const accessToken = await tokenManager.getAccessToken();
+      const refreshToken = await tokenManager.getRefreshToken();
       
       if (!accessToken || !refreshToken) {
-        console.log('🔐 AuthService: No tokens found');
+        // No valid tokens found - silently return false
         return false;
       }
 
@@ -460,35 +462,26 @@ class AuthService {
         const response = await httpClient.get(API_ENDPOINTS.AUTH.PROFILE);
         
         if (response.data) {
-          console.log('✅ AuthService: Token verified with server');
+          // Token verified with server - silently return true
           return true;
         }
         
         return false;
       } catch (verifyError: any) {
-        console.error('❌ AuthService: Token verification failed:', verifyError);
+        const status = verifyError.response?.status;
         
-        // If token is expired, try to refresh
-        if (verifyError.response?.status === 401 && refreshToken) {
-          console.log('🔄 AuthService: Token expired, attempting refresh');
-          try {
-            await this.refreshToken();
-            console.log('✅ AuthService: Token refreshed successfully');
-            return true;
-          } catch (refreshError) {
-            console.error('❌ AuthService: Token refresh failed:', refreshError);
-            // Clear invalid tokens
-            await tokenManager.clearAuthData();
-            return false;
-          }
+        // For 400/401, silently clear and return false (no logging)
+        if (status === 400 || status === 401) {
+          await tokenManager.clearAuthData();
+          return false;
         }
         
-        // For any other error, clear tokens and require re-login
+        // For other errors, silently clear tokens and require re-login
         await tokenManager.clearAuthData();
         return false;
       }
     } catch (error) {
-      console.error('❌ AuthService: Authentication verification failed:', error);
+      // Authentication verification failed - silently clear and return false
       await tokenManager.clearAuthData();
       return false;
     }

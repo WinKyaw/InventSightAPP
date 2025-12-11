@@ -92,92 +92,63 @@ const createHttpClient = (): AxiosInstance => {
     async (error: AxiosError) => {
       const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
       const sessionInfo = getSessionInfo();
+      const status = error.response?.status;
       
-      // Log error response
-      if (error.response) {
-        console.error(`❌ InventSightApp API Error: ${error.response.status} - ${error.config?.url}`);
+      // Handle 400 Bad Request (invalid token)
+      if (status === 400) {
+        const errorData = error.response?.data as any;
+        
+        // Check if it's a token-related error
+        // Looking for common JWT/token error indicators in error message
+        const errorMessage = errorData?.error || errorData?.message || '';
+        const isTokenError = 
+          errorMessage.toLowerCase().includes('tenant_id') || 
+          errorMessage.toLowerCase().includes('jwt') ||
+          errorMessage.toLowerCase().includes('token');
+        
+        if (isTokenError) {
+          // Silently clear token - DON'T RETRY
+          await tokenManager.clearAuthData();
+          
+          // Return rejection immediately (no retry, no logging)
+          return Promise.reject(new Error('INVALID_TOKEN'));
+        }
+      }
+
+      // Handle 401 Unauthorized
+      if (status === 401) {
+        const isRefreshRequest = error.config?.url?.includes('/auth/refresh');
+        const isLoginRequest = error.config?.url?.includes('/auth/login');
+        const isSignupRequest = error.config?.url?.includes('/auth/signup');
+        
+        // Don't retry refresh, login, or signup requests
+        if (isRefreshRequest || isLoginRequest || isSignupRequest) {
+          // Don't log auth-related 401s for login/signup/refresh
+          return Promise.reject(error);
+        }
+
+        // For other 401s, silently clear token and don't retry
+        await tokenManager.clearAuthData();
+        
+        // Return rejection immediately (no retry, no logging)
+        return Promise.reject(new Error('UNAUTHORIZED'));
+      }
+
+      // Log error response only for non-auth errors
+      if (error.response && status !== 400 && status !== 401) {
+        console.error(`❌ InventSightApp API Error: ${status} - ${error.config?.url}`);
         console.error(`📅 Current Date and Time (UTC): ${sessionInfo.timestamp}`);
         console.error(`👤 Current User's Login: ${sessionInfo.userLogin}`);
         
-        // Handle token refresh for 401 errors
-        if (error.response.status === 401 && !originalRequest._retry) {
-          const isRefreshRequest = error.config?.url?.includes('/auth/refresh');
-          const isLoginRequest = error.config?.url?.includes('/auth/login');
-          const isSignupRequest = error.config?.url?.includes('/auth/signup');
-          
-          // Don't retry refresh, login, or signup requests
-          if (isRefreshRequest || isLoginRequest || isSignupRequest) {
-            return Promise.reject(error);
-          }
-
-          // Check if we have a refresh token
-          const refreshToken = await tokenManager.getRefreshToken();
-          if (!refreshToken) {
-            console.error('🚫 No refresh token available - redirecting to login');
-            await tokenManager.clearAuthData();
-            return Promise.reject(error);
-          }
-
-          originalRequest._retry = true;
-
-          if (isRefreshing) {
-            // If refresh is in progress, queue this request
-            return new Promise((resolve, reject) => {
-              failedQueue.push({ resolve, reject });
-            }).then((token) => {
-              if (originalRequest.headers) {
-                originalRequest.headers['Authorization'] = `Bearer ${token}`;
-              }
-              return client(originalRequest);
-            }).catch((err) => {
-              return Promise.reject(err);
-            });
-          }
-
-          isRefreshing = true;
-
-          try {
-            // Attempt token refresh
-            console.log('🔄 Attempting to refresh token...');
-            const refreshResponse = await client.post('/auth/refresh', { refreshToken });
-            const { accessToken, expiresIn } = refreshResponse.data;
-            
-            // Update stored token
-            await tokenManager.updateAccessToken(accessToken, expiresIn);
-            
-            // Update the failed request and process queue
-            if (originalRequest.headers) {
-              originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
-            }
-            
-            processQueue(null, accessToken);
-            isRefreshing = false;
-            
-            console.log('✅ Token refresh successful');
-            return client(originalRequest);
-          } catch (refreshError) {
-            console.error('❌ Token refresh failed:', refreshError);
-            processQueue(refreshError, null);
-            isRefreshing = false;
-            
-            // Clear all auth data and redirect to login
-            await tokenManager.clearAuthData();
-            return Promise.reject(error);
-          }
-        }
-        
         // Enhanced authentication error handling
-        if (error.response.status === 401) {
-          console.error('🚫 Authentication Error: Invalid or missing credentials');
-          console.error('💡 Check API authentication configuration in environment variables');
-        } else if (error.response.status === 403) {
+        if (status === 403) {
           console.error('🚫 Authorization Error: Insufficient permissions');
         }
         
         if (__DEV__ && error.response.data) {
           console.error('📥 Error Response Data:', JSON.stringify(error.response.data, null, 2));
         }
-      } else if (error.request) {
+      } else if (error.request && status !== 400 && status !== 401) {
         console.error('❌ Network Error - No response received');
         console.error(`📅 Current Date and Time (UTC): ${sessionInfo.timestamp}`);
         console.error(`👤 Current User's Login: ${sessionInfo.userLogin}`);
@@ -200,7 +171,7 @@ const createHttpClient = (): AxiosInstance => {
             [{ text: 'OK' }]
           );
         }
-      } else {
+      } else if (!error.response && status !== 400 && status !== 401) {
         console.error('❌ Request Setup Error:', error.message);
       }
 

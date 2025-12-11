@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
-import { AuthTokens, AuthUser, TOKEN_KEYS } from '../types/auth';
+import { jwtDecode } from 'jwt-decode';
+import { AuthTokens, AuthUser, TOKEN_KEYS, JWTClaims } from '../types/auth';
 
 /**
  * Secure Token Manager for handling JWT tokens and user data
@@ -7,6 +8,7 @@ import { AuthTokens, AuthUser, TOKEN_KEYS } from '../types/auth';
  */
 class TokenManager {
   private static instance: TokenManager;
+  private clearingAuth: boolean = false;
 
   private constructor() {}
 
@@ -49,13 +51,68 @@ class TokenManager {
   }
 
   /**
-   * Retrieve access token
+   * Validate token structure and claims locally (silently)
+   * Returns true if token is valid, false otherwise
+   */
+  private async validateTokenLocally(token: string): Promise<boolean> {
+    try {
+      const decoded = jwtDecode<JWTClaims>(token);
+      
+      // Check for required claims (silently)
+      if (!decoded.tenant_id) {
+        // Old token format - silently invalid
+        return false;
+      }
+
+      if (!decoded.sub && !decoded.userId) {
+        // Invalid token structure - silently invalid
+        return false;
+      }
+
+      // Check expiration (silently)
+      if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        // Expired - silently invalid
+        return false;
+      }
+
+      // Token is valid locally
+      return true;
+      
+    } catch (decodeError) {
+      // Malformed token - silently invalid
+      return false;
+    }
+  }
+
+  /**
+   * Retrieve access token and validate it locally
+   * Returns null for invalid tokens (silently clears them)
    */
   async getAccessToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(TOKEN_KEYS.ACCESS_TOKEN);
+      const token = await SecureStore.getItemAsync(TOKEN_KEYS.ACCESS_TOKEN);
+      
+      if (!token) {
+        return null;
+      }
+
+      // Validate token structure and claims
+      const isValid = await this.validateTokenLocally(token);
+      
+      if (!isValid) {
+        // Silently clear invalid token (with race condition protection)
+        if (!this.clearingAuth) {
+          await this.clearAuthData();
+        }
+        return null;
+      }
+
+      return token;
     } catch (error) {
-      console.error('Failed to get access token:', error);
+      // Storage error - silently clear and return null
+      if (!this.clearingAuth) {
+        await this.clearAuthData();
+      }
       return null;
     }
   }
@@ -158,7 +215,13 @@ class TokenManager {
    * Clear all stored authentication data
    */
   async clearAuthData(): Promise<void> {
+    // Prevent concurrent clearing operations
+    if (this.clearingAuth) {
+      return;
+    }
+    
     try {
+      this.clearingAuth = true;
       await Promise.all([
         SecureStore.deleteItemAsync(TOKEN_KEYS.ACCESS_TOKEN),
         SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH_TOKEN),
@@ -168,6 +231,8 @@ class TokenManager {
     } catch (error) {
       console.error('Failed to clear auth data:', error);
       // Don't throw error here as this is often called during logout
+    } finally {
+      this.clearingAuth = false;
     }
   }
 

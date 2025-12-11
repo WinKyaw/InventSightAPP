@@ -89,3 +89,13 @@ export const TOKEN_KEYS = {
 } as const;
 
 export type TokenKey = typeof TOKEN_KEYS[keyof typeof TOKEN_KEYS];
+
+// JWT Token Claims
+export interface JWTClaims {
+  sub?: string;
+  userId?: string;
+  tenant_id?: string;
+  exp?: number;
+  iat?: number;
+  [key: string]: any; // Allow other claims
+}
