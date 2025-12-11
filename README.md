@@ -24,6 +24,18 @@ cd InventSightAPP
 npm install
 ```
 
+**Note:** The project uses `.npmrc` configured with `legacy-peer-deps=true` to handle peer dependency conflicts between `react-native-reanimated` and `react-native-worklets`. This is automatically applied when you run `npm install`.
+
+If you encounter any installation issues, try clearing the cache:
+```bash
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Clear Metro bundler cache
+npx expo start --clear
+```
+
 3. **⚠️ IMPORTANT: Configure backend** (see [Backend Setup](#-backend-setup-required) below)
 
 4. Configure API connection:
