@@ -55,6 +55,15 @@ export interface AuthState {
   tokens: AuthTokens | null;
 }
 
+export interface JWTPayload {
+  sub: string; // Subject (user ID)
+  email?: string;
+  tenant_id: string;
+  exp: number; // Expiration time (seconds since epoch)
+  iat?: number; // Issued at
+  role?: string;
+}
+
 export interface ValidationError {
   field: string;
   message: string;

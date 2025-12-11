@@ -6,7 +6,7 @@ import {
   LoginCredentials, 
   SignupCredentials 
 } from '../types/auth';
-import { authService } from '../services/api/authService';
+import { authService, getStoredToken } from '../services/api/authService';
 import { tokenManager } from '../utils/tokenManager';
 
 interface AuthContextType {
@@ -82,8 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
-      // Check for stored token
-      const token = await tokenManager.getAccessToken();
+      // Check for stored token (with validation)
+      const token = await getStoredToken();
       
       if (!token) {
         console.log('ℹ️  AuthContext: No valid token found - showing login');

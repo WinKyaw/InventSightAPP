@@ -4,7 +4,8 @@ import {
   LoginResponse, 
   RefreshTokenResponse,
   AuthUser,
-  AuthApiResponse 
+  AuthApiResponse,
+  JWTPayload 
 } from '../../types/auth';
 import { httpClient } from './httpClient';
 import { API_ENDPOINTS, API_CONFIG } from './config';
@@ -60,7 +61,7 @@ const getStoredToken = async (): Promise<string | null> => {
 
     // Validate token has required claims
     try {
-      const decoded: any = jwtDecode(token);
+      const decoded = jwtDecode<JWTPayload>(token);
       
       // Check for required claims
       if (!decoded.tenant_id) {
@@ -569,4 +570,4 @@ class AuthService {
 export const authService = AuthService.getInstance();
 
 // Export helper functions
-export { clearStoredToken };
+export { clearStoredToken, getStoredToken };

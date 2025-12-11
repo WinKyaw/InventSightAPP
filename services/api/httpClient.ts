@@ -103,9 +103,15 @@ const createHttpClient = (): AxiosInstance => {
         if (error.response.status === 400) {
           const errorData: any = error.response.data;
           
-          // Check if error is about missing tenant_id
-          if (errorData?.error?.includes('tenant_id') || errorData?.error?.includes('JWT')) {
-            console.warn('⚠️ Invalid JWT token detected - clearing and redirecting to login');
+          // Check if error is about missing tenant_id or JWT issues
+          // Be more robust by checking both error message and potential error codes
+          const errorMsg = errorData?.error || errorData?.message || '';
+          const isTenantIdError = errorMsg.toLowerCase().includes('tenant_id') || 
+                                   errorMsg.toLowerCase().includes('jwt') ||
+                                   errorMsg.toLowerCase().includes('token');
+          
+          if (isTenantIdError) {
+            console.warn('⚠️ Invalid JWT token detected (400) - clearing token');
             
             // Clear the invalid token
             await tokenManager.clearAuthData();
