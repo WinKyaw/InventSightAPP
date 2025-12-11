@@ -22,6 +22,7 @@ interface ItemsApiContextType {
   loading: boolean;
   error: string | null;
   refreshing: boolean;
+  isInitialized: boolean;  // Track if initial load has been attempted
   
   // Categories state
   categories: Category[];
@@ -75,6 +76,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);  // Track if initial load attempted
   
   // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -141,9 +143,11 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       setCurrentPage(response.currentPage);
       setTotalPages(response.totalPages);
       setHasMore(response.hasMore);
+      setIsInitialized(true);  // Mark as initialized after successful load
     } catch (err) {
       console.error('Failed to load products:', err);
       setError(err instanceof Error ? err.message : 'Failed to load products');
+      setIsInitialized(true);  // Mark as initialized even on error
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -332,9 +336,9 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    // Only reload if we already have products (user has visited the screen)
-    if (products.length === 0) {
-      console.log('📦 ItemsApiContext: No products loaded yet, waiting for screen focus');
+    // Only reload if initial load has been attempted (user has visited the screen)
+    if (!isInitialized) {
+      console.log('📦 ItemsApiContext: Not initialized yet, waiting for screen focus');
       return;
     }
     
@@ -343,7 +347,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
     } else {
       loadProducts(1, true);
     }
-  }, [searchQuery, selectedCategoryId, sortBy, sortOrder, canMakeApiCalls, searchProducts, loadProducts]);
+  }, [searchQuery, selectedCategoryId, sortBy, sortOrder, canMakeApiCalls, isInitialized, searchProducts, loadProducts]);
 
   return (
     <ItemsApiContext.Provider value={{
@@ -356,6 +360,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       refreshing,
+      isInitialized,
       
       // Categories state
       categories,
