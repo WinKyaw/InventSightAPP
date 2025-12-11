@@ -193,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const loginResponse = await authService.login(credentials);
 
       if (isMountedRef.current) {
-        // Update state FIRST
+        // Update state FIRST - set isAuthenticated before navigation
         setAuthState({
           user: loginResponse.user,
           isAuthenticated: true,
@@ -202,7 +202,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokens: null,
         });
 
-        // Wait for state propagation to prevent race condition
+        // ⏱️ Wait for React Context to propagate state to all subscribers
+        // React state updates are asynchronous, and Expo Router navigation is immediate.
+        // Without this delay, TabsLayout may briefly see the old state and redirect back to login.
+        // This is a known pattern in React Native apps using Context + Router.
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Then navigate to main app
@@ -231,7 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const signupResponse = await authService.signup(credentials);
 
       if (isMountedRef.current) {
-        // Update state FIRST
+        // Update state FIRST - set isAuthenticated before navigation
         setAuthState({
           user: signupResponse.user,
           isAuthenticated: true,
@@ -240,7 +243,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokens: null,
         });
 
-        // Wait for state propagation to prevent race condition
+        // ⏱️ Wait for React Context to propagate state to all subscribers
+        // React state updates are asynchronous, and Expo Router navigation is immediate.
+        // Without this delay, TabsLayout may briefly see the old state and redirect back to login.
+        // This is a known pattern in React Native apps using Context + Router.
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Then navigate to main app

@@ -32,13 +32,13 @@ export default function TabsLayout() {
   const [isReady, setIsReady] = useState(false);
   const [selectedNavItems, setSelectedNavItems] = useState(FALLBACK_NAV_ITEMS);
 
-  // ✅ MODIFIED: More nuanced auth check to prevent race condition
-  // Only redirect if we're sure the user is not authenticated
-  // Don't redirect during loading or if not yet initialized
+  // ✅ Auth guard: Redirect to login if not authenticated
+  // This protects the tabs from unauthorized access
   useEffect(() => {
     if (isInitialized && !isLoading && !isAuthenticated) {
       console.log('🔐 TabsLayout: User not authenticated, redirecting to login');
-      // Small delay to ensure we're not in the middle of a login transition
+      // Small delay to allow for auth state propagation during login transitions
+      // This prevents race conditions where we redirect before auth state updates
       const timer = setTimeout(() => {
         router.replace('/(auth)/login');
       }, 50);
