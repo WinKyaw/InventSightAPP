@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useReports } from '../../context/ReportsContext';
 import { useEmployees } from '../../context/EmployeesContext';
@@ -49,18 +50,18 @@ export default function DashboardScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // Only load dashboard data when API is ready (user is authenticated)
-  useEffect(() => {
-    if (canMakeApiCalls) {
-      console.log('🔐 Dashboard: Authentication verified, loading dashboard data');
-      refreshDashboardData().catch((error) => {
-        console.error('Failed to load dashboard data:', error);
-        Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
-      });
-    } else if (isAuthenticating) {
-      console.log('🔐 Dashboard: Waiting for authentication to complete');
-    }
-  }, [canMakeApiCalls, isAuthenticating]);
+  // ✅ LAZY LOADING: Load data only when Dashboard screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (canMakeApiCalls) {
+        console.log('📊 Dashboard screen focused - loading dashboard data');
+        refreshDashboardData().catch((error) => {
+          console.error('Failed to load dashboard data:', error);
+          // Don't show alert on automatic load, only on manual refresh
+        });
+      }
+    }, [canMakeApiCalls, refreshDashboardData])
+  );
 
   const handleRefresh = useCallback(async () => {
     // Check authentication before allowing refresh

@@ -321,19 +321,20 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
     });
   }, [products]);
 
-  // Load initial data only when authentication is ready
-  useEffect(() => {
-    if (canMakeApiCalls) {
-      console.log('🔐 ItemsApiContext: Authentication verified, loading initial data');
-      loadProducts();
-      loadCategories();
-    }
-  }, [canMakeApiCalls, loadProducts, loadCategories]);
+  // ✅ LAZY LOADING: Don't load automatically - let screens control when to fetch
+  // Removed automatic loading on mount
+  // Screens will use useFocusEffect to load data when focused
 
-  // Reload products when search/filter/sort changes
+  // Reload products when search/filter/sort changes (only if products already loaded)
   useEffect(() => {
     if (!canMakeApiCalls) {
       console.log('⚠️ ItemsApiContext: Skipping reload - not authenticated');
+      return;
+    }
+    
+    // Only reload if we already have products (user has visited the screen)
+    if (products.length === 0) {
+      console.log('📦 ItemsApiContext: No products loaded yet, waiting for screen focus');
       return;
     }
     
