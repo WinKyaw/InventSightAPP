@@ -193,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const loginResponse = await authService.login(credentials);
 
       if (isMountedRef.current) {
+        // Update state FIRST
         setAuthState({
           user: loginResponse.user,
           isAuthenticated: true,
@@ -201,7 +202,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokens: null,
         });
 
-        // Navigate to main app
+        // Wait for state propagation to prevent race condition
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Then navigate to main app
         router.replace('/(tabs)/dashboard');
       }
     } catch (error) {
@@ -227,6 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const signupResponse = await authService.signup(credentials);
 
       if (isMountedRef.current) {
+        // Update state FIRST
         setAuthState({
           user: signupResponse.user,
           isAuthenticated: true,
@@ -235,7 +240,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokens: null,
         });
 
-        // Navigate to main app
+        // Wait for state propagation to prevent race condition
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Then navigate to main app
         router.replace('/(tabs)/dashboard');
       }
     } catch (error) {
