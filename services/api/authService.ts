@@ -476,19 +476,7 @@ class AuthService {
           return false;
         }
         
-        // If token is expired, try to refresh
-        if (refreshToken) {
-          try {
-            await this.refreshToken();
-            return true;
-          } catch (refreshError) {
-            // Refresh failed - silently clear tokens
-            await tokenManager.clearAuthData();
-            return false;
-          }
-        }
-        
-        // For any other error, silently clear tokens and require re-login
+        // For other errors, silently clear tokens and require re-login
         await tokenManager.clearAuthData();
         return false;
       }
