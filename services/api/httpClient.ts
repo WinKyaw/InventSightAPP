@@ -99,10 +99,14 @@ const createHttpClient = (): AxiosInstance => {
         const errorData = error.response?.data as any;
         
         // Check if it's a token-related error
-        if (errorData?.error?.includes('tenant_id') || 
-            errorData?.error?.includes('JWT') ||
-            errorData?.error?.includes('token')) {
-          
+        // Looking for common JWT/token error indicators in error message
+        const errorMessage = errorData?.error || errorData?.message || '';
+        const isTokenError = 
+          errorMessage.toLowerCase().includes('tenant_id') || 
+          errorMessage.toLowerCase().includes('jwt') ||
+          errorMessage.toLowerCase().includes('token');
+        
+        if (isTokenError) {
           // Silently clear token - DON'T RETRY
           await tokenManager.clearAuthData();
           

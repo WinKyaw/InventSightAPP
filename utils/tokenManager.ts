@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from 'jwt-decode';
-import { AuthTokens, AuthUser, TOKEN_KEYS } from '../types/auth';
+import { AuthTokens, AuthUser, TOKEN_KEYS, JWTClaims } from '../types/auth';
 
 /**
  * Secure Token Manager for handling JWT tokens and user data
@@ -8,6 +8,7 @@ import { AuthTokens, AuthUser, TOKEN_KEYS } from '../types/auth';
  */
 class TokenManager {
   private static instance: TokenManager;
+  private clearingAuth: boolean = false;
 
   private constructor() {}
 
@@ -55,7 +56,7 @@ class TokenManager {
    */
   private async validateTokenLocally(token: string): Promise<boolean> {
     try {
-      const decoded: any = jwtDecode(token);
+      const decoded = jwtDecode<JWTClaims>(token);
       
       // Check for required claims (silently)
       if (!decoded.tenant_id) {
@@ -99,15 +100,19 @@ class TokenManager {
       const isValid = await this.validateTokenLocally(token);
       
       if (!isValid) {
-        // Silently clear invalid token
-        await this.clearAuthData();
+        // Silently clear invalid token (with race condition protection)
+        if (!this.clearingAuth) {
+          await this.clearAuthData();
+        }
         return null;
       }
 
       return token;
     } catch (error) {
       // Storage error - silently clear and return null
-      await this.clearAuthData();
+      if (!this.clearingAuth) {
+        await this.clearAuthData();
+      }
       return null;
     }
   }
@@ -210,7 +215,13 @@ class TokenManager {
    * Clear all stored authentication data
    */
   async clearAuthData(): Promise<void> {
+    // Prevent concurrent clearing operations
+    if (this.clearingAuth) {
+      return;
+    }
+    
     try {
+      this.clearingAuth = true;
       await Promise.all([
         SecureStore.deleteItemAsync(TOKEN_KEYS.ACCESS_TOKEN),
         SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH_TOKEN),
@@ -220,6 +231,8 @@ class TokenManager {
     } catch (error) {
       console.error('Failed to clear auth data:', error);
       // Don't throw error here as this is often called during logout
+    } finally {
+      this.clearingAuth = false;
     }
   }
 
