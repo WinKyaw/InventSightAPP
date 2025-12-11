@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -48,18 +48,42 @@ export default function DashboardScreen() {
   } = useEmployees();
 
   const [refreshing, setRefreshing] = useState(false);
+  
+  // ✅ INFINITE LOOP FIX: Track loaded state and throttle loads
+  const loadedRef = useRef(false);
+  const lastLoadTime = useRef(0);
+  const MIN_LOAD_INTERVAL = 5000; // 5 seconds minimum between loads
 
   // ✅ LAZY LOADING: Load data only when Dashboard screen is focused
   useFocusEffect(
     useCallback(() => {
-      if (canMakeApiCalls) {
-        console.log('📊 Dashboard screen focused - loading dashboard data');
-        refreshDashboardData().catch((error) => {
-          console.error('Failed to load dashboard data:', error);
-          // Don't show alert on automatic load, only on manual refresh
-        });
+      const now = Date.now();
+      
+      // Prevent loading if:
+      // 1. Already loaded once
+      // 2. Last load was less than 5 seconds ago
+      // 3. Currently loading
+      // 4. Not ready to make API calls
+      if (loadedRef.current || (now - lastLoadTime.current) < MIN_LOAD_INTERVAL || reportsLoading || !canMakeApiCalls) {
+        console.log('⏭️  Dashboard: Skipping load (already loaded or too soon or not ready)');
+        return;
       }
-    }, [canMakeApiCalls, refreshDashboardData])
+
+      console.log('📊 Dashboard screen focused - loading dashboard data');
+      lastLoadTime.current = now;
+      loadedRef.current = true;
+      
+      refreshDashboardData().catch((error) => {
+        console.error('❌ Dashboard load failed:', error);
+        // Don't retry automatically on error
+        loadedRef.current = false; // Allow manual retry
+      });
+
+      // Cleanup function
+      return () => {
+        console.log('📊 Dashboard screen unfocused');
+      };
+    }, [canMakeApiCalls, refreshDashboardData, reportsLoading])
   );
 
   const handleRefresh = useCallback(async () => {
@@ -69,9 +93,15 @@ export default function DashboardScreen() {
       return;
     }
 
+    // Reset load guards to allow fresh load
+    loadedRef.current = false;
+    lastLoadTime.current = 0;
+
     setRefreshing(true);
     try {
       await refreshDashboardData();
+      loadedRef.current = true;
+      lastLoadTime.current = Date.now();
     } catch (error) {
       console.error('Failed to refresh dashboard data:', error);
       Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
@@ -203,6 +233,9 @@ export default function DashboardScreen() {
             <Text style={[styles.kpiLabelSmall, { color: '#EF4444' }]}>{reportsError}</Text>
             <TouchableOpacity 
               onPress={() => {
+                // Reset load guards to allow retry
+                loadedRef.current = false;
+                lastLoadTime.current = 0;
                 refreshDashboardData().catch((error) => {
                   console.error('Failed to retry dashboard data:', error);
                   Alert.alert(t('errors.networkError'), t('errors.checkNetworkConnection'));
