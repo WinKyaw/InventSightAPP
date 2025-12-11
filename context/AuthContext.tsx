@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
+import { useRouter, useSegments } from 'expo-router';
 import { 
   AuthUser, 
   AuthState, 
@@ -36,6 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Ref to track if component is mounted to prevent state updates after unmount
   const isMountedRef = useRef(true);
+  
+  // Router and segments for navigation
+  const router = useRouter();
+  const segments = useSegments();
+  
+  // Check if we're on an auth screen
+  const inAuthGroup = segments[0] === '(auth)';
 
   useEffect(() => {
     return () => {
@@ -48,27 +56,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     initializeAuth();
-  }, []);
+  }, [inAuthGroup]);
 
   const initializeAuth = useCallback(async () => {
     try {
-      console.log('🔐 AuthContext: Initializing authentication...');
       if (!isMountedRef.current) return;
+      
+      // Skip token verification if already on login page
+      if (inAuthGroup) {
+        if (isMountedRef.current) {
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            isInitialized: true,
+            tokens: null,
+          });
+        }
+        return;
+      }
       
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
-      // ✅ SECURITY FIX: Verify authentication with server (not just local storage)
+      // Get stored token (this will auto-clear invalid ones via tokenManager)
+      const token = await tokenManager.getAccessToken();
+      
+      if (!token) {
+        // No valid token - silently redirect to login
+        if (isMountedRef.current) {
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            isInitialized: true,
+            tokens: null,
+          });
+          router.replace('/(auth)/login');
+        }
+        return;
+      }
+
+      // Verify authentication with server
       const isAuthenticated = await authService.verifyAuthentication();
       
       if (!isMountedRef.current) return;
       
       if (isAuthenticated) {
-        // ✅ SECURITY FIX: Fetch fresh user data from server, don't trust cached data
+        // Fetch fresh user data from server
         try {
           const user = await authService.getCurrentUser();
           
           if (user && isMountedRef.current) {
-            console.log('✅ AuthContext: User authenticated and verified:', user.email);
             setAuthState({
               user,
               isAuthenticated: true,
@@ -78,16 +116,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
             return;
           }
-        } catch (userError) {
-          console.error('❌ AuthContext: Failed to fetch user after token verification:', userError);
-          // Clear invalid state
-          await authService.logout();
+        } catch (userError: any) {
+          const status = userError.response?.status;
+          
+          // Silently clear and redirect for auth errors
+          if (status === 400 || status === 401) {
+            await tokenManager.clearAuthData();
+            if (isMountedRef.current) {
+              setAuthState({
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+                isInitialized: true,
+                tokens: null,
+              });
+              router.replace('/(auth)/login');
+            }
+            return;
+          }
+          
+          // For other errors, also clear and redirect but log for debugging
+          console.warn('⚠️ Auth: Failed to fetch user (network issue?)');
+          await tokenManager.clearAuthData();
         }
       }
 
-      // Authentication failed or user fetch failed
+      // Authentication failed - silently redirect to login
       if (isMountedRef.current) {
-        console.log('🚫 AuthContext: Authentication failed - redirecting to login');
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -95,26 +150,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isInitialized: true,
           tokens: null,
         });
+        router.replace('/(auth)/login');
       }
-    } catch (error) {
-      console.error('❌ AuthContext: Auth initialization failed:', error);
+    } catch (error: any) {
+      const status = error.response?.status;
+      
       if (isMountedRef.current) {
-        // Clear any potentially invalid tokens
-        await authService.logout();
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          isInitialized: true,
-          tokens: null,
-        });
+        // Silently handle auth errors (400/401)
+        if (status === 400 || status === 401) {
+          await tokenManager.clearAuthData();
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            isInitialized: true,
+            tokens: null,
+          });
+          router.replace('/(auth)/login');
+        } else {
+          // Network or other error - still redirect but log for debugging
+          console.warn('⚠️ Auth initialization failed (network issue?)');
+          await tokenManager.clearAuthData();
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            isInitialized: true,
+            tokens: null,
+          });
+          router.replace('/(auth)/login');
+        }
       }
     }
-  }, []);
+  }, [inAuthGroup, router]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
-      console.log('🔐 AuthContext: Attempting login...');
       if (!isMountedRef.current) return;
       
       setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -130,10 +201,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokens: null,
         });
 
-        console.log('✅ AuthContext: Login successful');
+        // Navigate to main app
+        router.replace('/(tabs)/dashboard');
       }
     } catch (error) {
-      console.error('❌ AuthContext: Login failed:', error);
+      // Login errors should be shown (user needs to know)
       if (isMountedRef.current) {
         setAuthState(prev => ({ 
           ...prev, 
@@ -144,11 +216,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       throw error;
     }
-  }, []);
+  }, [router]);
 
   const signup = useCallback(async (credentials: SignupCredentials) => {
     try {
-      console.log('🔐 AuthContext: Attempting signup...');
       if (!isMountedRef.current) return;
       
       setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -164,10 +235,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokens: null,
         });
 
-        console.log('✅ AuthContext: Signup successful');
+        // Navigate to main app
+        router.replace('/(tabs)/dashboard');
       }
     } catch (error) {
-      console.error('❌ AuthContext: Signup failed:', error);
+      // Signup errors should be shown (user needs to know)
       if (isMountedRef.current) {
         setAuthState(prev => ({ 
           ...prev, 
@@ -178,11 +250,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       throw error;
     }
-  }, []);
+  }, [router]);
 
   const logout = useCallback(async () => {
     try {
-      console.log('🔐 AuthContext: Logging out...');
       if (!isMountedRef.current) return;
       
       setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -198,10 +269,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokens: null,
         });
 
-        console.log('✅ AuthContext: Logout successful');
+        // Navigate to login
+        router.replace('/(auth)/login');
       }
     } catch (error) {
-      console.error('❌ AuthContext: Logout error:', error);
       // Even if server logout fails, clear local state
       if (isMountedRef.current) {
         setAuthState({
@@ -211,13 +282,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isInitialized: true,
           tokens: null,
         });
+        
+        // Navigate to login
+        router.replace('/(auth)/login');
       }
     }
-  }, []);
+  }, [router]);
 
   const refreshUser = useCallback(async () => {
     try {
-      console.log('👤 AuthContext: Refreshing user data...');
       if (!authState.isAuthenticated) {
         throw new Error('User not authenticated');
       }
@@ -229,14 +302,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...prev,
           user: updatedUser,
         }));
-
-        console.log('✅ AuthContext: User data refreshed');
       }
-    } catch (error) {
-      console.error('❌ AuthContext: Failed to refresh user data:', error);
-      // If refresh fails due to authentication, logout
-      if (error instanceof Error && error.message.includes('Session expired')) {
+    } catch (error: any) {
+      const status = error.response?.status;
+      
+      // If refresh fails due to authentication, logout silently
+      if (status === 400 || status === 401) {
         await logout();
+      } else {
+        console.warn('⚠️ Auth: Failed to refresh user data');
       }
       throw error;
     }
@@ -244,7 +318,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback(async (updates: Partial<AuthUser>) => {
     try {
-      console.log('👤 AuthContext: Updating profile...');
       if (!authState.isAuthenticated) {
         throw new Error('User not authenticated');
       }
@@ -256,11 +329,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...prev,
           user: updatedUser,
         }));
-
-        console.log('✅ AuthContext: Profile updated');
       }
     } catch (error) {
-      console.error('❌ AuthContext: Failed to update profile:', error);
       throw error;
     }
   }, [authState.isAuthenticated]);

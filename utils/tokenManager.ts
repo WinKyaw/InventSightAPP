@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { jwtDecode } from 'jwt-decode';
 import { AuthTokens, AuthUser, TOKEN_KEYS } from '../types/auth';
 
 /**
@@ -49,13 +50,64 @@ class TokenManager {
   }
 
   /**
-   * Retrieve access token
+   * Validate token structure and claims locally (silently)
+   * Returns true if token is valid, false otherwise
+   */
+  private async validateTokenLocally(token: string): Promise<boolean> {
+    try {
+      const decoded: any = jwtDecode(token);
+      
+      // Check for required claims (silently)
+      if (!decoded.tenant_id) {
+        // Old token format - silently invalid
+        return false;
+      }
+
+      if (!decoded.sub && !decoded.userId) {
+        // Invalid token structure - silently invalid
+        return false;
+      }
+
+      // Check expiration (silently)
+      if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        // Expired - silently invalid
+        return false;
+      }
+
+      // Token is valid locally
+      return true;
+      
+    } catch (decodeError) {
+      // Malformed token - silently invalid
+      return false;
+    }
+  }
+
+  /**
+   * Retrieve access token and validate it locally
+   * Returns null for invalid tokens (silently clears them)
    */
   async getAccessToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(TOKEN_KEYS.ACCESS_TOKEN);
+      const token = await SecureStore.getItemAsync(TOKEN_KEYS.ACCESS_TOKEN);
+      
+      if (!token) {
+        return null;
+      }
+
+      // Validate token structure and claims
+      const isValid = await this.validateTokenLocally(token);
+      
+      if (!isValid) {
+        // Silently clear invalid token
+        await this.clearAuthData();
+        return null;
+      }
+
+      return token;
     } catch (error) {
-      console.error('Failed to get access token:', error);
+      // Storage error - silently clear and return null
+      await this.clearAuthData();
       return null;
     }
   }

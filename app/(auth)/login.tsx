@@ -12,6 +12,7 @@ import { styles } from '../../constants/Styles';
 import { validateLoginForm, getFieldError } from '../../utils/validation';
 import { LoginCredentials } from '../../types/auth';
 import { biometricService } from '../../services/biometricService';
+import { tokenManager } from '../../utils/tokenManager';
 import { Colors } from '../../constants/Colors';
 
 export default function LoginScreen() {
@@ -270,6 +271,28 @@ export default function LoginScreen() {
             </View>
             
             <DemoInfo />
+            
+            {/* Dev Tool - Only in development */}
+            {__DEV__ && (
+              <TouchableOpacity
+                onPress={async () => {
+                  await tokenManager.clearAuthData();
+                  console.log('🔧 Dev: Token cleared');
+                  Alert.alert('Dev Tool', 'Token cleared successfully');
+                }}
+                style={{
+                  marginTop: 16,
+                  padding: 12,
+                  backgroundColor: '#FEF3C7',
+                  borderRadius: 8,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#92400E', fontSize: 12 }}>
+                  🔧 Clear Token (Dev)
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
