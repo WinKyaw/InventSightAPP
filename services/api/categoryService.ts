@@ -8,6 +8,7 @@ import {
 import { requestDeduplicator } from '../../utils/requestDeduplicator';
 import { responseCache } from '../../utils/responseCache';
 import { retryWithBackoff } from '../../utils/retryWithBackoff';
+import { CacheManager } from '../../utils/cacheManager';
 
 const CACHE_TTL = 30000; // 30 seconds
 
@@ -81,9 +82,9 @@ export class CategoryService {
       description,
     });
     
-    // Invalidate cache
-    responseCache.invalidate('categories:all');
-    responseCache.invalidate('categories:count');
+    // Invalidate categories and dashboard cache
+    CacheManager.invalidateCategories();
+    CacheManager.invalidateDashboard();
   }
 
   /**
@@ -95,9 +96,9 @@ export class CategoryService {
       description,
     });
     
-    // Invalidate cache
-    responseCache.invalidate('categories:all');
-    responseCache.invalidate(`category:${id}`);
+    // Invalidate categories and dashboard cache
+    CacheManager.invalidateCategories();
+    CacheManager.invalidateDashboard();
   }
 
   /**
@@ -106,10 +107,9 @@ export class CategoryService {
   static async deleteCategory(id: number): Promise<void> {
     await apiClient.delete(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.DELETE(id)}`);
     
-    // Invalidate cache
-    responseCache.invalidate('categories:all');
-    responseCache.invalidate('categories:count');
-    responseCache.invalidate(`category:${id}`);
+    // Invalidate categories and dashboard cache
+    CacheManager.invalidateCategories();
+    CacheManager.invalidateDashboard();
   }
 }
 

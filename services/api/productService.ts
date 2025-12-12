@@ -15,6 +15,7 @@ import {
 import { requestDeduplicator } from '../../utils/requestDeduplicator';
 import { responseCache } from '../../utils/responseCache';
 import { retryWithBackoff } from '../../utils/retryWithBackoff';
+import { CacheManager } from '../../utils/cacheManager';
 
 const CACHE_TTL = 30000; // 30 seconds
 
@@ -136,8 +137,9 @@ export class ProductService {
   static async createProduct(productData: CreateProductRequest): Promise<Product> {
     const product = await apiClient.post<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.CREATE, productData);
     
-    // Invalidate products cache
-    responseCache.invalidatePattern(/^products:/);
+    // Invalidate products and dashboard cache
+    CacheManager.invalidateProducts();
+    CacheManager.invalidateDashboard();
     
     return product;
   }
@@ -148,9 +150,9 @@ export class ProductService {
   static async updateProduct(id: number, updates: UpdateProductRequest): Promise<Product> {
     const product = await apiClient.put<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.UPDATE(id), updates);
     
-    // Invalidate products cache
-    responseCache.invalidatePattern(/^products:/);
-    responseCache.invalidate(`product:${id}`);
+    // Invalidate products and dashboard cache
+    CacheManager.invalidateProducts();
+    CacheManager.invalidateDashboard();
     
     return product;
   }
@@ -161,9 +163,9 @@ export class ProductService {
   static async deleteProduct(id: number): Promise<boolean> {
     await apiClient.delete<void>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.DELETE(id));
     
-    // Invalidate products cache
-    responseCache.invalidatePattern(/^products:/);
-    responseCache.invalidate(`product:${id}`);
+    // Invalidate products and dashboard cache
+    CacheManager.invalidateProducts();
+    CacheManager.invalidateDashboard();
     
     return true;
   }
@@ -174,9 +176,9 @@ export class ProductService {
   static async updateProductStock(id: number, stockData: UpdateStockRequest): Promise<Product> {
     const product = await apiClient.put<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.UPDATE_STOCK(id), stockData);
     
-    // Invalidate products cache (stock affects low stock and counts)
-    responseCache.invalidatePattern(/^products:/);
-    responseCache.invalidate(`product:${id}`);
+    // Invalidate products and dashboard cache (stock affects low stock and counts)
+    CacheManager.invalidateProducts();
+    CacheManager.invalidateDashboard();
     
     return product;
   }
