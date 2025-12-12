@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     initializeAuth();
-  }, [inAuthGroup]);
+  }, []); // ✅ Empty array - runs only once on mount
 
   const initializeAuth = useCallback(async () => {
     try {
@@ -187,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [inAuthGroup, router]);
+  }, [router]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
