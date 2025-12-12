@@ -53,7 +53,7 @@ class ApiClient {
         console.error(`❌ API Error: ${status} - ${url}`);
         
         if (status === 401) {
-          console.warn('⚠️ API: Authentication required - redirecting to login');
+          console.warn('⚠️ API: Authentication required');
           // Token expired or invalid - let the app handle re-authentication
         } else if (status === 404) {
           console.warn(`⚠️ API: Endpoint not found - ${url}`);

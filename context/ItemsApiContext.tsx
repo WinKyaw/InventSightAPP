@@ -92,7 +92,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
   const loadProductsRef = useRef<Promise<void> | null>(null);
 
   // Load products with pagination
-  const loadProducts = useCallback(async (page = 1, refresh = false) => {
+  const loadProducts = useCallback(async (page = 1, refresh = false): Promise<void> => {
     // Deduplicate concurrent requests
     if (loadProductsRef.current) {
       console.log('⏭️ Products: Request already in progress');
@@ -101,7 +101,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
 
     if (!canMakeApiCalls) {
       console.warn('Cannot load products - not authenticated');
-      return;
+      return Promise.resolve();
     }
 
     loadProductsRef.current = (async () => {

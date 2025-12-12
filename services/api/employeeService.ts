@@ -12,10 +12,13 @@ export class EmployeeService {
   static async getAllEmployees(): Promise<Employee[]> {
     try {
       return await apiClient.get<Employee[]>(API_ENDPOINTS.EMPLOYEES.ALL);
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        console.warn('⚠️ Employees API not found - returning empty array');
-        return [];
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404) {
+          console.warn('⚠️ Employees API not found - returning empty array');
+          return [];
+        }
       }
       throw error;
     }
@@ -59,7 +62,7 @@ export class EmployeeService {
   static async createEmployee(employeeData: CreateEmployeeRequest): Promise<Employee> {
     try {
       return await apiClient.post<Employee>(API_ENDPOINTS.EMPLOYEES.CREATE, employeeData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Failed to create employee:', error);
       throw error;
     }
