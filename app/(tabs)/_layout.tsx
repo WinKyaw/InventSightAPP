@@ -37,11 +37,11 @@ export default function TabsLayout() {
   useEffect(() => {
     if (isInitialized && !isLoading && !isAuthenticated) {
       console.log('🔐 TabsLayout: User not authenticated, redirecting to login');
-      // Small delay to allow for auth state propagation during login transitions
+      // Increase delay from 50ms to 200ms to ensure AuthContext updates
       // This prevents race conditions where we redirect before auth state updates
       const timer = setTimeout(() => {
         router.replace('/(auth)/login');
-      }, 50);
+      }, 200);
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated, isInitialized, isLoading, router]);

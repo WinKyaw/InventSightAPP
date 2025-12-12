@@ -45,6 +45,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check if we're on an auth screen
   const inAuthGroup = segments[0] === '(auth)';
 
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log(`🔐 AuthContext State: isAuthenticated=${authState.isAuthenticated}, user=${authState.user?.email || 'null'}, loading=${authState.isLoading}`);
+  }, [authState.isAuthenticated, authState.user, authState.isLoading]);
+
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -188,12 +193,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!isMountedRef.current) return;
       
+      console.log('🔐 AuthContext: Starting login...');
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
+      console.log('🔐 AuthContext: Calling login API...');
       const loginResponse = await authService.login(credentials);
+      console.log('✅ AuthContext: Login API successful');
 
       if (isMountedRef.current) {
-        // Update state FIRST - set isAuthenticated before navigation
+        // ✅ FIX: Update state IMMEDIATELY and SYNCHRONOUSLY
+        // Set isAuthenticated to true right after tokens are stored
         setAuthState({
           user: loginResponse.user,
           isAuthenticated: true,
@@ -201,17 +210,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isInitialized: true,
           tokens: null,
         });
+        console.log('✅ AuthContext: isAuthenticated set to TRUE');
 
         // ⏱️ Wait for React Context to propagate state to all subscribers
         // React state updates are asynchronous, and Expo Router navigation is immediate.
         // Without this delay, TabsLayout may briefly see the old state and redirect back to login.
         // This is a known pattern in React Native apps using Context + Router.
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Increased from 100ms to 150ms for React 19 batching
+        await new Promise(resolve => setTimeout(resolve, 150));
+        console.log('✅ AuthContext: State propagated, navigating...');
 
         // Then navigate to main app
         router.replace('/(tabs)/dashboard');
+        console.log('✅ AuthContext: Navigation triggered');
       }
     } catch (error) {
+      console.error('❌ AuthContext: Login failed:', error);
       // Login errors should be shown (user needs to know)
       if (isMountedRef.current) {
         setAuthState(prev => ({ 

@@ -13,6 +13,7 @@ import { validateLoginForm, getFieldError } from '../../utils/validation';
 import { LoginCredentials } from '../../types/auth';
 import { biometricService } from '../../services/biometricService';
 import { tokenManager } from '../../utils/tokenManager';
+import { saveRememberedEmail, getRememberedEmail, clearRememberedEmail } from '../../utils/rememberMe';
 import { Colors } from '../../constants/Colors';
 
 export default function LoginScreen() {
@@ -23,12 +24,29 @@ export default function LoginScreen() {
   });
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(true);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState<string>('Biometric');
   const [checkingBiometric, setCheckingBiometric] = useState(true);
   const { user, isAuthenticated, login } = useAuth();
   const router = useRouter();
+
+  // Load remembered email on mount
+  useEffect(() => {
+    const loadRememberedEmail = async () => {
+      const savedEmail = await getRememberedEmail();
+      if (savedEmail) {
+        setCredentials(prev => ({ ...prev, email: savedEmail }));
+        setRememberMe(true);
+        console.log('✅ Auto-filled email from Remember Me');
+      }
+      setLoadingEmail(false);
+    };
+
+    loadRememberedEmail();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated && user && !isSubmitting) {
@@ -146,12 +164,23 @@ export default function LoginScreen() {
       setIsSubmitting(true);
       setValidationErrors([]);
       
+      console.log('📝 LoginScreen: Calling login...');
+      
+      // Save or clear remembered email based on checkbox
+      if (rememberMe) {
+        await saveRememberedEmail(credentials.email);
+      } else {
+        await clearRememberedEmail();
+      }
+
+      // Call AuthContext login
       await login(credentials);
       
-      // Success is handled by useEffect above
+      console.log('✅ LoginScreen: Login completed');
+      // AuthContext handles navigation
       
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ LoginScreen: Login failed:', error);
       
       let errorMessage = t('errors.loginFailed');
       
@@ -167,6 +196,15 @@ export default function LoginScreen() {
 
   const emailError = getFieldError(validationErrors, 'email');
   const passwordError = getFieldError(validationErrors, 'password');
+
+  // Show loading while checking remembered email
+  if (loadingEmail) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -248,6 +286,42 @@ export default function LoginScreen() {
               accessibilityLabel="Password"
               accessibilityHint="Enter your password"
             />
+            
+            {/* Remember Me Checkbox */}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: 24,
+                marginTop: 8,
+              }}
+              onPress={() => setRememberMe(!rememberMe)}
+              disabled={isSubmitting}
+              accessibilityRole="checkbox"
+              accessibilityLabel="Remember my email"
+              accessibilityState={{ checked: rememberMe }}
+            >
+              <View
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderWidth: 2,
+                  borderColor: rememberMe ? '#3b82f6' : '#d1d5db',
+                  borderRadius: 4,
+                  marginRight: 8,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: rememberMe ? '#3b82f6' : 'transparent',
+                }}
+              >
+                {rememberMe && (
+                  <Ionicons name="checkmark" size={16} color="#ffffff" />
+                )}
+              </View>
+              <Text style={{ fontSize: 14, color: '#4b5563' }}>
+                Remember my email
+              </Text>
+            </TouchableOpacity>
             
             <Button 
               title={isSubmitting ? t('auth.signingIn') : t('auth.signIn')} 
