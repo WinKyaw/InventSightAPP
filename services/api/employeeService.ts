@@ -12,10 +12,14 @@ export class EmployeeService {
    */
   static async getAllEmployees(): Promise<Employee[]> {
     try {
-      return await apiClient.get<Employee[]>(API_ENDPOINTS.EMPLOYEES.ALL);
+      const employees = await apiClient.get<Employee[]>(API_ENDPOINTS.EMPLOYEES.ALL);
+      if (!employees || employees.length === 0) {
+        console.log('📭 No employees found');
+      }
+      return employees || [];
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
-        console.warn('⚠️ Employees API not found - returning empty array');
+        console.log('📭 No employees found - returning empty array');
         return [];
       }
       throw error;
