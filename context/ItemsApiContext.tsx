@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import ProductService from '../services/api/productService';
 import CategoryService from '../services/api/categoryService';
@@ -88,70 +88,86 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
   const [sortBy, setSortBy] = useState(DEFAULT_SORT);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(DEFAULT_SORT_ORDER);
 
+  // ✅ REQUEST DEDUPLICATION: Track in-progress requests to prevent rate limiting
+  const loadProductsRef = useRef<Promise<void> | null>(null);
+
   // Load products with pagination
-  const loadProducts = useCallback(async (page = 1, refresh = false) => {
+  const loadProducts = useCallback(async (page = 1, refresh = false): Promise<void> => {
+    // Deduplicate concurrent requests
+    if (loadProductsRef.current) {
+      console.log('⏭️ Products: Request already in progress');
+      await loadProductsRef.current;
+      return;
+    }
+
     if (!canMakeApiCalls) {
       console.warn('Cannot load products - not authenticated');
       return;
     }
-    console.log("loading products...")
-    try {
-      if (refresh) {
-        setRefreshing(true);
-        setError(null);
-      } else {
-        setLoading(true);
-        setError(null);
-      }
 
-      let response;
-      
-      // If we have search query or filters, use search endpoint
-      if (searchQuery || selectedCategoryId) {
-        const searchParams: SearchProductsParams = {
-          query: searchQuery || undefined,
-          categoryId: selectedCategoryId || undefined,
-          page,
-          limit: DEFAULT_PAGE_SIZE,
-          sortBy: sortBy as any,
-          sortOrder
-        };
+    loadProductsRef.current = (async () => {
+      console.log("loading products...")
+      try {
+        if (refresh) {
+          setRefreshing(true);
+          setError(null);
+        } else {
+          setLoading(true);
+          setError(null);
+        }
+
+        let response;
         
-        const searchResponse = await ProductService.searchProducts(searchParams);
-        console.log(searchResponse.toString());
-        response = {
-          products: searchResponse.products,
-          totalCount: searchResponse.totalCount,
-          currentPage: page,
-          totalPages: Math.ceil(searchResponse.totalCount / DEFAULT_PAGE_SIZE),
-          hasMore: page * DEFAULT_PAGE_SIZE < searchResponse.totalCount
-        };
-      } else {
-        // Otherwise use regular getAllProducts
-        response = await ProductService.getAllProducts(page, DEFAULT_PAGE_SIZE, sortBy, sortOrder);
-        console.log(JSON.stringify(response));
-      }
+        // If we have search query or filters, use search endpoint
+        if (searchQuery || selectedCategoryId) {
+          const searchParams: SearchProductsParams = {
+            query: searchQuery || undefined,
+            categoryId: selectedCategoryId || undefined,
+            page,
+            limit: DEFAULT_PAGE_SIZE,
+            sortBy: sortBy as any,
+            sortOrder
+          };
+          
+          const searchResponse = await ProductService.searchProducts(searchParams);
+          console.log(searchResponse.toString());
+          response = {
+            products: searchResponse.products,
+            totalCount: searchResponse.totalCount,
+            currentPage: page,
+            totalPages: Math.ceil(searchResponse.totalCount / DEFAULT_PAGE_SIZE),
+            hasMore: page * DEFAULT_PAGE_SIZE < searchResponse.totalCount
+          };
+        } else {
+          // Otherwise use regular getAllProducts
+          response = await ProductService.getAllProducts(page, DEFAULT_PAGE_SIZE, sortBy, sortOrder);
+          console.log(JSON.stringify(response));
+        }
 
-      if (refresh || page === 1) {
-        setProducts(response.products);
-      } else {
-        // Append for pagination
-        setProducts(prev => [...prev, ...response.products]);
-      }
+        if (refresh || page === 1) {
+          setProducts(response.products);
+        } else {
+          // Append for pagination
+          setProducts(prev => [...prev, ...response.products]);
+        }
 
-      setTotalProducts(response.totalItems || 0);
-      setCurrentPage(response.currentPage);
-      setTotalPages(response.totalPages);
-      setHasMore(response.hasMore);
-      setIsInitialized(true);  // Mark as initialized after successful load
-    } catch (err) {
-      console.error('Failed to load products:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load products');
-      setIsInitialized(true);  // Mark as initialized even on error
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+        setTotalProducts(response.totalItems || 0);
+        setCurrentPage(response.currentPage);
+        setTotalPages(response.totalPages);
+        setHasMore(response.hasMore);
+        setIsInitialized(true);  // Mark as initialized after successful load
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load products');
+        setIsInitialized(true);  // Mark as initialized even on error
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+        loadProductsRef.current = null;
+      }
+    })();
+
+    await loadProductsRef.current;
   }, [searchQuery, selectedCategoryId, sortBy, sortOrder, canMakeApiCalls]);
 
   // Search products

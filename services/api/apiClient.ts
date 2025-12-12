@@ -47,14 +47,26 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
+        const status = error.response?.status;
+        const url = error.config?.url;
+        
+        console.error(`❌ API Error: ${status} - ${url}`);
+        
+        if (status === 401) {
+          console.warn('⚠️ API: Authentication required');
           // Token expired or invalid - let the app handle re-authentication
-          console.warn('API: Authentication required');
-        } else if (error.response?.status >= 500) {
-          console.error('API: Server error');
+        } else if (status === 404) {
+          console.warn(`⚠️ API: Endpoint not found - ${url}`);
+          // Don't retry 404s - endpoint may not be implemented yet
+        } else if (status === 429) {
+          console.error('⚠️ API: Rate limited - too many requests');
+          // Add exponential backoff in calling code
+        } else if (status >= 500) {
+          console.error(`⚠️ API: Server error (${status}) - ${url}`);
         } else if (!error.response) {
-          console.error('API: Network error');
+          console.error('⚠️ API: Network error - no response received');
         }
+        
         return Promise.reject(error);
       }
     );
