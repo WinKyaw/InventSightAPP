@@ -1,6 +1,7 @@
 import { Employee } from '../../types';
 import { apiClient } from './apiClient';
 import { API_ENDPOINTS, EmployeeSearchParams, CreateEmployeeRequest } from './config';
+import axios, { AxiosError } from 'axios';
 
 /**
  * Employee API Client - Simple HTTP client for employee operations
@@ -13,12 +14,9 @@ export class EmployeeService {
     try {
       return await apiClient.get<Employee[]>(API_ENDPOINTS.EMPLOYEES.ALL);
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { status?: number } };
-        if (axiosError.response?.status === 404) {
-          console.warn('⚠️ Employees API not found - returning empty array');
-          return [];
-        }
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        console.warn('⚠️ Employees API not found - returning empty array');
+        return [];
       }
       throw error;
     }

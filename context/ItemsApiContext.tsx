@@ -96,12 +96,13 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
     // Deduplicate concurrent requests
     if (loadProductsRef.current) {
       console.log('⏭️ Products: Request already in progress');
-      return loadProductsRef.current;
+      await loadProductsRef.current;
+      return;
     }
 
     if (!canMakeApiCalls) {
       console.warn('Cannot load products - not authenticated');
-      return Promise.resolve();
+      return;
     }
 
     loadProductsRef.current = (async () => {
@@ -166,7 +167,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       }
     })();
 
-    return loadProductsRef.current;
+    await loadProductsRef.current;
   }, [searchQuery, selectedCategoryId, sortBy, sortOrder, canMakeApiCalls]);
 
   // Search products
