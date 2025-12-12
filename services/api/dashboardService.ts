@@ -7,6 +7,11 @@ import {
   ActivityItem,
   LowStockProduct
 } from './config';
+import { requestDeduplicator } from '../../utils/requestDeduplicator';
+import { responseCache } from '../../utils/responseCache';
+import { retryWithBackoff } from '../../utils/retryWithBackoff';
+
+const CACHE_TTL = 30000; // 30 seconds
 
 export interface ComprehensiveDashboardData {
   // Product metrics
@@ -49,47 +54,85 @@ export class DashboardService {
   }
 
   /**
-   * Get comprehensive dashboard summary (single API call)
+   * Get comprehensive dashboard summary (single API call) with caching
    */
   static async getDashboardSummary(): Promise<DashboardSummary> {
+    const cacheKey = 'dashboard:summary';
+    
+    // Check cache first
+    const cached = responseCache.get<DashboardSummary>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
     // Verify authentication before making the call
     await this.verifyAuthentication();
     
-    var testURL = API_CONFIG.BASE_URL + API_ENDPOINTS.DASHBOARD.SUMMARY;
-    console.log("URL: " + testURL);
-    return await apiClient.get<DashboardSummary>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.DASHBOARD.SUMMARY}`);
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        var testURL = API_CONFIG.BASE_URL + API_ENDPOINTS.DASHBOARD.SUMMARY;
+        console.log("URL: " + testURL);
+        const response = await apiClient.get<DashboardSummary>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.DASHBOARD.SUMMARY}`);
+        
+        // Cache successful response
+        responseCache.set(cacheKey, response, CACHE_TTL);
+        
+        return response;
+      });
+    });
   }
 
   /**
-   * Get comprehensive dashboard data
+   * Get comprehensive dashboard data with caching
    * Note: In a proper backend implementation, this would be a single endpoint
    */
   static async getComprehensiveDashboardData(): Promise<ComprehensiveDashboardData> {
-    // Verify authentication is done in getDashboardSummary call
-    const dashboardSummary = await this.getDashboardSummary();
+    const cacheKey = 'dashboard:comprehensive';
     
-    return {
-      totalProducts: dashboardSummary.totalProducts,
-      lowStockItems: [], // Not available in summary, would need separate endpoint
-      lowStockCount: dashboardSummary.lowStockCount,
-      totalCategories: dashboardSummary.totalCategories,
-      recentActivities: dashboardSummary.recentActivities,
-      totalRevenue: dashboardSummary.totalRevenue,
-      totalOrders: dashboardSummary.totalOrders,
-      avgOrderValue: dashboardSummary.avgOrderValue,
-      inventoryValue: dashboardSummary.inventoryValue,
-      revenueGrowth: dashboardSummary.revenueGrowth,
-      orderGrowth: dashboardSummary.orderGrowth,
-      customerSatisfaction: 0, // Not available in summary
-      lastUpdated: dashboardSummary.lastUpdated,
-      isEmpty: dashboardSummary.totalProducts === 0 && 
-              dashboardSummary.totalCategories === 0 && 
-              dashboardSummary.totalRevenue === 0
-    };
+    // Check cache first
+    const cached = responseCache.get<ComprehensiveDashboardData>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        // Verify authentication is done in getDashboardSummary call
+        const dashboardSummary = await this.getDashboardSummary();
+        
+        const data = {
+          totalProducts: dashboardSummary.totalProducts,
+          lowStockItems: [], // Not available in summary, would need separate endpoint
+          lowStockCount: dashboardSummary.lowStockCount,
+          totalCategories: dashboardSummary.totalCategories,
+          recentActivities: dashboardSummary.recentActivities,
+          totalRevenue: dashboardSummary.totalRevenue,
+          totalOrders: dashboardSummary.totalOrders,
+          avgOrderValue: dashboardSummary.avgOrderValue,
+          inventoryValue: dashboardSummary.inventoryValue,
+          revenueGrowth: dashboardSummary.revenueGrowth,
+          orderGrowth: dashboardSummary.orderGrowth,
+          customerSatisfaction: 0, // Not available in summary
+          lastUpdated: dashboardSummary.lastUpdated,
+          isEmpty: dashboardSummary.totalProducts === 0 && 
+                  dashboardSummary.totalCategories === 0 && 
+                  dashboardSummary.totalRevenue === 0
+        };
+        
+        // Cache successful response
+        responseCache.set(cacheKey, data, CACHE_TTL);
+        
+        return data;
+      });
+    });
   }
 
   /**
-   * Get top performing products/items
+   * Get top performing products/items with caching
    */
   static async getTopItems(limit: number = 10): Promise<Array<{
     name: string;
@@ -98,17 +141,42 @@ export class DashboardService {
     quantity: number;
     trend: number;
   }>> {
-    // Verify authentication before making the call
-    await this.verifyAuthentication();
+    const cacheKey = `dashboard:topItems:${limit}`;
     
-    // This should be a dedicated backend endpoint
-    return await apiClient.get<Array<{
+    // Check cache first
+    const cached = responseCache.get<Array<{
       name: string;
       category: string;
       sales: number;
       quantity: number;
       trend: number;
-    }>>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.DASHBOARD.SUMMARY}/top-items?limit=${limit}`);
+    }>>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Verify authentication before making the call
+    await this.verifyAuthentication();
+    
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        // This should be a dedicated backend endpoint
+        const response = await apiClient.get<Array<{
+          name: string;
+          category: string;
+          sales: number;
+          quantity: number;
+          trend: number;
+        }>>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.DASHBOARD.SUMMARY}/top-items?limit=${limit}`);
+        
+        // Cache successful response
+        responseCache.set(cacheKey, response, CACHE_TTL);
+        
+        return response;
+      });
+    });
   }
 }
 

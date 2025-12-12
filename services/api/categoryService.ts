@@ -5,24 +5,111 @@ import {
   CategoryCountResponse,
   CategoriesResponse
 } from './config';
+import { requestDeduplicator } from '../../utils/requestDeduplicator';
+import { responseCache } from '../../utils/responseCache';
+import { retryWithBackoff } from '../../utils/retryWithBackoff';
+
+const CACHE_TTL = 30000; // 30 seconds
 
 /**
- * Category API Client - Simple HTTP client for category operations
+ * Category API Client with caching and deduplication
  */
 export class CategoryService {
   /**
-   * Get total categories count
+   * Get total categories count with caching
    */
   static async getCategoriesCount(): Promise<number> {
-    const response = await apiClient.get<CategoryCountResponse>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.COUNT}`);
-    return response.totalCategories;
+    const cacheKey = 'categories:count';
+    
+    // Check cache first
+    const cached = responseCache.get<number>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        const response = await apiClient.get<CategoryCountResponse>(
+          `${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.COUNT}`
+        );
+        const count = response.totalCategories;
+        
+        // Cache successful response
+        responseCache.set(cacheKey, count, CACHE_TTL);
+        
+        return count;
+      });
+    });
   }
 
   /**
-   * Get all categories
+   * Get all categories with caching
    */
   static async getAllCategories(): Promise<CategoriesResponse> {
-    return await apiClient.get<CategoriesResponse>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.ALL}`);
+    const cacheKey = 'categories:all';
+    
+    // Check cache first
+    const cached = responseCache.get<CategoriesResponse>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        const response = await apiClient.get<CategoriesResponse>(
+          `${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.ALL}`
+        );
+        
+        // Cache successful response
+        responseCache.set(cacheKey, response, CACHE_TTL);
+        
+        return response;
+      });
+    });
+  }
+
+  /**
+   * Create category and invalidate cache
+   */
+  static async createCategory(name: string, description?: string): Promise<void> {
+    await apiClient.post(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.CREATE}`, {
+      name,
+      description,
+    });
+    
+    // Invalidate cache
+    responseCache.invalidate('categories:all');
+    responseCache.invalidate('categories:count');
+  }
+
+  /**
+   * Update category and invalidate cache
+   */
+  static async updateCategory(id: number, name: string, description?: string): Promise<void> {
+    await apiClient.put(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.UPDATE(id)}`, {
+      name,
+      description,
+    });
+    
+    // Invalidate cache
+    responseCache.invalidate('categories:all');
+    responseCache.invalidate(`category:${id}`);
+  }
+
+  /**
+   * Delete category and invalidate cache
+   */
+  static async deleteCategory(id: number): Promise<void> {
+    await apiClient.delete(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.DELETE(id)}`);
+    
+    // Invalidate cache
+    responseCache.invalidate('categories:all');
+    responseCache.invalidate('categories:count');
+    responseCache.invalidate(`category:${id}`);
   }
 }
 
