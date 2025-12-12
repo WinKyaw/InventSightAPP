@@ -12,68 +12,115 @@ import {
   SearchProductsParams,
   ProductSearchResponse
 } from './config';
+import { requestDeduplicator } from '../../utils/requestDeduplicator';
+import { responseCache } from '../../utils/responseCache';
+import { retryWithBackoff } from '../../utils/retryWithBackoff';
+
+const CACHE_TTL = 30000; // 30 seconds
 
 /**
  * Product API Client - Simple HTTP client for product operations
  */
 export class ProductService {
   /**
-   * Get total products count
+   * Get total products count with caching and deduplication
    */
   static async getProductsCount(): Promise<number> {
-    const response = await apiClient.get<ProductCountResponse>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.COUNT);
-    return response.totalProducts;
+    const cacheKey = 'products:count';
+    
+    // Check cache first
+    const cached = responseCache.get<number>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        const response = await apiClient.get<ProductCountResponse>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.COUNT);
+        const count = response.totalProducts;
+        
+        // Cache successful response
+        responseCache.set(cacheKey, count, CACHE_TTL);
+        
+        return count;
+      });
+    });
   }
 
   /**
-   * Get products with low inventory
+   * Get products with low inventory with caching and deduplication
    */
   static async getLowStockProducts(): Promise<LowStockResponse> {
-    return await apiClient.get<LowStockResponse>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.LOW_STOCK);
+    const cacheKey = 'products:lowStock';
+    
+    // Check cache first
+    const cached = responseCache.get<LowStockResponse>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        const response = await apiClient.get<LowStockResponse>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.LOW_STOCK);
+        
+        // Cache successful response
+        responseCache.set(cacheKey, response, CACHE_TTL);
+        
+        return response;
+      });
+    });
   }
 
   /**
-   * Get all products with pagination
+   * Get all products with pagination with caching and deduplication
    */
-  // static async getAllProducts(page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<ProductsListResponse> {
-  //   const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.PRODUCTS.ALL}?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
-  //   const response = await apiClient.get<ProductsListResponse>(fullUrl);
-  //   console.log("test))");
-  //   console.log(JSON.stringify(response));
-  //   // Ensure we return a properly structured response even if the API returns unexpected data
-  
-  //   return {
-  //     products: response.products || [],
-  //     totalCount: response.totalCount || 0,
-  //     currentPage: response.currentPage || page,
-  //     totalPages: response.totalPages || 1,
-  //     hasMore: response.hasMore || false
-  //   };
-  // }
   static async getAllProducts(page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<ProductsListResponse> {
-    const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.PRODUCTS.ALL}?page=${page - 1}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
-    const response = await apiClient.get<any>(fullUrl);
+    const cacheKey = `products:all:${page}:${limit}:${sortBy}:${sortOrder}`;
+    
+    // Check cache first
+    const cached = responseCache.get<ProductsListResponse>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
 
-    // Map backend response to frontend interface
-    return {
-      products: (response.products || []).map((product: any) => ({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: product.quantity,
-        category: product.category,
-        description: product.description,
-        sku: product.sku,
-        minStock: product.lowStockThreshold, // If available
-        maxStock: product.maxQuantity,       // Map from maxQuantity
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-      })),
-      totalItems: response.totalItems,
-      currentPage: (response.currentPage || 0) + 1, // convert 0-based to 1-based if needed
-      totalPages: response.totalPages,
-      hasMore: response.currentPage < response.totalPages - 1,
-    };
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.PRODUCTS.ALL}?page=${page - 1}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+        const response = await apiClient.get<any>(fullUrl);
+
+        // Map backend response to frontend interface
+        const result = {
+          products: (response.products || []).map((product: any) => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: product.quantity,
+            category: product.category,
+            description: product.description,
+            sku: product.sku,
+            minStock: product.lowStockThreshold, // If available
+            maxStock: product.maxQuantity,       // Map from maxQuantity
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+          })),
+          totalItems: response.totalItems,
+          currentPage: (response.currentPage || 0) + 1, // convert 0-based to 1-based if needed
+          totalPages: response.totalPages,
+          hasMore: response.currentPage < response.totalPages - 1,
+        };
+        
+        // Cache successful response
+        responseCache.set(cacheKey, result, CACHE_TTL);
+        
+        return result;
+      });
+    });
   }
 
   /**
@@ -84,32 +131,54 @@ export class ProductService {
   }
 
   /**
-   * Create new product
+   * Create new product and invalidate cache
    */
   static async createProduct(productData: CreateProductRequest): Promise<Product> {
-    return await apiClient.post<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.CREATE, productData);
+    const product = await apiClient.post<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.CREATE, productData);
+    
+    // Invalidate products cache
+    responseCache.invalidatePattern(/^products:/);
+    
+    return product;
   }
 
   /**
-   * Update existing product
+   * Update existing product and invalidate cache
    */
   static async updateProduct(id: number, updates: UpdateProductRequest): Promise<Product> {
-    return await apiClient.put<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.UPDATE(id), updates);
+    const product = await apiClient.put<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.UPDATE(id), updates);
+    
+    // Invalidate products cache
+    responseCache.invalidatePattern(/^products:/);
+    responseCache.invalidate(`product:${id}`);
+    
+    return product;
   }
 
   /**
-   * Delete product
+   * Delete product and invalidate cache
    */
   static async deleteProduct(id: number): Promise<boolean> {
     await apiClient.delete<void>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.DELETE(id));
+    
+    // Invalidate products cache
+    responseCache.invalidatePattern(/^products:/);
+    responseCache.invalidate(`product:${id}`);
+    
     return true;
   }
 
   /**
-   * Update product stock
+   * Update product stock and invalidate cache
    */
   static async updateProductStock(id: number, stockData: UpdateStockRequest): Promise<Product> {
-    return await apiClient.put<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.UPDATE_STOCK(id), stockData);
+    const product = await apiClient.put<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.UPDATE_STOCK(id), stockData);
+    
+    // Invalidate products cache (stock affects low stock and counts)
+    responseCache.invalidatePattern(/^products:/);
+    responseCache.invalidate(`product:${id}`);
+    
+    return product;
   }
 
   /**

@@ -1,29 +1,56 @@
 import { Employee } from '../../types';
 import { apiClient } from './apiClient';
 import { API_ENDPOINTS, EmployeeSearchParams, CreateEmployeeRequest } from './config';
+import { requestDeduplicator } from '../../utils/requestDeduplicator';
+import { responseCache } from '../../utils/responseCache';
+import { retryWithBackoff } from '../../utils/retryWithBackoff';
 import axios from 'axios';
+
+const CACHE_TTL = 30000; // 30 seconds
 
 /**
  * Employee API Client - Simple HTTP client for employee operations
  */
 export class EmployeeService {
   /**
-   * Get all active employees
+   * Get all active employees with caching and deduplication
    */
   static async getAllEmployees(): Promise<Employee[]> {
-    try {
-      const employees = await apiClient.get<Employee[]>(API_ENDPOINTS.EMPLOYEES.ALL);
-      if (!employees || employees.length === 0) {
-        console.log('📭 No employees found');
-      }
-      return employees || [];
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        console.log('📭 No employees found - returning empty array');
-        return [];
-      }
-      throw error;
+    const cacheKey = 'employees:all';
+    
+    // Check cache first
+    const cached = responseCache.get<Employee[]>(cacheKey);
+    if (cached !== null) {
+      return cached;
     }
+
+    // Deduplicate concurrent requests
+    return requestDeduplicator.execute(cacheKey, async () => {
+      // Retry with exponential backoff on rate limit
+      return retryWithBackoff(async () => {
+        try {
+          const employees = await apiClient.get<Employee[]>(API_ENDPOINTS.EMPLOYEES.ALL);
+          const data = employees || [];
+          
+          if (data.length === 0) {
+            console.log('📭 No employees found');
+          }
+          
+          // Cache successful response
+          responseCache.set(cacheKey, data, CACHE_TTL);
+          
+          return data;
+        } catch (error: unknown) {
+          if (axios.isAxiosError(error) && error.response?.status === 404) {
+            console.log('📭 No employees found - returning empty array');
+            const emptyArray: Employee[] = [];
+            responseCache.set(cacheKey, emptyArray, CACHE_TTL);
+            return emptyArray;
+          }
+          throw error;
+        }
+      });
+    });
   }
 
   /**
@@ -59,11 +86,16 @@ export class EmployeeService {
   }
 
   /**
-   * Create a new employee
+   * Create a new employee and invalidate cache
    */
   static async createEmployee(employeeData: CreateEmployeeRequest): Promise<Employee> {
     try {
-      return await apiClient.post<Employee>(API_ENDPOINTS.EMPLOYEES.CREATE, employeeData);
+      const employee = await apiClient.post<Employee>(API_ENDPOINTS.EMPLOYEES.CREATE, employeeData);
+      
+      // Invalidate employees cache
+      responseCache.invalidate('employees:all');
+      
+      return employee;
     } catch (error: unknown) {
       console.error('❌ Failed to create employee:', error);
       throw error;
@@ -71,17 +103,27 @@ export class EmployeeService {
   }
 
   /**
-   * Update an existing employee
+   * Update an existing employee and invalidate cache
    */
   static async updateEmployee(id: number, updates: Partial<Employee>): Promise<Employee> {
-    return await apiClient.put<Employee>(API_ENDPOINTS.EMPLOYEES.BY_ID(id), updates);
+    const employee = await apiClient.put<Employee>(API_ENDPOINTS.EMPLOYEES.BY_ID(id), updates);
+    
+    // Invalidate employees cache
+    responseCache.invalidate('employees:all');
+    responseCache.invalidate(`employee:${id}`);
+    
+    return employee;
   }
 
   /**
-   * Delete an employee
+   * Delete an employee and invalidate cache
    */
   static async deleteEmployee(id: number): Promise<void> {
     await apiClient.delete<void>(API_ENDPOINTS.EMPLOYEES.BY_ID(id));
+    
+    // Invalidate employees cache
+    responseCache.invalidate('employees:all');
+    responseCache.invalidate(`employee:${id}`);
   }
 
   /**

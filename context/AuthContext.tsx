@@ -8,6 +8,8 @@ import {
 } from '../types/auth';
 import { authService } from '../services/api/authService';
 import { tokenManager } from '../utils/tokenManager';
+import { responseCache } from '../utils/responseCache';
+import { requestDeduplicator } from '../utils/requestDeduplicator';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -289,6 +291,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.logout();
 
       if (isMountedRef.current) {
+        // Clear all caches and pending requests
+        responseCache.clear();
+        requestDeduplicator.clear();
+        console.log('✅ Caches cleared on logout');
+        
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -303,6 +310,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       // Even if server logout fails, clear local state
       if (isMountedRef.current) {
+        // Clear all caches and pending requests
+        responseCache.clear();
+        requestDeduplicator.clear();
+        console.log('✅ Caches cleared on logout (after error)');
+        
         setAuthState({
           user: null,
           isAuthenticated: false,
