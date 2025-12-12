@@ -90,11 +90,11 @@ export const API_ENDPOINTS = {
   },
   // Employee endpoints
   EMPLOYEES: {
-    ALL: '/employees',
-    BY_ID: (id: string | number) => `/employees/${id}`,
-    CHECKED_IN: '/employees/checked-in',
-    SEARCH: '/employees/search',
-    CREATE: '/employees',
+    ALL: '/api/employees',
+    BY_ID: (id: string | number) => `/api/employees/${id}`,
+    CHECKED_IN: '/api/employees/checked-in',
+    SEARCH: '/api/employees/search',
+    CREATE: '/api/employees',
   },
 };
 
