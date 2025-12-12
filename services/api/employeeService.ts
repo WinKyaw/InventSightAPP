@@ -10,7 +10,15 @@ export class EmployeeService {
    * Get all active employees
    */
   static async getAllEmployees(): Promise<Employee[]> {
-    return await apiClient.get<Employee[]>(API_ENDPOINTS.EMPLOYEES.ALL);
+    try {
+      return await apiClient.get<Employee[]>(API_ENDPOINTS.EMPLOYEES.ALL);
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.warn('⚠️ Employees API not found - returning empty array');
+        return [];
+      }
+      throw error;
+    }
   }
 
   /**
@@ -49,7 +57,12 @@ export class EmployeeService {
    * Create a new employee
    */
   static async createEmployee(employeeData: CreateEmployeeRequest): Promise<Employee> {
-    return await apiClient.post<Employee>(API_ENDPOINTS.EMPLOYEES.CREATE, employeeData);
+    try {
+      return await apiClient.post<Employee>(API_ENDPOINTS.EMPLOYEES.CREATE, employeeData);
+    } catch (error: any) {
+      console.error('❌ Failed to create employee:', error);
+      throw error;
+    }
   }
 
   /**

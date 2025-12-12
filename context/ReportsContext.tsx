@@ -71,7 +71,13 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
   
   // Memoize the API function to prevent it from changing on every render
   const dashboardApiFunction = useCallback(() => {
-    return DashboardService.getComprehensiveDashboardData();
+    // ⚠️ TEMPORARY: Backend /api/dashboard/summary returns 500
+    // Return empty data until backend is fixed
+    console.log('⚠️ Dashboard API disabled - using empty data');
+    return Promise.resolve(getEmptyDashboardData());
+    
+    // TODO: Re-enable when backend is ready
+    // return DashboardService.getComprehensiveDashboardData();
   }, []);
   
   // Use comprehensive dashboard data API with authentication guard
