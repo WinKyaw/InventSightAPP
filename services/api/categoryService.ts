@@ -77,9 +77,12 @@ export class CategoryService {
    * Create category and invalidate cache
    */
   static async createCategory(name: string, description?: string): Promise<void> {
-    await apiClient.post(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.CREATE}`, {
-      name,
-      description,
+    // Retry with exponential backoff on rate limit
+    await retryWithBackoff(async () => {
+      await apiClient.post(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.CREATE}`, {
+        name,
+        description,
+      });
     });
     
     // Invalidate categories and dashboard cache
@@ -91,9 +94,12 @@ export class CategoryService {
    * Update category and invalidate cache
    */
   static async updateCategory(id: number, name: string, description?: string): Promise<void> {
-    await apiClient.put(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.UPDATE(id)}`, {
-      name,
-      description,
+    // Retry with exponential backoff on rate limit
+    await retryWithBackoff(async () => {
+      await apiClient.put(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.UPDATE(id)}`, {
+        name,
+        description,
+      });
     });
     
     // Invalidate categories and dashboard cache
@@ -105,7 +111,10 @@ export class CategoryService {
    * Delete category and invalidate cache
    */
   static async deleteCategory(id: number): Promise<void> {
-    await apiClient.delete(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.DELETE(id)}`);
+    // Retry with exponential backoff on rate limit
+    await retryWithBackoff(async () => {
+      await apiClient.delete(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.DELETE(id)}`);
+    });
     
     // Invalidate categories and dashboard cache
     CacheManager.invalidateCategories();

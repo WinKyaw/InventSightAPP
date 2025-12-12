@@ -99,35 +99,32 @@ export class DashboardService {
 
     // Deduplicate concurrent requests
     return requestDeduplicator.execute(cacheKey, async () => {
-      // Retry with exponential backoff on rate limit
-      return retryWithBackoff(async () => {
-        // Verify authentication is done in getDashboardSummary call
-        const dashboardSummary = await this.getDashboardSummary();
-        
-        const data = {
-          totalProducts: dashboardSummary.totalProducts,
-          lowStockItems: [], // Not available in summary, would need separate endpoint
-          lowStockCount: dashboardSummary.lowStockCount,
-          totalCategories: dashboardSummary.totalCategories,
-          recentActivities: dashboardSummary.recentActivities,
-          totalRevenue: dashboardSummary.totalRevenue,
-          totalOrders: dashboardSummary.totalOrders,
-          avgOrderValue: dashboardSummary.avgOrderValue,
-          inventoryValue: dashboardSummary.inventoryValue,
-          revenueGrowth: dashboardSummary.revenueGrowth,
-          orderGrowth: dashboardSummary.orderGrowth,
-          customerSatisfaction: 0, // Not available in summary
-          lastUpdated: dashboardSummary.lastUpdated,
-          isEmpty: dashboardSummary.totalProducts === 0 && 
-                  dashboardSummary.totalCategories === 0 && 
-                  dashboardSummary.totalRevenue === 0
-        };
-        
-        // Cache successful response
-        responseCache.set(cacheKey, data, CACHE_TTL);
-        
-        return data;
-      });
+      // getDashboardSummary already has retry logic, so we don't nest it here
+      const dashboardSummary = await this.getDashboardSummary();
+      
+      const data = {
+        totalProducts: dashboardSummary.totalProducts,
+        lowStockItems: [], // Not available in summary, would need separate endpoint
+        lowStockCount: dashboardSummary.lowStockCount,
+        totalCategories: dashboardSummary.totalCategories,
+        recentActivities: dashboardSummary.recentActivities,
+        totalRevenue: dashboardSummary.totalRevenue,
+        totalOrders: dashboardSummary.totalOrders,
+        avgOrderValue: dashboardSummary.avgOrderValue,
+        inventoryValue: dashboardSummary.inventoryValue,
+        revenueGrowth: dashboardSummary.revenueGrowth,
+        orderGrowth: dashboardSummary.orderGrowth,
+        customerSatisfaction: 0, // Not available in summary
+        lastUpdated: dashboardSummary.lastUpdated,
+        isEmpty: dashboardSummary.totalProducts === 0 && 
+                dashboardSummary.totalCategories === 0 && 
+                dashboardSummary.totalRevenue === 0
+      };
+      
+      // Cache successful response
+      responseCache.set(cacheKey, data, CACHE_TTL);
+      
+      return data;
     });
   }
 
