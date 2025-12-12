@@ -1,7 +1,7 @@
 import { Employee } from '../../types';
 import { apiClient } from './apiClient';
 import { API_ENDPOINTS, EmployeeSearchParams, CreateEmployeeRequest } from './config';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 
 /**
  * Employee API Client - Simple HTTP client for employee operations
