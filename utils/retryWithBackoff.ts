@@ -25,7 +25,7 @@ export async function retryWithBackoff<T>(
   options: RetryOptions = {}
 ): Promise<T> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  let lastError: any;
+  let lastError: any = new Error('Retry failed with unknown error');
 
   for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
     try {
