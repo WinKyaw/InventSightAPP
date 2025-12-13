@@ -16,7 +16,7 @@ import { SortModal } from '../../components/modals/SortModal';
 import { productToItem } from '../../utils/productUtils';
 import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
-import { canCreateItems } from '../../utils/permissions';
+import { PermissionService } from '../../services/api/permissionService';
 
 export default function ItemsScreen() {
   // ✅ SECURITY FIX: Add authentication check
@@ -35,7 +35,7 @@ export default function ItemsScreen() {
     return null;
   }
 
-  const canAdd = canCreateItems(user?.role);
+  const [canAdd, setCanAdd] = useState(false);
 
   const {
     products,
@@ -85,6 +85,14 @@ export default function ItemsScreen() {
       loadedRef.current = true;
       loadProducts();
       loadCategories();
+
+      // Check permissions
+      PermissionService.canAddItem()
+        .then(setCanAdd)
+        .catch((error) => {
+          console.error('Failed to check add item permission:', error);
+          setCanAdd(false);
+        });
     }, [loadProducts, loadCategories, loading])
   );
 

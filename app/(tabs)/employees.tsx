@@ -11,7 +11,7 @@ import { AddEmployeeModal } from '../../components/modals/AddEmployeeModal';
 import { EditEmployeeModal } from '../../components/modals/EditEmployeeModal';
 import { Employee } from '../../types';
 import { styles } from '../../constants/Styles';
-import { canManageEmployees } from '../../utils/permissions';
+import { PermissionService } from '../../services/api/permissionService';
 
 export default function EmployeesScreen() {
   // ✅ SECURITY FIX: Add authentication check
@@ -30,7 +30,7 @@ export default function EmployeesScreen() {
     return null;
   }
 
-  const canAdd = canManageEmployees(user?.role);
+  const [canAdd, setCanAdd] = useState(false);
 
   const { 
     employees, 
@@ -62,6 +62,14 @@ export default function EmployeesScreen() {
       console.log('👥 Employees screen focused - loading employees');
       loadedRef.current = true;
       refreshEmployees();
+
+      // Check permissions
+      PermissionService.canAddItem()
+        .then(setCanAdd)
+        .catch((error) => {
+          console.error('Failed to check add employee permission:', error);
+          setCanAdd(false);
+        });
     }, [refreshEmployees, loading])
   );
 
