@@ -4,6 +4,7 @@ import { API_ENDPOINTS, EmployeeSearchParams, CreateEmployeeRequest } from './co
 import { requestDeduplicator } from '../../utils/requestDeduplicator';
 import { responseCache } from '../../utils/responseCache';
 import { retryWithBackoff } from '../../utils/retryWithBackoff';
+import { CacheManager } from '../../utils/cacheManager';
 import axios from 'axios';
 
 const CACHE_TTL = 30000; // 30 seconds
@@ -92,8 +93,9 @@ export class EmployeeService {
     try {
       const employee = await apiClient.post<Employee>(API_ENDPOINTS.EMPLOYEES.CREATE, employeeData);
       
-      // Invalidate employees cache
-      responseCache.invalidate('employees:all');
+      // Invalidate employees and dashboard cache
+      CacheManager.invalidateEmployees();
+      CacheManager.invalidateDashboard();
       
       return employee;
     } catch (error: unknown) {
@@ -108,9 +110,9 @@ export class EmployeeService {
   static async updateEmployee(id: number, updates: Partial<Employee>): Promise<Employee> {
     const employee = await apiClient.put<Employee>(API_ENDPOINTS.EMPLOYEES.BY_ID(id), updates);
     
-    // Invalidate employees cache
-    responseCache.invalidate('employees:all');
-    responseCache.invalidate(`employee:${id}`);
+    // Invalidate employees and dashboard cache
+    CacheManager.invalidateEmployees();
+    CacheManager.invalidateDashboard();
     
     return employee;
   }
@@ -121,9 +123,9 @@ export class EmployeeService {
   static async deleteEmployee(id: number): Promise<void> {
     await apiClient.delete<void>(API_ENDPOINTS.EMPLOYEES.BY_ID(id));
     
-    // Invalidate employees cache
-    responseCache.invalidate('employees:all');
-    responseCache.invalidate(`employee:${id}`);
+    // Invalidate employees and dashboard cache
+    CacheManager.invalidateEmployees();
+    CacheManager.invalidateDashboard();
   }
 
   /**
