@@ -11,10 +11,11 @@ import { AddEmployeeModal } from '../../components/modals/AddEmployeeModal';
 import { EditEmployeeModal } from '../../components/modals/EditEmployeeModal';
 import { Employee } from '../../types';
 import { styles } from '../../constants/Styles';
+import { canManageEmployees } from '../../utils/permissions';
 
 export default function EmployeesScreen() {
   // ✅ SECURITY FIX: Add authentication check
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated, isInitialized, user } = useAuth();
   const router = useRouter();
 
   React.useEffect(() => {
@@ -28,6 +29,8 @@ export default function EmployeesScreen() {
   if (!isAuthenticated) {
     return null;
   }
+
+  const canAdd = canManageEmployees(user?.role);
 
   const { 
     employees, 
@@ -106,12 +109,14 @@ export default function EmployeesScreen() {
         title="Team Management"
         backgroundColor="#8B5CF6"
         rightComponent={
-          <TouchableOpacity 
-            style={styles.headerButton} 
-            onPress={() => setShowAddModal(true)}
-          >
-            <Text style={styles.headerButtonText}>Add Employee</Text>
-          </TouchableOpacity>
+          canAdd ? (
+            <TouchableOpacity 
+              style={styles.headerButton} 
+              onPress={() => setShowAddModal(true)}
+            >
+              <Text style={styles.headerButtonText}>Add Employee</Text>
+            </TouchableOpacity>
+          ) : null
         }
       />
 

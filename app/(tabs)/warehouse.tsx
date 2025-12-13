@@ -16,16 +16,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
 import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInventoryList';
+import { AddWarehouseModal } from '../../components/modals/AddWarehouseModal';
 import { WarehouseSummary, WarehouseInventoryRow } from '../../types/warehouse';
 import { getWarehouses, getWarehouseInventory } from '../../services/api/warehouse';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { useAuth } from '../../context/AuthContext';
+import { canManageWarehouses } from '../../utils/permissions';
 import { Colors } from '../../constants/Colors';
 import { styles as commonStyles } from '../../constants/Styles';
 
 export default function WarehouseScreen() {
   // ✅ SECURITY FIX: Add authentication check
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated, isInitialized, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export default function WarehouseScreen() {
     return null;
   }
 
+  const canAdd = canManageWarehouses(user?.role);
   const { isReady, isAuthenticating, isUnauthenticated } = useApiReadiness();
   
   const [warehouses, setWarehouses] = useState<WarehouseSummary[]>([]);
@@ -50,6 +53,7 @@ export default function WarehouseScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWarehousePicker, setShowWarehousePicker] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Filter inventory based on search query
   const filteredInventory = useMemo(() => {
@@ -209,15 +213,26 @@ export default function WarehouseScreen() {
         subtitle={selectedWarehouse?.name || 'Select Warehouse'}
         backgroundColor="#6366F1"
         rightComponent={
-          warehouses.length > 0 && (
-            <TouchableOpacity 
-              style={styles.warehouseButton}
-              onPress={() => setShowWarehousePicker(true)}
-            >
-              <Ionicons name="business" size={20} color="#fff" />
-              <Text style={styles.warehouseButtonText}>Change</Text>
-            </TouchableOpacity>
-          )
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {canAdd && (
+              <TouchableOpacity 
+                style={styles.warehouseButton}
+                onPress={() => setShowAddModal(true)}
+              >
+                <Ionicons name="add" size={20} color="#fff" />
+                <Text style={styles.warehouseButtonText}>Add Warehouse</Text>
+              </TouchableOpacity>
+            )}
+            {warehouses.length > 0 && (
+              <TouchableOpacity 
+                style={styles.warehouseButton}
+                onPress={() => setShowWarehousePicker(true)}
+              >
+                <Ionicons name="business" size={20} color="#fff" />
+                <Text style={styles.warehouseButtonText}>Change</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         }
       />
 
@@ -310,6 +325,13 @@ export default function WarehouseScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Add Warehouse Modal */}
+      <AddWarehouseModal 
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onWarehouseAdded={handleRefresh}
+      />
     </SafeAreaView>
   );
 }

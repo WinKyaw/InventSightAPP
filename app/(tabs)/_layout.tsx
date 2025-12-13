@@ -193,6 +193,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="calendar" options={{ href: null }} />
         <Tabs.Screen name="reports" options={{ href: null }} />
         <Tabs.Screen name="setting" options={{ href: null }} />
+        <Tabs.Screen name="warehouse" options={{ href: null }} />
       </Tabs>
 
       <HamburgerMenu
