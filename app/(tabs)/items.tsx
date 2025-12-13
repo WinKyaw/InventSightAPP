@@ -16,10 +16,11 @@ import { SortModal } from '../../components/modals/SortModal';
 import { productToItem } from '../../utils/productUtils';
 import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
+import { canCreateItems } from '../../utils/permissions';
 
 export default function ItemsScreen() {
   // ✅ SECURITY FIX: Add authentication check
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated, isInitialized, user } = useAuth();
   const router = useRouter();
 
   React.useEffect(() => {
@@ -33,6 +34,8 @@ export default function ItemsScreen() {
   if (!isAuthenticated) {
     return null;
   }
+
+  const canAdd = canCreateItems(user?.role);
 
   const {
     products,
@@ -184,12 +187,14 @@ export default function ItemsScreen() {
         title="Inventory Management"
         backgroundColor="#10B981"
         rightComponent={
-          <TouchableOpacity 
-            style={styles.headerButton} 
-            onPress={() => setShowAddModal(true)}
-          >
-            <Text style={styles.headerButtonText}>Add Item</Text>
-          </TouchableOpacity>
+          canAdd ? (
+            <TouchableOpacity 
+              style={styles.headerButton} 
+              onPress={() => setShowAddModal(true)}
+            >
+              <Text style={styles.headerButtonText}>Add Item</Text>
+            </TouchableOpacity>
+          ) : null
         }
       />
 
