@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployees } from '../../context/EmployeesContext';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { mockStores } from '../../constants/Data';
+import { StoreService, Store } from '../../services/api/storeService';
 import { styles } from '../../constants/Styles';
 
 interface AddEmployeeModalProps {
@@ -24,6 +24,8 @@ interface ValidationErrors {
 
 export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
   const { addEmployee, loading: employeesLoading } = useEmployees();
+  const [stores, setStores] = useState<Store[]>([]);
+  const [loadingStores, setLoadingStores] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     firstName: '',
     lastName: '',
@@ -36,6 +38,26 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
   });
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load stores when modal opens
+  useEffect(() => {
+    if (visible) {
+      loadStores();
+    }
+  }, [visible]);
+
+  const loadStores = async () => {
+    setLoadingStores(true);
+    try {
+      const userStores = await StoreService.getUserStores();
+      setStores(userStores);
+    } catch (error) {
+      console.error('Failed to load stores:', error);
+      Alert.alert('Error', 'Failed to load stores. Please try again.');
+    } finally {
+      setLoadingStores(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
@@ -241,27 +263,41 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
         <View style={{ marginBottom: 16 }}>
           <View style={styles.pickerContainer}>
             <Text style={styles.pickerLabel}>Select Store *</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.pickerRow}>
-                {mockStores.map((store) => (
-                  <TouchableOpacity
-                    key={store.id}
-                    style={[
-                      styles.pickerOption, 
-                      newEmployee.storeId === store.id && styles.pickerOptionSelected
-                    ]}
-                    onPress={() => handleInputChange('storeId', store.id)}
-                  >
-                    <Text style={[
-                      styles.pickerOptionText, 
-                      newEmployee.storeId === store.id && styles.pickerOptionTextSelected
-                    ]}>
-                      {store.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+            {loadingStores ? (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#8B5CF6" />
+                <Text style={{ marginTop: 8, color: '#6B7280', fontSize: 14 }}>Loading stores...</Text>
               </View>
-            </ScrollView>
+            ) : stores.length === 0 ? (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Ionicons name="business-outline" size={48} color="#9CA3AF" />
+                <Text style={{ marginTop: 8, color: '#EF4444', fontSize: 14, textAlign: 'center' }}>
+                  No stores available. Please create a store first.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.pickerRow}>
+                  {stores.map((store) => (
+                    <TouchableOpacity
+                      key={store.id}
+                      style={[
+                        styles.pickerOption, 
+                        newEmployee.storeId === store.id && styles.pickerOptionSelected
+                      ]}
+                      onPress={() => handleInputChange('storeId', store.id)}
+                    >
+                      <Text style={[
+                        styles.pickerOptionText, 
+                        newEmployee.storeId === store.id && styles.pickerOptionTextSelected
+                      ]}>
+                        {store.storeName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
           </View>
           {validationErrors.storeId && (
             <View style={styles.fieldErrorContainer}>

@@ -96,6 +96,14 @@ export const API_ENDPOINTS = {
     SEARCH: '/api/employees/search',
     CREATE: '/api/employees',
   },
+  // Store endpoints
+  STORES: {
+    ALL: '/api/stores',
+    BY_ID: (id: string) => `/api/stores/${id}`,
+    CREATE: '/api/stores',
+    ACTIVATE: (id: string) => `/api/stores/${id}/activate`,
+    CURRENT: '/api/stores/current',
+  },
 };
 
 // Session Information
