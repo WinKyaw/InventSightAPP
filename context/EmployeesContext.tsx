@@ -78,15 +78,24 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
           storeId: newEmployee.storeId || DEFAULT_STORE_ID, // Use constant for fallback UUID
         };
         
+        console.log('📤 Creating employee with data:', createData);
+        
         const createdEmployee = await EmployeeService.createEmployee(createData);
         setEmployees(prev => [...prev, createdEmployee]);
-      } catch (error) {
-        console.error('Failed to create employee via API:', error);
-        // Wrap error in user-friendly message before re-throwing
-        const userMessage = error instanceof Error 
-          ? error.message 
-          : 'Failed to create employee. Please check your connection and try again.';
-        throw new Error(userMessage);
+      } catch (error: unknown) {
+        const err = error as any; // Type assertion for axios error
+        console.error('❌ Full error creating employee:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+        });
+        
+        // Extract more detailed error message from API response
+        const errorMsg = err.response?.data?.message || 
+                        err.response?.data?.error ||
+                        err.message || 
+                        'Failed to create employee. Please check your connection and try again.';
+        throw new Error(errorMsg);
       }
     } else {
       fallbackAddEmployee(newEmployee);

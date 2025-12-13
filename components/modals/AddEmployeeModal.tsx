@@ -141,10 +141,11 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
       });
       setValidationErrors({});
       onClose();
-      Alert.alert('Success', 'Employee added successfully!');
+      Alert.alert('Success', `${newEmployee.firstName} ${newEmployee.lastName} has been added!`);
     } catch (error) {
       console.error('Failed to add employee:', error);
-      Alert.alert('Error', 'Failed to add employee. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add employee. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }

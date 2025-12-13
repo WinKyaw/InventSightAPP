@@ -217,7 +217,9 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       if (newProduct) {
         // Refresh the product list
         await loadProducts(1, true);
-        Alert.alert('Success', `${newProduct.name} has been added to inventory!`);
+        // Use product name from response, fallback to request data if undefined
+        const productName = newProduct.name || productData.name;
+        Alert.alert('Success', `${productName} has been added to inventory!`);
       }
       return newProduct;
     } catch (err) {
