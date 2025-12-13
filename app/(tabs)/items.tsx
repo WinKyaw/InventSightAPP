@@ -87,7 +87,12 @@ export default function ItemsScreen() {
       loadCategories();
 
       // Check permissions
-      PermissionService.canAddItem().then(setCanAdd);
+      PermissionService.canAddItem()
+        .then(setCanAdd)
+        .catch((error) => {
+          console.error('Failed to check add item permission:', error);
+          setCanAdd(false);
+        });
     }, [loadProducts, loadCategories, loading])
   );
 

@@ -8,7 +8,7 @@ import { API_CONFIG } from './config';
  * Supports both permanent role-based permissions and temporary one-time permissions.
  * 
  * Backend Permission Types:
- * - ADD_ITEM: Can add products
+ * - ADD_ITEM: Can add products and employees
  * - EDIT_ITEM: Can edit products
  * - DELETE_ITEM: Can delete products
  * 

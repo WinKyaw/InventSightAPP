@@ -64,7 +64,12 @@ export default function EmployeesScreen() {
       refreshEmployees();
 
       // Check permissions
-      PermissionService.canAddItem().then(setCanAdd);
+      PermissionService.canAddItem()
+        .then(setCanAdd)
+        .catch((error) => {
+          console.error('Failed to check add employee permission:', error);
+          setCanAdd(false);
+        });
     }, [refreshEmployees, loading])
   );
 
