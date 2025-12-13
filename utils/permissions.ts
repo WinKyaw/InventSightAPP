@@ -14,17 +14,22 @@ const ROLE_HIERARCHY = {
   OWNER: 5,
 };
 
-export function canCreateItems(userRole?: string): boolean {
+/**
+ * Check if a user has the minimum required role level
+ */
+function hasMinimumRole(userRole: string | undefined, minimumRole: UserRole): boolean {
   const level = ROLE_HIERARCHY[userRole as UserRole] || 0;
-  return level >= ROLE_HIERARCHY.GENERAL_MANAGER;
+  return level >= ROLE_HIERARCHY[minimumRole];
+}
+
+export function canCreateItems(userRole?: string): boolean {
+  return hasMinimumRole(userRole, UserRole.GENERAL_MANAGER);
 }
 
 export function canManageEmployees(userRole?: string): boolean {
-  const level = ROLE_HIERARCHY[userRole as UserRole] || 0;
-  return level >= ROLE_HIERARCHY.GENERAL_MANAGER;
+  return hasMinimumRole(userRole, UserRole.GENERAL_MANAGER);
 }
 
 export function canManageWarehouses(userRole?: string): boolean {
-  const level = ROLE_HIERARCHY[userRole as UserRole] || 0;
-  return level >= ROLE_HIERARCHY.GENERAL_MANAGER;
+  return hasMinimumRole(userRole, UserRole.GENERAL_MANAGER);
 }

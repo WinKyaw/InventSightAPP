@@ -72,11 +72,13 @@ export function AddWarehouseModal({ visible, onClose, onWarehouseAdded }: AddWar
     setIsSubmitting(true);
     
     try {
+      const warehouseName = newWarehouse.name.trim();
+      
       await apiClient.post('/api/warehouses', {
-        name: newWarehouse.name.trim(),
+        name: warehouseName,
         location: newWarehouse.location.trim() || undefined,
         code: newWarehouse.code.trim() || undefined,
-        isActive: true,
+        isActive: true, // New warehouses are created as active by default
       });
       
       // Reset form
@@ -87,7 +89,7 @@ export function AddWarehouseModal({ visible, onClose, onWarehouseAdded }: AddWar
       });
       setValidationErrors({});
       onClose();
-      Alert.alert('Success', `Warehouse "${newWarehouse.name}" has been added!`);
+      Alert.alert('Success', `Warehouse "${warehouseName}" has been added!`);
       
       // Notify parent to refresh warehouse list
       if (onWarehouseAdded) {
