@@ -82,17 +82,18 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
         
         const createdEmployee = await EmployeeService.createEmployee(createData);
         setEmployees(prev => [...prev, createdEmployee]);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as any; // Type assertion for axios error
         console.error('❌ Full error creating employee:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
         });
         
         // Extract more detailed error message from API response
-        const errorMsg = error.response?.data?.message || 
-                        error.response?.data?.error ||
-                        error.message || 
+        const errorMsg = err.response?.data?.message || 
+                        err.response?.data?.error ||
+                        err.message || 
                         'Failed to create employee. Please check your connection and try again.';
         throw new Error(errorMsg);
       }
