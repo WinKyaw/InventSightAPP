@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { API_ENDPOINTS } from './config';
+import axios from 'axios';
 
 export interface Store {
   id: string;
@@ -30,9 +31,13 @@ export class StoreService {
         API_ENDPOINTS.STORES.ALL
       );
       return response.stores;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        console.log('📭 No stores found - returning empty array');
+        return [];
+      }
       console.error('❌ Failed to fetch stores:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -45,9 +50,13 @@ export class StoreService {
         API_ENDPOINTS.STORES.BY_ID(id)
       );
       return response.store;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        console.log(`📭 Store ${id} not found`);
+        return null;
+      }
       console.error(`❌ Failed to fetch store ${id}:`, error);
-      return null;
+      throw error;
     }
   }
 }

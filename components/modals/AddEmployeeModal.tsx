@@ -53,7 +53,9 @@ export function AddEmployeeModal({ visible, onClose }: AddEmployeeModalProps) {
       setStores(userStores);
     } catch (error) {
       console.error('Failed to load stores:', error);
-      Alert.alert('Error', 'Failed to load stores. Please try again.');
+      setStores([]);
+      // Show a non-blocking error message, user can still close modal and try again
+      Alert.alert('Error', 'Failed to load stores. Please try again later.');
     } finally {
       setLoadingStores(false);
     }
