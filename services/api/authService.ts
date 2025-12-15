@@ -189,23 +189,40 @@ class AuthService {
     try {
       console.log('🔐 AuthService: Attempting signup for:', credentials.email);
       
-      // Demo mode - use mock authentication
-      // if (DEMO_MODE) {
-      //   return this.mockSignup(credentials);
-      // }
       const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.SIGNUP}`;
-      const response = await httpClient.post<LoginResponse>(
+      console.log('🔗 Signup API URL:', fullUrl);
+      
+      const response = await httpClient.post(
         fullUrl,
         {
           firstName: credentials.firstName.trim(),
           lastName: credentials.lastName.trim(),
-          username: credentials.firstName.trim()+ "." + credentials.lastName.trim() + generateRandomId(),
+          username: credentials.firstName.trim() + "." + credentials.lastName.trim() + generateRandomId(),
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
         }
       );
 
-      const signupData = response.data;
+      const apiResponse = response.data;
+      console.log('📥 Raw Signup API Response:', apiResponse);
+      
+      // Transform the API response to match expected LoginResponse format
+      // Backend returns user data at root level, not nested in "user" object
+      const signupData: LoginResponse = {
+        user: {
+          id: apiResponse.id.toString(),
+          email: apiResponse.email,
+          name: apiResponse.fullName || `${credentials.firstName} ${credentials.lastName}`,
+          role: apiResponse.role.toLowerCase(),
+        },
+        tokens: {
+          accessToken: apiResponse.token,
+          refreshToken: apiResponse.token, // Use same token if no separate refresh token
+          expiresIn: apiResponse.expiresIn || 86400000,
+          tokenType: apiResponse.tokenType || 'Bearer',
+        },
+        message: apiResponse.message || 'Signup successful',
+      };
       
       // Store tokens and user data securely
       if (signupData.tokens) {
@@ -218,8 +235,21 @@ class AuthService {
     } catch (error: any) {
       console.error('❌ AuthService: Signup failed:', error);
       
+      // Network/connection errors
+      if (error.code === 'ECONNABORTED' || error.code === 'ECONNREFUSED') {
+        throw new Error(
+          'Cannot connect to InventSight backend server.\n\n' +
+          'Please ensure:\n' +
+          '1. Backend is running on port 8080\n' +
+          '2. local-login is enabled in application.yml\n' +
+          '3. You are on the same network\n\n' +
+          'See BACKEND_SETUP.md for setup instructions.'
+        );
+      }
+      
+      // HTTP error responses
       if (error.response?.status === 409) {
-        throw new Error('An account with this email already exists');
+        throw new Error('Email already exists. Please use a different email or login.');
       } else if (error.response?.status === 400) {
         throw new Error(error.response.data?.message || 'Invalid signup data');
       } else if (error.response?.data?.message) {
