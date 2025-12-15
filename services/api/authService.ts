@@ -197,7 +197,7 @@ class AuthService {
         {
           firstName: credentials.firstName.trim(),
           lastName: credentials.lastName.trim(),
-          username: credentials.firstName.trim()+ "." + credentials.lastName.trim() + generateRandomId(),
+          username: credentials.firstName.trim() + "." + credentials.lastName.trim() + generateRandomId(),
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
         }
@@ -241,7 +241,8 @@ class AuthService {
           'Cannot connect to InventSight backend server.\n\n' +
           'Please ensure:\n' +
           '1. Backend is running on port 8080\n' +
-          '2. You are on the same network\n\n' +
+          '2. local-login is enabled in application.yml\n' +
+          '3. You are on the same network\n\n' +
           'See BACKEND_SETUP.md for setup instructions.'
         );
       }
