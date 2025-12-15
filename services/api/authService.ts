@@ -247,10 +247,10 @@ class AuthService {
       }
       
       // HTTP error responses
-      if (error.response?.status === 400) {
-        throw new Error(error.response.data?.message || 'Invalid signup data');
-      } else if (error.response?.status === 409) {
+      if (error.response?.status === 409) {
         throw new Error('Email already exists. Please use a different email or login.');
+      } else if (error.response?.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid signup data');
       } else if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       } else {
