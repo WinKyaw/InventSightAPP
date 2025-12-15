@@ -104,6 +104,10 @@ export const API_ENDPOINTS = {
     ACTIVATE: (id: string) => `/api/stores/${id}/activate`,
     CURRENT: '/api/stores/current',
   },
+  // User/Navigation endpoints
+  USER: {
+    NAVIGATION_PREFERENCES: '/api/user/navigation-preferences',
+  },
 };
 
 // Session Information

@@ -18,10 +18,11 @@ try {
   console.error('Failed to import NavigationContext:', error);
 }
 
-// Fallback navigation items
+// Fallback navigation items (3 tabs for middle section)
 const FALLBACK_NAV_ITEMS = [
+  { key: 'items', title: 'Items', icon: 'cube', screen: '/(tabs)/items', color: '#10B981' },
   { key: 'receipt', title: 'Receipt', icon: 'receipt', screen: '/(tabs)/receipt', color: '#F59E0B' },
-  { key: 'employees', title: 'Team', icon: 'people', screen: '/(tabs)/employees', color: '#8B5CF6' }
+  { key: 'calendar', title: 'Calendar', icon: 'calendar', screen: '/(tabs)/calendar', color: '#F59E0B' }
 ];
 
 export default function TabsLayout() {
@@ -31,6 +32,15 @@ export default function TabsLayout() {
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [selectedNavItems, setSelectedNavItems] = useState(FALLBACK_NAV_ITEMS);
+
+  // All possible tab screens that can be hidden
+  const allTabScreens = ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting'];
+  
+  // Get keys of currently selected tabs to avoid duplicates
+  const selectedTabKeys = selectedNavItems.map(item => item.key);
+  
+  // Filter screens to hide only those not in selectedNavItems
+  const screensToHide = allTabScreens.filter(screen => !selectedTabKeys.includes(screen));
 
   // ✅ Auth guard: Redirect to login if not authenticated
   // This protects the tabs from unauthorized access
@@ -55,13 +65,13 @@ export default function TabsLayout() {
     navContext = null;
   }
 
-  // ✅ Update selected items when navigation context changes
+  // ✅ Update selected items when navigation context changes or when loading completes
   useEffect(() => {
-    if (navContext && Array.isArray(navContext.selectedNavItems)) {
+    if (navContext && !navContext.loading && Array.isArray(navContext.selectedNavItems) && navContext.selectedNavItems.length > 0) {
       setSelectedNavItems(navContext.selectedNavItems);
     }
     setIsReady(true);
-  }, [navContext]);
+  }, [navContext, navContext?.loading]);
 
   // ✅ SECURITY FIX: Show loading while checking authentication
   if (!isInitialized || isLoading) {
@@ -110,7 +120,7 @@ export default function TabsLayout() {
           },
         }}
       >
-        {/* Fixed Tab 1: Dashboard */}
+        {/* Fixed Tab 1: Dashboard (far left) */}
         <Tabs.Screen
           name="dashboard"
           options={{
@@ -121,25 +131,14 @@ export default function TabsLayout() {
           }}
         />
 
-        {/* Fixed Tab 2: Items */}
+        {/* Dynamic Tab 2: User's Pick 1 (from API) */}
         <Tabs.Screen
-          name="items"
+          name={selectedNavItems[0]?.key || 'items'}
           options={{
-            title: t('tabs.items'),
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="cube" size={size} color={color} />
-            ),
-          }}
-        />
-
-        {/* Dynamic Tab 3: User's Pick 1 */}
-        <Tabs.Screen
-          name={selectedNavItems[0]?.key || 'receipt'}
-          options={{
-            title: selectedNavItems[0]?.title || 'Receipt',
+            title: selectedNavItems[0]?.title || 'Items',
             tabBarIcon: ({ color, size }) => (
               <Ionicons 
-                name={(selectedNavItems[0]?.icon || 'receipt') as any} 
+                name={(selectedNavItems[0]?.icon || 'cube') as any} 
                 size={size} 
                 color={color} 
               />
@@ -147,14 +146,14 @@ export default function TabsLayout() {
           }}
         />
 
-        {/* Dynamic Tab 4: User's Pick 2 */}
+        {/* Dynamic Tab 3: User's Pick 2 (from API) */}
         <Tabs.Screen
-          name={selectedNavItems[1]?.key || 'employees'}
+          name={selectedNavItems[1]?.key || 'receipt'}
           options={{
-            title: selectedNavItems[1]?.title || 'Team',
+            title: selectedNavItems[1]?.title || 'Receipt',
             tabBarIcon: ({ color, size }) => (
               <Ionicons 
-                name={(selectedNavItems[1]?.icon || 'people') as any} 
+                name={(selectedNavItems[1]?.icon || 'receipt') as any} 
                 size={size} 
                 color={color} 
               />
@@ -162,7 +161,22 @@ export default function TabsLayout() {
           }}
         />
 
-        {/* Fixed Tab 5: Menu */}
+        {/* Dynamic Tab 4: User's Pick 3 (from API) */}
+        <Tabs.Screen
+          name={selectedNavItems[2]?.key || 'calendar'}
+          options={{
+            title: selectedNavItems[2]?.title || 'Calendar',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons 
+                name={(selectedNavItems[2]?.icon || 'calendar') as any} 
+                size={size} 
+                color={color} 
+              />
+            ),
+          }}
+        />
+
+        {/* Fixed Tab 5: Menu (far right) */}
         <Tabs.Screen
           name="menu"
           options={{
@@ -189,11 +203,15 @@ export default function TabsLayout() {
           }}
         />
 
-        {/* Hidden screens accessible via menu */}
-        <Tabs.Screen name="calendar" options={{ href: null }} />
-        <Tabs.Screen name="reports" options={{ href: null }} />
-        <Tabs.Screen name="setting" options={{ href: null }} />
-        <Tabs.Screen name="warehouse" options={{ href: null }} />
+        {/* Hidden screens accessible via menu or when not in preferredTabs */}
+        {/* Only hide screens that are NOT currently visible in the dynamic tabs */}
+        {screensToHide.map(screenName => (
+          <Tabs.Screen 
+            key={screenName} 
+            name={screenName} 
+            options={{ href: null }} 
+          />
+        ))}
       </Tabs>
 
       <HamburgerMenu

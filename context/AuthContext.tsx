@@ -10,6 +10,7 @@ import { authService } from '../services/api/authService';
 import { tokenManager } from '../utils/tokenManager';
 import { responseCache } from '../utils/responseCache';
 import { requestDeduplicator } from '../utils/requestDeduplicator';
+import { navigationService } from '../services/api/navigationService';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -202,6 +203,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const loginResponse = await authService.login(credentials);
       console.log('✅ AuthContext: Login API successful');
 
+      // Force refresh navigation preferences after successful login
+      try {
+        console.log('📱 AuthContext: Loading navigation preferences...');
+        await navigationService.getNavigationPreferences(true);
+        console.log('✅ AuthContext: Navigation preferences loaded');
+      } catch (navError) {
+        console.warn('⚠️ AuthContext: Failed to load navigation preferences:', navError);
+        // Don't fail login if navigation preferences fail
+      }
+
       if (isMountedRef.current) {
         // ✅ FIX: Update state IMMEDIATELY and SYNCHRONOUSLY
         // Set isAuthenticated to true right after tokens are stored
@@ -248,6 +259,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
       const signupResponse = await authService.signup(credentials);
+
+      // Force refresh navigation preferences after successful signup
+      try {
+        console.log('📱 AuthContext: Loading navigation preferences...');
+        await navigationService.getNavigationPreferences(true);
+        console.log('✅ AuthContext: Navigation preferences loaded');
+      } catch (navError) {
+        console.warn('⚠️ AuthContext: Failed to load navigation preferences:', navError);
+        // Don't fail signup if navigation preferences fail
+      }
 
       if (isMountedRef.current) {
         // Update state FIRST - set isAuthenticated before navigation
