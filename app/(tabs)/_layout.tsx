@@ -33,6 +33,15 @@ export default function TabsLayout() {
   const [isReady, setIsReady] = useState(false);
   const [selectedNavItems, setSelectedNavItems] = useState(FALLBACK_NAV_ITEMS);
 
+  // All possible tab screens that can be hidden
+  const allTabScreens = ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting'];
+  
+  // Get keys of currently selected tabs to avoid duplicates
+  const selectedTabKeys = selectedNavItems.map(item => item.key);
+  
+  // Filter screens to hide only those not in selectedNavItems
+  const screensToHide = allTabScreens.filter(screen => !selectedTabKeys.includes(screen));
+
   // ✅ Auth guard: Redirect to login if not authenticated
   // This protects the tabs from unauthorized access
   useEffect(() => {
@@ -195,13 +204,14 @@ export default function TabsLayout() {
         />
 
         {/* Hidden screens accessible via menu or when not in preferredTabs */}
-        <Tabs.Screen name="items" options={{ href: null }} />
-        <Tabs.Screen name="receipt" options={{ href: null }} />
-        <Tabs.Screen name="employees" options={{ href: null }} />
-        <Tabs.Screen name="calendar" options={{ href: null }} />
-        <Tabs.Screen name="reports" options={{ href: null }} />
-        <Tabs.Screen name="setting" options={{ href: null }} />
-        <Tabs.Screen name="warehouse" options={{ href: null }} />
+        {/* Only hide screens that are NOT currently visible in the dynamic tabs */}
+        {screensToHide.map(screenName => (
+          <Tabs.Screen 
+            key={screenName} 
+            name={screenName} 
+            options={{ href: null }} 
+          />
+        ))}
       </Tabs>
 
       <HamburgerMenu

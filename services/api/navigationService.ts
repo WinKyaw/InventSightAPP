@@ -42,7 +42,7 @@ class NavigationService {
       // Return default fallback
       return {
         preferredTabs: ['items', 'receipt', 'calendar'],
-        availableTabs: ['items', 'receipt', 'calendar', 'dashboard'],
+        availableTabs: ['items', 'receipt', 'calendar'],
         modifiedAt: new Date().toISOString(),
         userId: '',
         username: '',

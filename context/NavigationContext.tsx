@@ -50,7 +50,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       title: 'Calendar',
       icon: 'calendar',
       screen: '/(tabs)/calendar',
-      color: '#F59E0B'
+      color: '#EC4899'
     },
     {
       key: 'reports',
@@ -75,11 +75,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   ];
 
-  // Default to first 3 options (items, receipt, employees)
+  // Default to first 3 options (items, receipt, team)
   const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>([
     availableOptions[0], // Items
     availableOptions[1], // Receipt
-    availableOptions[2]  // Team
+    availableOptions[2]  // Team (employees)
   ]);
 
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
@@ -102,10 +102,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       // Map preferredTabs from API to NavigationOption objects
       const mappedOptions = mapTabKeysToOptions(prefs.preferredTabs);
       
-      // Only update if we have valid mapped options
-      if (mappedOptions.length > 0) {
+      // Validate we have exactly 3 tabs, or use defaults
+      if (mappedOptions.length === 3) {
         setSelectedNavItems(mappedOptions);
         console.log('✅ Navigation preferences loaded:', mappedOptions.map(o => o.key));
+      } else if (mappedOptions.length > 0) {
+        // If we have some options but not exactly 3, use what we have up to 3
+        const limitedOptions = mappedOptions.slice(0, 3);
+        setSelectedNavItems(limitedOptions);
+        console.log('⚠️ Navigation preferences loaded with adjustment:', limitedOptions.map(o => o.key));
+      } else {
+        console.log('⚠️ No valid navigation options mapped, using defaults');
       }
     } catch (error) {
       console.error('Failed to load navigation preferences:', error);
