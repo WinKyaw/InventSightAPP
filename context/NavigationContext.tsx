@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { navigationService, NavigationPreferences } from '../services/api/navigationService';
 
 interface NavigationOption {
   key: string;
@@ -11,15 +12,25 @@ interface NavigationOption {
 interface NavigationContextType {
   availableOptions: NavigationOption[];
   selectedNavItems: NavigationOption[];
-  updateNavigationPreferences: (item1: NavigationOption, item2: NavigationOption) => void;
+  updateNavigationPreferences: (item1: NavigationOption, item2: NavigationOption, item3?: NavigationOption) => Promise<void>;
   showNavigationSettings: boolean;
   setShowNavigationSettings: (show: boolean) => void;
+  preferences: NavigationPreferences | null;
+  loading: boolean;
+  refreshPreferences: () => Promise<void>;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const availableOptions: NavigationOption[] = [
+    {
+      key: 'items',
+      title: 'Items',
+      icon: 'cube',
+      screen: '/(tabs)/items',
+      color: '#10B981'
+    },
     {
       key: 'receipt',
       title: 'Receipt',
@@ -64,15 +75,70 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   ];
 
+  // Default to first 3 options (items, receipt, employees)
   const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>([
-    availableOptions[0], // Receipt
-    availableOptions[1]  // Team
+    availableOptions[0], // Items
+    availableOptions[1], // Receipt
+    availableOptions[2]  // Team
   ]);
 
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
+  const [preferences, setPreferences] = useState<NavigationPreferences | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const updateNavigationPreferences = (item1: NavigationOption, item2: NavigationOption) => {
-    setSelectedNavItems([item1, item2]);
+  // Map API tab keys to NavigationOption objects
+  const mapTabKeysToOptions = (tabKeys: string[]): NavigationOption[] => {
+    return tabKeys
+      .map(key => availableOptions.find(opt => opt.key === key))
+      .filter((opt): opt is NavigationOption => opt !== undefined);
+  };
+
+  const loadPreferences = async (forceRefresh = false) => {
+    try {
+      setLoading(true);
+      const prefs = await navigationService.getNavigationPreferences(forceRefresh);
+      setPreferences(prefs);
+      
+      // Map preferredTabs from API to NavigationOption objects
+      const mappedOptions = mapTabKeysToOptions(prefs.preferredTabs);
+      
+      // Only update if we have valid mapped options
+      if (mappedOptions.length > 0) {
+        setSelectedNavItems(mappedOptions);
+        console.log('✅ Navigation preferences loaded:', mappedOptions.map(o => o.key));
+      }
+    } catch (error) {
+      console.error('Failed to load navigation preferences:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPreferences();
+  }, []);
+
+  const refreshPreferences = async () => {
+    await loadPreferences(true);
+  };
+
+  const updateNavigationPreferences = async (item1: NavigationOption, item2: NavigationOption, item3?: NavigationOption) => {
+    try {
+      const newItems = item3 ? [item1, item2, item3] : [item1, item2];
+      const tabKeys = newItems.map(item => item.key);
+      
+      // Update API
+      await navigationService.updateNavigationPreferences(tabKeys);
+      
+      // Update local state
+      setSelectedNavItems(newItems);
+      
+      // Refresh from API to ensure sync
+      await refreshPreferences();
+    } catch (error) {
+      console.error('Failed to update navigation preferences:', error);
+      throw error;
+    }
   };
 
   // Ensure the context value is always properly constructed
@@ -81,7 +147,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     selectedNavItems: selectedNavItems || [],
     updateNavigationPreferences,
     showNavigationSettings: showNavigationSettings || false,
-    setShowNavigationSettings
+    setShowNavigationSettings,
+    preferences,
+    loading,
+    refreshPreferences
   };
 
   return (
@@ -97,6 +166,13 @@ export function useNavigation(): NavigationContextType {
     console.error('useNavigation must be used within a NavigationProvider');
     // Return a more complete default context to prevent crashes
     const defaultOptions: NavigationOption[] = [
+      {
+        key: 'items',
+        title: 'Items',
+        icon: 'cube',
+        screen: '/(tabs)/items',
+        color: '#10B981'
+      },
       {
         key: 'receipt',
         title: 'Receipt',
@@ -116,12 +192,17 @@ export function useNavigation(): NavigationContextType {
     return {
       availableOptions: defaultOptions,
       selectedNavItems: defaultOptions,
-      updateNavigationPreferences: () => {
+      updateNavigationPreferences: async () => {
         console.warn('NavigationContext not available - updateNavigationPreferences called');
       },
       showNavigationSettings: false,
       setShowNavigationSettings: () => {
         console.warn('NavigationContext not available - setShowNavigationSettings called');
+      },
+      preferences: null,
+      loading: false,
+      refreshPreferences: async () => {
+        console.warn('NavigationContext not available - refreshPreferences called');
       }
     };
   }

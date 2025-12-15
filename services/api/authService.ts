@@ -9,6 +9,7 @@ import {
 import { httpClient } from './httpClient';
 import { API_ENDPOINTS, API_CONFIG } from './config';
 import { tokenManager } from '../../utils/tokenManager';
+import { navigationService } from './navigationService';
 
 // Demo mode configuration
 const DEMO_MODE = process.env.DEMO_MODE === 'true' || (process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL);
@@ -353,11 +354,15 @@ class AuthService {
       // Clear all stored authentication data
       await tokenManager.clearAuthData();
       
+      // Clear navigation preferences cache
+      await navigationService.clearCache();
+      
       console.log('✅ AuthService: Logout successful');
     } catch (error) {
       console.error('❌ AuthService: Logout failed:', error);
       // Still clear local data even if server call fails
       await tokenManager.clearAuthData();
+      await navigationService.clearCache();
       throw new Error('Logout failed but local session cleared');
     }
   }
