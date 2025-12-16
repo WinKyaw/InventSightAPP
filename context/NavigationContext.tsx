@@ -118,8 +118,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: any) {
       // navigationService returns defaults instead of throwing for INVALID_TOKEN
-      // This catch is for other unexpected errors
-      console.error('❌ Failed to load navigation preferences:', error);
+      // This catch is for other unexpected errors (network issues, etc.)
+      console.error('❌ Failed to load navigation preferences:', error.message || error);
     } finally {
       setLoading(false);
     }

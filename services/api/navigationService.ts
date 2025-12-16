@@ -49,7 +49,8 @@ class NavigationService {
       return preferences;
     } catch (error: any) {
       // ✅ Silently handle INVALID_TOKEN errors (user not logged in)
-      if (error.message === 'INVALID_TOKEN') {
+      // Check both message and potential variations for robustness
+      if (error.message === 'INVALID_TOKEN' || error.message?.includes('INVALID_TOKEN')) {
         console.log('ℹ️ Navigation preferences not loaded: User not authenticated');
         return this.getDefaultPreferences();
       }
