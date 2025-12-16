@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { navigationService, NavigationPreferences } from '../services/api/navigationService';
+import { useAuth } from './AuthContext';
 
 interface NavigationOption {
   key: string;
@@ -23,6 +24,7 @@ interface NavigationContextType {
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const availableOptions: NavigationOption[] = [
     {
       key: 'items',
@@ -84,7 +86,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
   const [preferences, setPreferences] = useState<NavigationPreferences | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Map API tab keys to NavigationOption objects
   const mapTabKeysToOptions = (tabKeys: string[]): NavigationOption[] => {
@@ -114,16 +116,26 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('⚠️ No valid navigation options mapped, using defaults');
       }
-    } catch (error) {
-      console.error('Failed to load navigation preferences:', error);
+    } catch (error: any) {
+      // navigationService returns defaults for auth/API errors
+      // This catch handles unexpected errors (e.g., service method bugs)
+      console.error('❌ Failed to load navigation preferences:', error.message || error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadPreferences();
-  }, []);
+    // ✅ Only load preferences if user is authenticated
+    if (isAuthenticated) {
+      console.log('📱 User authenticated, loading navigation preferences');
+      loadPreferences();
+    } else {
+      console.log('ℹ️ User not authenticated, skipping navigation preferences');
+      setPreferences(null);
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
 
   const refreshPreferences = async () => {
     await loadPreferences(true);

@@ -14,6 +14,18 @@ interface NavigationPreferences {
 const CACHE_KEY = '@navigation_preferences';
 
 class NavigationService {
+  private getDefaultPreferences(): NavigationPreferences {
+    // Default tabs match NavigationContext initial state: Items, Receipt, Team (employees key)
+    return {
+      preferredTabs: ['items', 'receipt', 'employees'],
+      availableTabs: ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting'],
+      modifiedAt: new Date().toISOString(),
+      userId: '',
+      username: '',
+      role: 'USER'
+    };
+  }
+
   async getNavigationPreferences(forceRefresh = false): Promise<NavigationPreferences> {
     try {
       // Check cache first
@@ -37,17 +49,16 @@ class NavigationService {
       
       return preferences;
     } catch (error: any) {
-      console.error('❌ Error fetching navigation preferences:', error);
+      // ✅ Silently handle INVALID_TOKEN errors (user not logged in)
+      // Check both message and potential variations for robustness
+      if (error.message === 'INVALID_TOKEN' || error.message?.includes('INVALID_TOKEN')) {
+        console.log('ℹ️ Navigation preferences not loaded: User not authenticated');
+        return this.getDefaultPreferences();
+      }
       
-      // Return default fallback
-      return {
-        preferredTabs: ['items', 'receipt', 'calendar'],
-        availableTabs: ['items', 'receipt', 'calendar'],
-        modifiedAt: new Date().toISOString(),
-        userId: '',
-        username: '',
-        role: 'USER'
-      };
+      // Only log other errors, don't throw
+      console.error('❌ Error fetching navigation preferences:', error.message || error);
+      return this.getDefaultPreferences();
     }
   }
 
