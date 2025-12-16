@@ -117,12 +117,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         console.log('⚠️ No valid navigation options mapped, using defaults');
       }
     } catch (error: any) {
-      // ✅ Silently handle auth errors, only log
-      if (error.message === 'INVALID_TOKEN') {
-        console.log('ℹ️ Navigation preferences not loaded: User not authenticated');
-      } else {
-        console.error('❌ Failed to load navigation preferences:', error);
-      }
+      // navigationService returns defaults instead of throwing for INVALID_TOKEN
+      // This catch is for other unexpected errors
+      console.error('❌ Failed to load navigation preferences:', error);
     } finally {
       setLoading(false);
     }

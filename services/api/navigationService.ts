@@ -16,8 +16,8 @@ const CACHE_KEY = '@navigation_preferences';
 class NavigationService {
   private getDefaultPreferences(): NavigationPreferences {
     return {
-      preferredTabs: ['items', 'receipt', 'calendar'],
-      availableTabs: ['items', 'receipt', 'calendar', 'dashboard'],
+      preferredTabs: ['items', 'receipt', 'employees'],
+      availableTabs: ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting'],
       modifiedAt: new Date().toISOString(),
       userId: '',
       username: '',
