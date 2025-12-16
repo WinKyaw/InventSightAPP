@@ -117,8 +117,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         console.log('⚠️ No valid navigation options mapped, using defaults');
       }
     } catch (error: any) {
-      // navigationService returns defaults instead of throwing for INVALID_TOKEN
-      // This catch is for other unexpected errors (network issues, etc.)
+      // navigationService always returns defaults (never throws)
+      // This catch is for truly unexpected errors (e.g., service method bugs)
       console.error('❌ Failed to load navigation preferences:', error.message || error);
     } finally {
       setLoading(false);

@@ -15,6 +15,7 @@ const CACHE_KEY = '@navigation_preferences';
 
 class NavigationService {
   private getDefaultPreferences(): NavigationPreferences {
+    // Default tabs match NavigationContext initial state: items, receipt, employees (team)
     return {
       preferredTabs: ['items', 'receipt', 'employees'],
       availableTabs: ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting'],
