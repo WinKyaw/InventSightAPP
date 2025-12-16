@@ -14,6 +14,17 @@ interface NavigationPreferences {
 const CACHE_KEY = '@navigation_preferences';
 
 class NavigationService {
+  private getDefaultPreferences(): NavigationPreferences {
+    return {
+      preferredTabs: ['items', 'receipt', 'calendar'],
+      availableTabs: ['items', 'receipt', 'calendar', 'dashboard'],
+      modifiedAt: new Date().toISOString(),
+      userId: '',
+      username: '',
+      role: 'USER'
+    };
+  }
+
   async getNavigationPreferences(forceRefresh = false): Promise<NavigationPreferences> {
     try {
       // Check cache first
@@ -37,17 +48,15 @@ class NavigationService {
       
       return preferences;
     } catch (error: any) {
-      console.error('❌ Error fetching navigation preferences:', error);
+      // ✅ Silently handle INVALID_TOKEN errors (user not logged in)
+      if (error.message === 'INVALID_TOKEN') {
+        console.log('ℹ️ Navigation preferences not loaded: User not authenticated');
+        return this.getDefaultPreferences();
+      }
       
-      // Return default fallback
-      return {
-        preferredTabs: ['items', 'receipt', 'calendar'],
-        availableTabs: ['items', 'receipt', 'calendar'],
-        modifiedAt: new Date().toISOString(),
-        userId: '',
-        username: '',
-        role: 'USER'
-      };
+      // Only log other errors, don't throw
+      console.error('❌ Error fetching navigation preferences:', error.message || error);
+      return this.getDefaultPreferences();
     }
   }
 
