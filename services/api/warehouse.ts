@@ -14,14 +14,25 @@ import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability } from '..
 export async function getWarehouses(): Promise<WarehouseSummary[]> {
   try {
     const response = await apiClient.get<WarehouseSummary[]>('/api/warehouses');
-    return response || [];
+    
+    // Handle different response formats
+    const warehouseData = response?.data || response || [];
+    
+    // Ensure it's always an array
+    if (Array.isArray(warehouseData)) {
+      return warehouseData;
+    } else {
+      console.warn('⚠️ Unexpected warehouse response format:', warehouseData);
+      return [];
+    }
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       console.warn('Warehouses endpoint not yet available');
       return [];
     }
-    throw error;
+    console.error('Error fetching warehouses:', error);
+    return []; // Always return empty array on error instead of throwing
   }
 }
 

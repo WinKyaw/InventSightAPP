@@ -75,11 +75,18 @@ export default function WarehouseScreen() {
 
     try {
       const warehousesList = await getWarehouses();
-      setWarehouses(warehousesList);
-
-      // Select first warehouse by default if available
-      if (warehousesList.length > 0 && !selectedWarehouse) {
-        setSelectedWarehouse(warehousesList[0]);
+      
+      // Ensure we always have an array
+      if (Array.isArray(warehousesList)) {
+        setWarehouses(warehousesList);
+        
+        // Select first warehouse by default if available
+        if (warehousesList.length > 0 && !selectedWarehouse) {
+          setSelectedWarehouse(warehousesList[0]);
+        }
+      } else {
+        console.warn('⚠️ Unexpected warehouse response format:', warehousesList);
+        setWarehouses([]);
       }
     } catch (err) {
       console.error('Failed to load warehouses:', err);
@@ -177,7 +184,7 @@ export default function WarehouseScreen() {
   }
 
   // Render empty warehouse state
-  if (!loading && warehouses.length === 0) {
+  if (!loading && (!warehouses || warehouses.length === 0)) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar backgroundColor="#6366F1" barStyle="light-content" />
@@ -223,7 +230,7 @@ export default function WarehouseScreen() {
                 <Text style={styles.warehouseButtonText}>Add Warehouse</Text>
               </TouchableOpacity>
             )}
-            {warehouses.length > 0 && (
+            {warehouses && warehouses.length > 0 && (
               <TouchableOpacity 
                 style={styles.warehouseButton}
                 onPress={() => setShowWarehousePicker(true)}
@@ -289,38 +296,44 @@ export default function WarehouseScreen() {
             </View>
 
             <ScrollView style={styles.warehouseList}>
-              {warehouses.map((warehouse) => (
-                <TouchableOpacity
-                  key={warehouse.id}
-                  style={[
-                    styles.warehouseItem,
-                    selectedWarehouse?.id === warehouse.id && styles.warehouseItemSelected,
-                  ]}
-                  onPress={() => handleWarehouseSelect(warehouse)}
-                >
-                  <View style={styles.warehouseItemContent}>
-                    <Ionicons 
-                      name="business" 
-                      size={24} 
-                      color={selectedWarehouse?.id === warehouse.id ? '#6366F1' : Colors.textSecondary} 
-                    />
-                    <View style={styles.warehouseItemText}>
-                      <Text style={[
-                        styles.warehouseName,
-                        selectedWarehouse?.id === warehouse.id && styles.warehouseNameSelected,
-                      ]}>
-                        {warehouse.name}
-                      </Text>
-                      {warehouse.location && (
-                        <Text style={styles.warehouseLocation}>{warehouse.location}</Text>
-                      )}
+              {warehouses && warehouses.length > 0 ? (
+                warehouses.map((warehouse) => (
+                  <TouchableOpacity
+                    key={warehouse.id}
+                    style={[
+                      styles.warehouseItem,
+                      selectedWarehouse?.id === warehouse.id && styles.warehouseItemSelected,
+                    ]}
+                    onPress={() => handleWarehouseSelect(warehouse)}
+                  >
+                    <View style={styles.warehouseItemContent}>
+                      <Ionicons 
+                        name="business" 
+                        size={24} 
+                        color={selectedWarehouse?.id === warehouse.id ? '#6366F1' : Colors.textSecondary} 
+                      />
+                      <View style={styles.warehouseItemText}>
+                        <Text style={[
+                          styles.warehouseName,
+                          selectedWarehouse?.id === warehouse.id && styles.warehouseNameSelected,
+                        ]}>
+                          {warehouse.name}
+                        </Text>
+                        {warehouse.location && (
+                          <Text style={styles.warehouseLocation}>{warehouse.location}</Text>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                  {selectedWarehouse?.id === warehouse.id && (
-                    <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
-                  )}
-                </TouchableOpacity>
-              ))}
+                    {selectedWarehouse?.id === warehouse.id && (
+                      <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
+                    )}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.centerContainer}>
+                  <Text style={styles.emptySubtext}>No warehouses available</Text>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
