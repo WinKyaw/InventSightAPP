@@ -117,9 +117,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         console.log('⚠️ No valid navigation options mapped, using defaults');
       }
     } catch (error: any) {
-      // navigationService returns defaults for auth/API errors
-      // This catch handles unexpected errors (e.g., service method bugs)
-      console.error('❌ Failed to load navigation preferences:', error.message || error);
+      // ✅ Don't throw - just use defaults
+      console.log('ℹ️ Using default navigation preferences');
+      const defaults = await navigationService.getNavigationPreferences(false);
+      setPreferences(defaults);
     } finally {
       setLoading(false);
     }

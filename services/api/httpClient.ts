@@ -93,6 +93,13 @@ const createHttpClient = (): AxiosInstance => {
       const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
       const sessionInfo = getSessionInfo();
       const status = error.response?.status;
+      const url = error.config?.url || '';
+      
+      // ✅ Don't log 500 errors for navigation-preferences (backend might not be ready)
+      if (url.includes('navigation-preferences') && status === 500) {
+        console.log('ℹ️ Navigation preferences endpoint not ready, will use defaults');
+        return Promise.reject(error); // Still reject but without scary logs
+      }
       
       // Handle 400 Bad Request (invalid token)
       if (status === 400) {

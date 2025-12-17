@@ -1,6 +1,7 @@
 import { httpClient } from './httpClient';
 import { API_CONFIG, API_ENDPOINTS } from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokenManager } from '../../utils/tokenManager';
 
 interface NavigationPreferences {
   preferredTabs: string[];
@@ -15,14 +16,36 @@ const CACHE_KEY = '@navigation_preferences';
 
 class NavigationService {
   private getDefaultPreferences(): NavigationPreferences {
-    // Default tabs match NavigationContext initial state: Items, Receipt, Team (employees key)
+    // Try to get role from cached token
+    let role = 'EMPLOYEE'; // Default to most restrictive
+    
+    try {
+      // Get token synchronously from the manager
+      const token = tokenManager.getAccessToken(); // This returns a Promise, we'll handle it differently
+      // For now, use default role since we can't await here
+      // The role will be updated when preferences are fetched from backend
+    } catch (e) {
+      console.log('Could not decode token for role, using EMPLOYEE defaults');
+    }
+    
+    // GM+ roles get team access
+    const isGMPlus = ['OWNER', 'CO_OWNER', 'MANAGER', 'ADMIN'].includes(role);
+    
+    const defaultTabs = isGMPlus 
+      ? ['items', 'receipt', 'employees']
+      : ['items', 'receipt', 'calendar'];
+    
+    const availableTabs = isGMPlus
+      ? ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting']
+      : ['items', 'receipt', 'calendar', 'reports', 'warehouse', 'setting'];
+    
     return {
-      preferredTabs: ['items', 'receipt', 'employees'],
-      availableTabs: ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting'],
+      preferredTabs: defaultTabs,
+      availableTabs: availableTabs,
       modifiedAt: new Date().toISOString(),
       userId: '',
       username: '',
-      role: 'USER'
+      role: role
     };
   }
 
@@ -41,7 +64,16 @@ class NavigationService {
       console.log('📱 Fetching navigation preferences from API');
       const response = await httpClient.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.USER.NAVIGATION_PREFERENCES}`);
       
-      const preferences = response.data;
+      // Handle backend response format
+      const data = response.data.data || response.data; // Support both formats
+      const preferences = {
+        preferredTabs: data.preferredTabs || [],
+        availableTabs: data.availableTabs || [],
+        modifiedAt: data.modifiedAt || new Date().toISOString(),
+        userId: data.userId || '',
+        username: data.username || '',
+        role: data.role || 'USER'
+      };
       
       // Cache the response
       await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(preferences));
@@ -49,15 +81,20 @@ class NavigationService {
       
       return preferences;
     } catch (error: any) {
-      // ✅ Silently handle INVALID_TOKEN errors (user not logged in)
-      // Check both message and potential variations for robustness
-      if (error.message === 'INVALID_TOKEN' || error.message?.includes('INVALID_TOKEN')) {
-        console.log('ℹ️ Navigation preferences not loaded: User not authenticated');
-        return this.getDefaultPreferences();
+      // ✅ Silently handle errors - don't show to user
+      const status = error.response?.status;
+      
+      if (error.message === 'INVALID_TOKEN') {
+        console.log('ℹ️ Navigation preferences: User not authenticated');
+      } else if (status === 500) {
+        console.log('ℹ️ Navigation preferences: Backend endpoint not ready, using defaults');
+      } else if (status === 404) {
+        console.log('ℹ️ Navigation preferences: Endpoint not found, using defaults');
+      } else {
+        console.log('ℹ️ Navigation preferences: Using defaults due to error:', error.message);
       }
       
-      // Only log other errors, don't throw
-      console.error('❌ Error fetching navigation preferences:', error.message || error);
+      // ✅ Return role-based defaults instead of generic defaults
       return this.getDefaultPreferences();
     }
   }

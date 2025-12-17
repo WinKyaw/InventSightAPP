@@ -106,7 +106,7 @@ export const API_ENDPOINTS = {
   },
   // User/Navigation endpoints
   USER: {
-    NAVIGATION_PREFERENCES: '/api/user/navigation-preferences',
+    NAVIGATION_PREFERENCES: '/api/user/me/navigation-preferences',
   },
 };
 
