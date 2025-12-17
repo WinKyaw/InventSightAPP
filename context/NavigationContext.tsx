@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo, useRef } from 'react';
 import { navigationService, NavigationPreferences } from '../services/api/navigationService';
 import { useAuth } from './AuthContext';
 import { canManageEmployees } from '../utils/permissions';
@@ -29,7 +29,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   
   // ✅ FIX: Check if user is GM+ (can manage employees/team)
   // Use useMemo to recompute when user role changes
-  const canAccessTeam = React.useMemo(() => {
+  const canAccessTeam = useMemo(() => {
     return canManageEmployees(user?.role);
   }, [user?.role]);
   
@@ -117,6 +117,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
   const [preferences, setPreferences] = useState<NavigationPreferences | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Track previous canAccessTeam value to detect changes
+  const prevCanAccessTeamRef = useRef(canAccessTeam);
 
   // Map API tab keys to NavigationOption objects
   const mapTabKeysToOptions = (tabKeys: string[]): NavigationOption[] => {
@@ -182,16 +185,25 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   // ✅ FIX: Update navigation items when user role changes
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // Check if current selectedNavItems includes Team but user no longer has access
-      const hasTeamInNav = selectedNavItems.some(item => item.key === 'employees');
-      if (hasTeamInNav && !canAccessTeam) {
-        console.log('🔒 User role changed - removing Team from navigation');
-        // Reload preferences to get filtered options
-        loadPreferences(true);
+    // Only act if canAccessTeam actually changed
+    if (prevCanAccessTeamRef.current !== canAccessTeam) {
+      prevCanAccessTeamRef.current = canAccessTeam;
+      
+      if (isAuthenticated && user) {
+        // Check if current selectedNavItems includes Team but user no longer has access
+        const hasTeamInNav = selectedNavItems.some(item => item.key === 'employees');
+        if (hasTeamInNav && !canAccessTeam) {
+          console.log('🔒 User role changed - removing Team from navigation');
+          // Reload preferences to get filtered options
+          loadPreferences(true);
+        } else if (!hasTeamInNav && canAccessTeam) {
+          console.log('🔓 User role changed - user now has access to Team');
+          // Reload preferences in case Team should be added
+          loadPreferences(true);
+        }
       }
     }
-  }, [canAccessTeam, isAuthenticated, user]);
+  }, [canAccessTeam, isAuthenticated, user, selectedNavItems]);
 
   const refreshPreferences = async () => {
     await loadPreferences(true);
