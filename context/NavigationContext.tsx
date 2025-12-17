@@ -100,23 +100,26 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const getDefaultNavItems = useCallback((): NavigationOption[] => {
     // For GM+ users: Items, Receipt, Team
     // For non-GM users: Items, Receipt, Calendar
-    if (canAccessTeam && availableOptions.length >= 3) {
+    if (canAccessTeam) {
       const items = availableOptions.find(o => o.key === 'items');
       const receipt = availableOptions.find(o => o.key === 'receipt');
       const team = availableOptions.find(o => o.key === 'employees');
       
-      // Only return if all three are found
+      // Only return if all three are found (team should exist if canAccessTeam is true)
       if (items && receipt && team) {
         return [items, receipt, team];
       }
     }
     // Non-GM users get first 3 available options (which won't include Team)
+    // Also used as fallback if any required option is missing
     return availableOptions.slice(0, 3);
   }, [canAccessTeam, availableOptions]);
 
   const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>(() => {
-    // Use lazy initialization to avoid issues with initial render
-    return availableOptions.slice(0, 3);
+    // Use lazy initialization with a safe default
+    // This will be updated by useEffect when preferences load
+    const safeDefault = allOptions.filter(o => o.key !== 'employees').slice(0, 3);
+    return safeDefault.length >= 3 ? safeDefault : allOptions.slice(0, 3);
   });
 
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
@@ -174,7 +177,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [canAccessTeam, availableOptions, getDefaultNavItems, mapTabKeysToOptions]);
+  }, [canAccessTeam, getDefaultNavItems, mapTabKeysToOptions, availableOptions]);
 
   useEffect(() => {
     // ✅ Only load preferences if user is authenticated
