@@ -14,14 +14,29 @@ import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability } from '..
 export async function getWarehouses(): Promise<WarehouseSummary[]> {
   try {
     const response = await apiClient.get<WarehouseSummary[]>('/api/warehouses');
-    return response || [];
+    
+    // apiClient.get already extracts response.data, so response should be the data directly
+    // Handle case where data might be wrapped in a data property, or is the array itself
+    const warehouseData = (response as any)?.data ?? response;
+    
+    // Ensure it's always an array
+    if (Array.isArray(warehouseData)) {
+      return warehouseData;
+    } else if (warehouseData === undefined || warehouseData === null) {
+      console.warn('⚠️ Warehouse API returned null/undefined');
+      return [];
+    } else {
+      console.warn('⚠️ Unexpected warehouse response format:', typeof warehouseData);
+      return [];
+    }
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       console.warn('Warehouses endpoint not yet available');
       return [];
     }
-    throw error;
+    console.error('Error fetching warehouses:', error);
+    return []; // Always return empty array on error instead of throwing
   }
 }
 
@@ -33,10 +48,21 @@ export async function getWarehouseInventory(warehouseId: string): Promise<Wareho
     const response = await apiClient.get<WarehouseInventoryRow[]>(
       `/api/sales/inventory/warehouse/${warehouseId}`
     );
-    return response || [];
+    
+    // apiClient.get already extracts response.data, so response should be the data directly
+    // Handle case where data might be wrapped in a data property, or is the array itself
+    const inventoryData = (response as any)?.data ?? response;
+    
+    // Ensure it's always an array
+    if (Array.isArray(inventoryData)) {
+      return inventoryData;
+    } else {
+      console.warn('⚠️ Unexpected inventory response format:', typeof inventoryData);
+      return [];
+    }
   } catch (error) {
     console.error('Failed to fetch warehouse inventory:', error);
-    throw error;
+    return []; // Return empty array on error instead of throwing
   }
 }
 
