@@ -52,7 +52,7 @@ class NavigationService {
         modifiedAt: data.modifiedAt || new Date().toISOString(),
         userId: data.userId || '',
         username: data.username || '',
-        role: data.role || 'USER'
+        role: data.role || defaults.role
       };
       
       // Cache the response
@@ -63,10 +63,17 @@ class NavigationService {
     } catch (error: any) {
       // ✅ Silently handle errors - don't show to user
       const status = error.response?.status;
-      const errorType = error.message === 'INVALID_TOKEN' ? 'not authenticated' :
-                       status === 500 ? 'backend endpoint not ready' :
-                       status === 404 ? 'endpoint not found' :
-                       `error: ${error.message}`;
+      let errorType = 'error';
+      
+      if (error.message === 'INVALID_TOKEN') {
+        errorType = 'not authenticated';
+      } else if (status === 500) {
+        errorType = 'backend endpoint not ready';
+      } else if (status === 404) {
+        errorType = 'endpoint not found';
+      } else if (error.message) {
+        errorType = `error: ${error.message}`;
+      }
       
       console.log(`ℹ️ Navigation preferences: ${errorType}, using defaults`);
       
