@@ -1,7 +1,6 @@
 import { httpClient } from './httpClient';
 import { API_CONFIG, API_ENDPOINTS } from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { tokenManager } from '../../utils/tokenManager';
 
 interface NavigationPreferences {
   preferredTabs: string[];
@@ -16,17 +15,9 @@ const CACHE_KEY = '@navigation_preferences';
 
 class NavigationService {
   private getDefaultPreferences(): NavigationPreferences {
-    // Try to get role from cached token
-    let role = 'EMPLOYEE'; // Default to most restrictive
-    
-    try {
-      // Get token synchronously from the manager
-      const token = tokenManager.getAccessToken(); // This returns a Promise, we'll handle it differently
-      // For now, use default role since we can't await here
-      // The role will be updated when preferences are fetched from backend
-    } catch (e) {
-      console.log('Could not decode token for role, using EMPLOYEE defaults');
-    }
+    // Default to EMPLOYEE role for most restrictive access
+    // Role will be properly set when preferences are fetched from backend
+    const role = 'EMPLOYEE';
     
     // GM+ roles get team access
     const isGMPlus = ['OWNER', 'CO_OWNER', 'MANAGER', 'ADMIN'].includes(role);
