@@ -73,7 +73,7 @@ class NavigationService {
         console.log('ℹ️ Navigation preferences: Using defaults due to error:', error.message);
       }
       
-      // ✅ Return role-based defaults instead of generic defaults
+      // ✅ Return safe defaults (EMPLOYEE role with calendar)
       return this.getDefaultPreferences();
     }
   }

@@ -119,13 +119,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       // ✅ Don't throw - just use defaults
       console.log('ℹ️ Using default navigation preferences');
-      try {
-        const defaults = await navigationService.getNavigationPreferences(false);
-        setPreferences(defaults);
-      } catch (innerError) {
-        // If even getting defaults fails, we'll use the empty state
-        console.log('⚠️ Could not load default preferences');
-      }
+      // Set to null - the navigationService.getNavigationPreferences already returns defaults on error
+      // So this catch block should rarely be hit, but if it is, we'll just use the existing state
+      // or let the navigation system use its built-in defaults
     } finally {
       setLoading(false);
     }
