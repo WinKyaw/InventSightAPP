@@ -15,8 +15,9 @@ export async function getWarehouses(): Promise<WarehouseSummary[]> {
   try {
     const response = await apiClient.get<WarehouseSummary[]>('/api/warehouses');
     
-    // Handle different response formats - some APIs wrap data in a data property
-    const warehouseData = response?.data || response;
+    // apiClient.get already extracts response.data, so response should be the data directly
+    // Handle case where data might be wrapped in a data property, or is the array itself
+    const warehouseData = (response as any)?.data ?? response;
     
     // Ensure it's always an array
     if (Array.isArray(warehouseData)) {
@@ -48,14 +49,15 @@ export async function getWarehouseInventory(warehouseId: string): Promise<Wareho
       `/api/sales/inventory/warehouse/${warehouseId}`
     );
     
-    // Handle different response formats
-    const inventoryData = response?.data || response || [];
+    // apiClient.get already extracts response.data, so response should be the data directly
+    // Handle case where data might be wrapped in a data property, or is the array itself
+    const inventoryData = (response as any)?.data ?? response;
     
     // Ensure it's always an array
     if (Array.isArray(inventoryData)) {
       return inventoryData;
     } else {
-      console.warn('⚠️ Unexpected inventory response format:', inventoryData);
+      console.warn('⚠️ Unexpected inventory response format:', typeof inventoryData);
       return [];
     }
   } catch (error) {
