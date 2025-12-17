@@ -15,14 +15,16 @@ const CACHE_KEY = '@navigation_preferences';
 
 class NavigationService {
   private getDefaultPreferences(): NavigationPreferences {
-    // Default tabs match NavigationContext initial state: Items, Receipt, Team (employees key)
+    // Default to EMPLOYEE role for most restrictive access
+    // Role will be properly set when preferences are fetched from backend
+    // EMPLOYEE users get calendar instead of team by default
     return {
-      preferredTabs: ['items', 'receipt', 'employees'],
-      availableTabs: ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting'],
+      preferredTabs: ['items', 'receipt', 'calendar'],
+      availableTabs: ['items', 'receipt', 'calendar', 'reports', 'warehouse', 'setting', 'employees'],
       modifiedAt: new Date().toISOString(),
       userId: '',
       username: '',
-      role: 'USER'
+      role: 'EMPLOYEE'
     };
   }
 
@@ -41,7 +43,17 @@ class NavigationService {
       console.log('📱 Fetching navigation preferences from API');
       const response = await httpClient.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.USER.NAVIGATION_PREFERENCES}`);
       
-      const preferences = response.data;
+      // Handle backend response format
+      const data = response.data.data || response.data; // Support both formats
+      const defaults = this.getDefaultPreferences();
+      const preferences = {
+        preferredTabs: data.preferredTabs ?? defaults.preferredTabs,
+        availableTabs: data.availableTabs ?? defaults.availableTabs,
+        modifiedAt: data.modifiedAt ?? new Date().toISOString(),
+        userId: data.userId ?? '',
+        username: data.username ?? '',
+        role: data.role ?? defaults.role
+      };
       
       // Cache the response
       await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(preferences));
@@ -49,15 +61,23 @@ class NavigationService {
       
       return preferences;
     } catch (error: any) {
-      // ✅ Silently handle INVALID_TOKEN errors (user not logged in)
-      // Check both message and potential variations for robustness
-      if (error.message === 'INVALID_TOKEN' || error.message?.includes('INVALID_TOKEN')) {
-        console.log('ℹ️ Navigation preferences not loaded: User not authenticated');
-        return this.getDefaultPreferences();
+      // ✅ Silently handle errors - don't show to user
+      const status = error.response?.status;
+      let errorType = 'error';
+      
+      if (error.message === 'INVALID_TOKEN') {
+        errorType = 'not authenticated';
+      } else if (status === 500) {
+        errorType = 'backend endpoint not ready';
+      } else if (status === 404) {
+        errorType = 'endpoint not found';
+      } else if (error.message?.trim()) {
+        errorType = `error: ${error.message}`;
       }
       
-      // Only log other errors, don't throw
-      console.error('❌ Error fetching navigation preferences:', error.message || error);
+      console.log(`ℹ️ Navigation preferences: ${errorType}, using defaults`);
+      
+      // ✅ Return safe defaults (EMPLOYEE role with calendar)
       return this.getDefaultPreferences();
     }
   }
