@@ -86,15 +86,20 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   ];
   
-  // ✅ FIX: Filter out Team option for non-GM users
-  const availableOptions: NavigationOption[] = useMemo(() => {
-    return allOptions.filter(option => {
+  // Helper function to filter options based on Team access
+  const filterByTeamAccess = useCallback((options: NavigationOption[]) => {
+    return options.filter(option => {
       if (option.key === 'employees') {
         return canAccessTeam;
       }
       return true;
     });
   }, [canAccessTeam]);
+
+  // ✅ FIX: Filter out Team option for non-GM users
+  const availableOptions: NavigationOption[] = useMemo(() => {
+    return filterByTeamAccess(allOptions);
+  }, [filterByTeamAccess]);
 
   // ✅ FIX: Default to first available options, excluding Team for non-GM users
   const getDefaultNavItems = useCallback((): NavigationOption[] => {
@@ -115,7 +120,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     return availableOptions.slice(0, 3);
   }, [canAccessTeam, availableOptions]);
 
-  const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>([]);
+  const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>(() => {
+    // Safe initial state - will be updated by useEffect with proper filtered options
+    return allOptions.filter(o => o.key !== 'employees').slice(0, 3);
+  });
 
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
   const [preferences, setPreferences] = useState<NavigationPreferences | null>(null);
@@ -142,12 +150,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       const mappedOptions = mapTabKeysToOptions(prefs.preferredTabs);
       
       // ✅ FIX: Filter out Team option if user doesn't have permission
-      const filteredOptions = mappedOptions.filter(option => {
-        if (option.key === 'employees') {
-          return canAccessTeam;
-        }
-        return true;
-      });
+      const filteredOptions = filterByTeamAccess(mappedOptions);
       
       // Validate we have exactly 3 tabs, or use defaults
       if (filteredOptions.length === 3) {
@@ -155,10 +158,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         console.log('✅ Navigation preferences loaded:', filteredOptions.map(o => o.key));
       } else if (filteredOptions.length > 0) {
         // If we have some options but not exactly 3, fill with available options
-        const currentAvailableOptions = allOptions.filter(opt => {
-          if (opt.key === 'employees') return canAccessTeam;
-          return true;
-        });
+        const currentAvailableOptions = filterByTeamAccess(allOptions);
         const needed = 3 - filteredOptions.length;
         const additionalOptions = currentAvailableOptions
           .filter(opt => !filteredOptions.find(fo => fo.key === opt.key))
@@ -177,7 +177,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [canAccessTeam, getDefaultNavItems, mapTabKeysToOptions]);
+  }, [filterByTeamAccess, getDefaultNavItems, mapTabKeysToOptions]);
 
   // Initialize selectedNavItems on first render
   useEffect(() => {
