@@ -96,7 +96,7 @@ const createHttpClient = (): AxiosInstance => {
       const url = error.config?.url || '';
       
       // ✅ Don't log 500 errors for navigation-preferences (backend might not be ready)
-      if (url.includes('navigation-preferences') && status === 500) {
+      if (url.endsWith('/api/user/me/navigation-preferences') && status === 500) {
         console.log('ℹ️ Navigation preferences endpoint not ready, will use defaults');
         return Promise.reject(error); // Still reject but without scary logs
       }

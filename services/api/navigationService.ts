@@ -45,9 +45,10 @@ class NavigationService {
       
       // Handle backend response format
       const data = response.data.data || response.data; // Support both formats
+      const defaults = this.getDefaultPreferences();
       const preferences = {
-        preferredTabs: data.preferredTabs || [],
-        availableTabs: data.availableTabs || [],
+        preferredTabs: data.preferredTabs || defaults.preferredTabs,
+        availableTabs: data.availableTabs || defaults.availableTabs,
         modifiedAt: data.modifiedAt || new Date().toISOString(),
         userId: data.userId || '',
         username: data.username || '',
@@ -62,16 +63,12 @@ class NavigationService {
     } catch (error: any) {
       // ✅ Silently handle errors - don't show to user
       const status = error.response?.status;
+      const errorType = error.message === 'INVALID_TOKEN' ? 'not authenticated' :
+                       status === 500 ? 'backend endpoint not ready' :
+                       status === 404 ? 'endpoint not found' :
+                       `error: ${error.message}`;
       
-      if (error.message === 'INVALID_TOKEN') {
-        console.log('ℹ️ Navigation preferences: User not authenticated');
-      } else if (status === 500) {
-        console.log('ℹ️ Navigation preferences: Backend endpoint not ready, using defaults');
-      } else if (status === 404) {
-        console.log('ℹ️ Navigation preferences: Endpoint not found, using defaults');
-      } else {
-        console.log('ℹ️ Navigation preferences: Using defaults due to error:', error.message);
-      }
+      console.log(`ℹ️ Navigation preferences: ${errorType}, using defaults`);
       
       // ✅ Return safe defaults (EMPLOYEE role with calendar)
       return this.getDefaultPreferences();
