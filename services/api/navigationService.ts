@@ -47,12 +47,12 @@ class NavigationService {
       const data = response.data.data || response.data; // Support both formats
       const defaults = this.getDefaultPreferences();
       const preferences = {
-        preferredTabs: data.preferredTabs || defaults.preferredTabs,
-        availableTabs: data.availableTabs || defaults.availableTabs,
-        modifiedAt: data.modifiedAt || new Date().toISOString(),
-        userId: data.userId || '',
-        username: data.username || '',
-        role: data.role || defaults.role
+        preferredTabs: data.preferredTabs ?? defaults.preferredTabs,
+        availableTabs: data.availableTabs ?? defaults.availableTabs,
+        modifiedAt: data.modifiedAt ?? new Date().toISOString(),
+        userId: data.userId ?? '',
+        username: data.username ?? '',
+        role: data.role ?? defaults.role
       };
       
       // Cache the response
@@ -71,7 +71,7 @@ class NavigationService {
         errorType = 'backend endpoint not ready';
       } else if (status === 404) {
         errorType = 'endpoint not found';
-      } else if (error.message) {
+      } else if (error.message?.trim()) {
         errorType = `error: ${error.message}`;
       }
       

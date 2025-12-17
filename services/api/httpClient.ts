@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { Platform, Alert } from 'react-native';
-import { API_CONFIG, getSessionInfo, ApiResponse, getNetworkDiagnostics } from './config';
+import { API_CONFIG, API_ENDPOINTS, getSessionInfo, ApiResponse, getNetworkDiagnostics } from './config';
 import { tokenManager } from '../../utils/tokenManager';
 
 // Track if we're currently refreshing token to avoid multiple refresh calls
@@ -96,7 +96,7 @@ const createHttpClient = (): AxiosInstance => {
       const url = error.config?.url || '';
       
       // ✅ Don't log 500 errors for navigation-preferences (backend might not be ready)
-      if (url.endsWith('/api/user/me/navigation-preferences') && status === 500) {
+      if (url.endsWith(API_ENDPOINTS.USER.NAVIGATION_PREFERENCES) && status === 500) {
         console.log('ℹ️ Navigation preferences endpoint not ready, will use defaults');
         return Promise.reject(error); // Still reject but without scary logs
       }
