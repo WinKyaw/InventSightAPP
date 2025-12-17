@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo, useRef, useCallback } from 'react';
 import { navigationService, NavigationPreferences } from '../services/api/navigationService';
 import { useAuth } from './AuthContext';
 import { canManageEmployees } from '../utils/permissions';
@@ -87,15 +87,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   ];
   
   // ✅ FIX: Filter out Team option for non-GM users
-  const availableOptions: NavigationOption[] = allOptions.filter(option => {
-    if (option.key === 'employees') {
-      return canAccessTeam;
-    }
-    return true;
-  });
+  const availableOptions: NavigationOption[] = useMemo(() => {
+    return allOptions.filter(option => {
+      if (option.key === 'employees') {
+        return canAccessTeam;
+      }
+      return true;
+    });
+  }, [canAccessTeam]);
 
   // ✅ FIX: Default to first available options, excluding Team for non-GM users
-  const getDefaultNavItems = (): NavigationOption[] => {
+  const getDefaultNavItems = useCallback((): NavigationOption[] => {
     // For GM+ users: Items, Receipt, Team
     // For non-GM users: Items, Receipt, Calendar
     if (canAccessTeam && availableOptions.length >= 3) {
@@ -110,9 +112,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
     // Non-GM users get first 3 available options (which won't include Team)
     return availableOptions.slice(0, 3);
-  };
+  }, [canAccessTeam, availableOptions]);
 
-  const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>(getDefaultNavItems());
+  const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>(() => {
+    // Use lazy initialization to avoid issues with initial render
+    return availableOptions.slice(0, 3);
+  });
 
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
   const [preferences, setPreferences] = useState<NavigationPreferences | null>(null);
@@ -122,13 +127,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const prevCanAccessTeamRef = useRef(canAccessTeam);
 
   // Map API tab keys to NavigationOption objects
-  const mapTabKeysToOptions = (tabKeys: string[]): NavigationOption[] => {
+  const mapTabKeysToOptions = useCallback((tabKeys: string[]): NavigationOption[] => {
     return tabKeys
       .map(key => availableOptions.find(opt => opt.key === key))
       .filter((opt): opt is NavigationOption => opt !== undefined);
-  };
+  }, [availableOptions]);
 
-  const loadPreferences = async (forceRefresh = false) => {
+  const loadPreferences = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
       const prefs = await navigationService.getNavigationPreferences(forceRefresh);
@@ -169,7 +174,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [canAccessTeam, availableOptions, getDefaultNavItems, mapTabKeysToOptions]);
 
   useEffect(() => {
     // ✅ Only load preferences if user is authenticated
@@ -181,7 +186,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setPreferences(null);
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadPreferences]);
 
   // ✅ FIX: Update navigation items when user role changes
   useEffect(() => {
@@ -190,24 +195,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       prevCanAccessTeamRef.current = canAccessTeam;
       
       if (isAuthenticated && user) {
-        // Check if current selectedNavItems includes Team but user no longer has access
-        const hasTeamInNav = selectedNavItems.some(item => item.key === 'employees');
-        if (hasTeamInNav && !canAccessTeam) {
-          console.log('🔒 User role changed - removing Team from navigation');
-          // Reload preferences to get filtered options
-          loadPreferences(true);
-        } else if (!hasTeamInNav && canAccessTeam) {
-          console.log('🔓 User role changed - user now has access to Team');
-          // Reload preferences in case Team should be added
-          loadPreferences(true);
-        }
+        console.log('🔄 User role changed - reloading navigation preferences');
+        // Reload preferences to get filtered options
+        loadPreferences(true);
       }
     }
-  }, [canAccessTeam, isAuthenticated, user, selectedNavItems]);
+  }, [canAccessTeam, isAuthenticated, user, loadPreferences]);
 
-  const refreshPreferences = async () => {
+  const refreshPreferences = useCallback(async () => {
     await loadPreferences(true);
-  };
+  }, [loadPreferences]);
 
   const updateNavigationPreferences = async (item1: NavigationOption, item2: NavigationOption, item3?: NavigationOption) => {
     try {
