@@ -115,12 +115,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     return availableOptions.slice(0, 3);
   }, [canAccessTeam, availableOptions]);
 
-  const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>(() => {
-    // Use lazy initialization with a safe default
-    // This will be updated by useEffect when preferences load
-    const safeDefault = allOptions.filter(o => o.key !== 'employees').slice(0, 3);
-    return safeDefault.length >= 3 ? safeDefault : allOptions.slice(0, 3);
-  });
+  const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>([]);
 
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
   const [preferences, setPreferences] = useState<NavigationPreferences | null>(null);
@@ -128,6 +123,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   
   // Track previous canAccessTeam value to detect changes
   const prevCanAccessTeamRef = useRef(canAccessTeam);
+  const isInitializedRef = useRef(false);
 
   // Map API tab keys to NavigationOption objects
   const mapTabKeysToOptions = useCallback((tabKeys: string[]): NavigationOption[] => {
@@ -159,8 +155,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         console.log('✅ Navigation preferences loaded:', filteredOptions.map(o => o.key));
       } else if (filteredOptions.length > 0) {
         // If we have some options but not exactly 3, fill with available options
+        const currentAvailableOptions = allOptions.filter(opt => {
+          if (opt.key === 'employees') return canAccessTeam;
+          return true;
+        });
         const needed = 3 - filteredOptions.length;
-        const additionalOptions = availableOptions
+        const additionalOptions = currentAvailableOptions
           .filter(opt => !filteredOptions.find(fo => fo.key === opt.key))
           .slice(0, needed);
         const finalOptions = [...filteredOptions, ...additionalOptions].slice(0, 3);
@@ -177,7 +177,15 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [canAccessTeam, getDefaultNavItems, mapTabKeysToOptions, availableOptions]);
+  }, [canAccessTeam, getDefaultNavItems, mapTabKeysToOptions]);
+
+  // Initialize selectedNavItems on first render
+  useEffect(() => {
+    if (!isInitializedRef.current && availableOptions.length > 0) {
+      isInitializedRef.current = true;
+      setSelectedNavItems(getDefaultNavItems());
+    }
+  }, [availableOptions, getDefaultNavItems]);
 
   useEffect(() => {
     // ✅ Only load preferences if user is authenticated
@@ -193,8 +201,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   // ✅ FIX: Update navigation items when user role changes
   useEffect(() => {
-    // Only act if canAccessTeam actually changed
-    if (prevCanAccessTeamRef.current !== canAccessTeam) {
+    // Only act if canAccessTeam actually changed and component is initialized
+    if (isInitializedRef.current && prevCanAccessTeamRef.current !== canAccessTeam) {
       prevCanAccessTeamRef.current = canAccessTeam;
       
       if (isAuthenticated && user) {
