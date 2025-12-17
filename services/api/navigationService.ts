@@ -17,26 +17,14 @@ class NavigationService {
   private getDefaultPreferences(): NavigationPreferences {
     // Default to EMPLOYEE role for most restrictive access
     // Role will be properly set when preferences are fetched from backend
-    const role = 'EMPLOYEE';
-    
-    // GM+ roles get team access
-    const isGMPlus = ['OWNER', 'CO_OWNER', 'MANAGER', 'ADMIN'].includes(role);
-    
-    const defaultTabs = isGMPlus 
-      ? ['items', 'receipt', 'employees']
-      : ['items', 'receipt', 'calendar'];
-    
-    const availableTabs = isGMPlus
-      ? ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting']
-      : ['items', 'receipt', 'calendar', 'reports', 'warehouse', 'setting'];
-    
+    // EMPLOYEE users get calendar instead of team by default
     return {
-      preferredTabs: defaultTabs,
-      availableTabs: availableTabs,
+      preferredTabs: ['items', 'receipt', 'calendar'],
+      availableTabs: ['items', 'receipt', 'calendar', 'reports', 'warehouse', 'setting', 'employees'],
       modifiedAt: new Date().toISOString(),
       userId: '',
       username: '',
-      role: role
+      role: 'EMPLOYEE'
     };
   }
 

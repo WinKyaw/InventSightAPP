@@ -119,8 +119,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       // ✅ Don't throw - just use defaults
       console.log('ℹ️ Using default navigation preferences');
-      const defaults = await navigationService.getNavigationPreferences(false);
-      setPreferences(defaults);
+      try {
+        const defaults = await navigationService.getNavigationPreferences(false);
+        setPreferences(defaults);
+      } catch (innerError) {
+        // If even getting defaults fails, we'll use the empty state
+        console.log('⚠️ Could not load default preferences');
+      }
     } finally {
       setLoading(false);
     }
