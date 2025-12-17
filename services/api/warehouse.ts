@@ -15,14 +15,17 @@ export async function getWarehouses(): Promise<WarehouseSummary[]> {
   try {
     const response = await apiClient.get<WarehouseSummary[]>('/api/warehouses');
     
-    // Handle different response formats
-    const warehouseData = response?.data || response || [];
+    // Handle different response formats - some APIs wrap data in a data property
+    const warehouseData = response?.data || response;
     
     // Ensure it's always an array
     if (Array.isArray(warehouseData)) {
       return warehouseData;
+    } else if (warehouseData === undefined || warehouseData === null) {
+      console.warn('⚠️ Warehouse API returned null/undefined');
+      return [];
     } else {
-      console.warn('⚠️ Unexpected warehouse response format:', warehouseData);
+      console.warn('⚠️ Unexpected warehouse response format:', typeof warehouseData);
       return [];
     }
   } catch (error) {
@@ -44,10 +47,20 @@ export async function getWarehouseInventory(warehouseId: string): Promise<Wareho
     const response = await apiClient.get<WarehouseInventoryRow[]>(
       `/api/sales/inventory/warehouse/${warehouseId}`
     );
-    return response || [];
+    
+    // Handle different response formats
+    const inventoryData = response?.data || response || [];
+    
+    // Ensure it's always an array
+    if (Array.isArray(inventoryData)) {
+      return inventoryData;
+    } else {
+      console.warn('⚠️ Unexpected inventory response format:', inventoryData);
+      return [];
+    }
   } catch (error) {
     console.error('Failed to fetch warehouse inventory:', error);
-    throw error;
+    return []; // Return empty array on error instead of throwing
   }
 }
 
