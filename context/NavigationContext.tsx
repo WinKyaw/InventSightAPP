@@ -28,7 +28,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
   
   // ✅ FIX: Check if user is GM+ (can manage employees/team)
-  const canAccessTeam = canManageEmployees(user?.role);
+  // Use useMemo to recompute when user role changes
+  const canAccessTeam = React.useMemo(() => {
+    return canManageEmployees(user?.role);
+  }, [user?.role]);
   
   // ✅ FIX: Filter available options based on user permissions
   const allOptions: NavigationOption[] = [
@@ -96,11 +99,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // For GM+ users: Items, Receipt, Team
     // For non-GM users: Items, Receipt, Calendar
     if (canAccessTeam && availableOptions.length >= 3) {
-      return [
-        availableOptions.find(o => o.key === 'items')!,
-        availableOptions.find(o => o.key === 'receipt')!,
-        availableOptions.find(o => o.key === 'employees')!
-      ].filter(Boolean);
+      const items = availableOptions.find(o => o.key === 'items');
+      const receipt = availableOptions.find(o => o.key === 'receipt');
+      const team = availableOptions.find(o => o.key === 'employees');
+      
+      // Only return if all three are found
+      if (items && receipt && team) {
+        return [items, receipt, team];
+      }
     }
     // Non-GM users get first 3 available options (which won't include Team)
     return availableOptions.slice(0, 3);
@@ -173,6 +179,19 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   }, [isAuthenticated]);
+
+  // ✅ FIX: Update navigation items when user role changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Check if current selectedNavItems includes Team but user no longer has access
+      const hasTeamInNav = selectedNavItems.some(item => item.key === 'employees');
+      if (hasTeamInNav && !canAccessTeam) {
+        console.log('🔒 User role changed - removing Team from navigation');
+        // Reload preferences to get filtered options
+        loadPreferences(true);
+      }
+    }
+  }, [canAccessTeam, isAuthenticated, user]);
 
   const refreshPreferences = async () => {
     await loadPreferences(true);
