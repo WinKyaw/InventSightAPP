@@ -33,7 +33,7 @@ type TabType = "create" | "list";
 
 export default function ReceiptScreen() {
   // ✅ SECURITY FIX: Add authentication check
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated, isInitialized, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
