@@ -1,5 +1,5 @@
 import { httpClient } from './httpClient';
-import { API_CONFIG, API_ENDPOINTS } from './config';
+import { API_ENDPOINTS } from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface NavigationPreferences {
