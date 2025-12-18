@@ -146,11 +146,18 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       const prefs = await navigationService.getNavigationPreferences(forceRefresh);
       setPreferences(prefs);
       
+      console.log('📱 Navigation preferences loaded:');
+      console.log('  - Preferred tabs:', prefs.preferredTabs);
+      console.log('  - Available tabs:', prefs.availableTabs);
+      console.log('  - User can access Team:', canAccessTeam);
+      
       // Map preferredTabs from API to NavigationOption objects
       const mappedOptions = mapTabKeysToOptions(prefs.preferredTabs);
+      console.log('  - Mapped options:', mappedOptions.map(o => o.key));
       
       // ✅ FIX: Filter out Team option if user doesn't have permission
       const filteredOptions = filterByTeamAccess(mappedOptions);
+      console.log('  - Filtered options (after Team access check):', filteredOptions.map(o => o.key));
       
       // Validate we have exactly 3 tabs, or use defaults
       if (filteredOptions.length === 3) {
@@ -176,7 +183,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [filterByTeamAccess, getDefaultNavItems, mapTabKeysToOptions]);
+  }, [filterByTeamAccess, getDefaultNavItems, mapTabKeysToOptions, canAccessTeam, availableOptions]);
 
   // Initialize selectedNavItems when availableOptions are ready
   useEffect(() => {
