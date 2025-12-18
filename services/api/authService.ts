@@ -67,6 +67,7 @@ class AuthService {
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
   try {
+    // ✅ SAFE: Log email only, NOT password
     console.log('🔐 AuthService: Attempting login for:', credentials.email);
     
     const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`;
@@ -76,12 +77,13 @@ class AuthService {
       fullUrl,
       {
         email: credentials.email.toLowerCase().trim(),
-        password: credentials.password,
+        password: credentials.password, // Send but don't log
       }
     );
 
     const apiResponse = response.data;
-    console.log('📥 Raw API Response:', apiResponse);
+    // ✅ SECURITY FIX: Don't log response containing tokens
+    // console.log('📥 Raw API Response:', apiResponse); // REMOVED - contains token!
     
     // Transform the API response to match expected LoginResponse format
     const loginData: LoginResponse = {
@@ -106,11 +108,17 @@ class AuthService {
       await tokenManager.storeUser(loginData.user);
     }
 
+    // ✅ SAFE: Log only non-sensitive data
     console.log('✅ AuthService: Login successful for user:', loginData.user.email);
+    console.log('  - User ID:', loginData.user.id);
+    console.log('  - Role:', loginData.user.role);
+    // Do NOT log the token - it's sensitive!
+    
     return loginData;
   } catch (error: any) {
     console.log('we are in the catch');
-    console.error('❌ AuthService: Login failed:', error);
+    // ✅ SAFE: Don't log credentials in error
+    console.error('❌ AuthService: Login failed for:', credentials.email);
     
     // Network/connection errors
     if (error.code === 'ECONNABORTED' || error.code === 'ECONNREFUSED') {
@@ -188,6 +196,7 @@ class AuthService {
    */
   async signup(credentials: SignupCredentials): Promise<LoginResponse> {
     try {
+      // ✅ SAFE: Log only non-sensitive fields
       console.log('🔐 AuthService: Attempting signup for:', credentials.email);
       
       const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.SIGNUP}`;
@@ -200,12 +209,13 @@ class AuthService {
           lastName: credentials.lastName.trim(),
           username: credentials.firstName.trim() + "." + credentials.lastName.trim() + generateRandomId(),
           email: credentials.email.toLowerCase().trim(),
-          password: credentials.password,
+          password: credentials.password, // Send but don't log
         }
       );
 
       const apiResponse = response.data;
-      console.log('📥 Raw Signup API Response:', apiResponse);
+      // ✅ SECURITY FIX: Don't log response containing tokens
+      // console.log('📥 Raw Signup API Response:', apiResponse); // REMOVED - contains token!
       
       // Transform the API response to match expected LoginResponse format
       // Backend returns user data at root level, not nested in "user" object
@@ -231,10 +241,16 @@ class AuthService {
         await tokenManager.storeUser(signupData.user);
       }
 
+      // ✅ SAFE: Log only non-sensitive data
       console.log('✅ AuthService: Signup successful for user:', signupData.user.email);
+      console.log('  - User ID:', signupData.user.id);
+      console.log('  - Role:', signupData.user.role);
+      // Do NOT log the token - it's sensitive!
+      
       return signupData;
     } catch (error: any) {
-      console.error('❌ AuthService: Signup failed:', error);
+      // ✅ SAFE: Don't log credentials in error
+      console.error('❌ AuthService: Signup failed for:', credentials.email);
       
       // Network/connection errors
       if (error.code === 'ECONNABORTED' || error.code === 'ECONNREFUSED') {
@@ -427,19 +443,22 @@ class AuthService {
 
   /**
    * Change password
+   * ✅ SECURE: Never logs old or new passwords
    */
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     try {
+      // ✅ SAFE: Don't log passwords
       console.log('🔐 AuthService: Changing password');
       
       await httpClient.put(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
-        currentPassword,
-        newPassword,
+        currentPassword, // Send but don't log
+        newPassword,     // Send but don't log
       });
       
       console.log('✅ AuthService: Password changed successfully');
     } catch (error: any) {
-      console.error('❌ AuthService: Password change failed:', error);
+      // ✅ SAFE: Don't log passwords in error
+      console.error('❌ AuthService: Password change failed');
       
       if (error.response?.status === 400) {
         throw new Error('Current password is incorrect');

@@ -46,6 +46,7 @@ export interface ReceiptItem {
   price: number;
   quantity: number;
   total: number;
+  stock: number; // Available stock from product
 }
 
 export interface Receipt {
