@@ -46,7 +46,16 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
   };
 
   const getCurrentDateTime = () => {
-    return new Date().toISOString();
+    return new Date().toLocaleString('en-US', { 
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
   };
 
   const fixedMenuItems = [
@@ -252,7 +261,7 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
                 </TouchableOpacity>
                 
                 {/* Bottom padding for safe scrolling */}
-                <View style={{ height: 50 }} />
+                <View style={styles.bottomPadding} />
               </ScrollView>
             </SafeAreaView>
           </View>
@@ -473,5 +482,8 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  bottomPadding: {
+    height: 50,
   },
 });
