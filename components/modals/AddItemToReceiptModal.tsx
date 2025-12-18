@@ -20,6 +20,9 @@ import { Item } from '../../constants/types';
 // Debounce delay for product search (ms)
 const SEARCH_DEBOUNCE_DELAY = 500;
 
+// Initial products load limit
+const INITIAL_PRODUCTS_LIMIT = 100;
+
 interface AddItemToReceiptModalProps {
   visible: boolean;
   onClose: () => void;
@@ -48,7 +51,7 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
           setIsLoadingInitial(true);
           console.log('📦 Loading all products from API...');
           
-          const results = await ProductService.getAllProducts(1, 100);
+          const results = await ProductService.getAllProducts(1, INITIAL_PRODUCTS_LIMIT);
           
           // Convert Product[] to Item[] format
           const items: Item[] = results.products.map((product) => ({
@@ -128,7 +131,7 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
         setHasSearched(true);
       } catch (error) {
         console.error('Error searching products:', error);
-        Alert.alert('Error', 'Failed to search products. Using loaded inventory.');
+        Alert.alert('Error', 'Failed to search products. Using local inventory.');
         setSearchResults([]);
         setHasSearched(true);
       } finally {
