@@ -32,9 +32,63 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
   const { items } = useItems();
   const { addItemToReceipt, receiptItems, useApiIntegration } = useReceipt();
   const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState<Item[]>([]);
   const [searchResults, setSearchResults] = useState<Item[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // ✅ Load all products from API when modal opens
+  useEffect(() => {
+    if (!visible) return;
+    
+    if (useApiIntegration) {
+      const loadAllProducts = async () => {
+        try {
+          setIsLoadingInitial(true);
+          console.log('📦 Loading all products from API...');
+          
+          const results = await ProductService.getAllProducts(1, 100);
+          
+          // Convert Product[] to Item[] format
+          const items: Item[] = results.products.map((product) => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: product.quantity,
+            category: product.category,
+            description: product.description,
+            sku: product.sku,
+            barcode: product.sku, // Use SKU as fallback if barcode not available
+            minStock: product.minStock,
+            maxStock: product.maxStock,
+            total: product.price * product.quantity,
+            expanded: false,
+            salesCount: 0, // Sales count not available from product API
+          }));
+          
+          console.log(`✅ Loaded ${items.length} products from API`);
+          setAllProducts(items);
+        } catch (error) {
+          console.error('❌ Error loading products:', error);
+          Alert.alert('Error', 'Failed to load products from API. Using local inventory.');
+          setAllProducts(items); // Fallback to local items
+        } finally {
+          setIsLoadingInitial(false);
+        }
+      };
+      
+      loadAllProducts();
+    } else {
+      // Use local items when API integration is disabled
+      setAllProducts(items);
+    }
+    
+    // Reset search state when modal opens
+    setSearchQuery('');
+    setSearchResults([]);
+    setHasSearched(false);
+  }, [visible, useApiIntegration, items]);
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
@@ -74,7 +128,7 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
         setHasSearched(true);
       } catch (error) {
         console.error('Error searching products:', error);
-        Alert.alert('Error', 'Failed to search products. Using local inventory.');
+        Alert.alert('Error', 'Failed to search products. Using loaded inventory.');
         setSearchResults([]);
         setHasSearched(true);
       } finally {
@@ -85,23 +139,26 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
     return () => clearTimeout(timeoutId);
   }, [searchQuery, useApiIntegration]);
 
-  // Filter items based on search query (local fallback)
+  // ✅ Filter items: prioritize search results, then all products
   const filteredItems = useMemo(() => {
-    // Use API search results if available
-    if (useApiIntegration && (hasSearched || isSearching)) {
+    // When searching with API integration
+    if (useApiIntegration && searchQuery.trim() && (hasSearched || isSearching)) {
       return searchResults;
     }
     
-    // Fall back to local filtering
-    if (!searchQuery.trim()) return items;
+    // When not searching: show all loaded products (from API or local)
+    if (!searchQuery.trim()) {
+      return allProducts;
+    }
     
-    return items.filter(item =>
+    // Local filtering on allProducts as fallback
+    return allProducts.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.barcode?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [items, searchQuery, searchResults, hasSearched, isSearching, useApiIntegration]);
+  }, [allProducts, searchQuery, searchResults, hasSearched, isSearching, useApiIntegration]);
 
   // Check if item is already in receipt
   const isItemInReceipt = (itemId: number) => {
@@ -205,7 +262,9 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
 
         <View style={styles.itemCount}>
           <Text style={styles.itemCountText}>
-            {isSearching ? (
+            {isLoadingInitial ? (
+              'Loading products...'
+            ) : isSearching ? (
               'Searching...'
             ) : (
               `${filteredItems.length} item${filteredItems.length !== 1 ? 's' : ''} ${
@@ -213,12 +272,17 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
               }`
             )}
           </Text>
-          {useApiIntegration && (
-            <Text style={styles.apiIndicator}>• API Search Active</Text>
+          {useApiIntegration && !isLoadingInitial && (
+            <Text style={styles.apiIndicator}>• API Active</Text>
           )}
         </View>
 
-        {isSearching ? (
+        {isLoadingInitial ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#F59E0B" />
+            <Text style={styles.loadingText}>Loading products from API...</Text>
+          </View>
+        ) : isSearching ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#F59E0B" />
             <Text style={styles.loadingText}>Searching products...</Text>

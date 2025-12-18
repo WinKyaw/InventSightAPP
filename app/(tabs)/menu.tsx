@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { NavigationSettingsModal } from '../../components/modals/NavigationSettingsModal';
 
 export default function MenuScreen() {
   const { user, logout } = useAuth();
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -56,7 +58,13 @@ export default function MenuScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>NAVIGATION</Text>
-            <TouchableOpacity style={styles.customizeButton}>
+            <TouchableOpacity 
+              style={styles.customizeButton}
+              onPress={() => {
+                console.log('📱 Opening Customize Navigation modal...');
+                setShowCustomizeModal(true);
+              }}
+            >
               <Text style={styles.customizeButtonText}>⚙️ Customize</Text>
             </TouchableOpacity>
           </View>
@@ -129,6 +137,12 @@ export default function MenuScreen() {
         {/* Add extra padding at bottom for easier scrolling */}
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* ✅ Customize Navigation Modal */}
+      <NavigationSettingsModal
+        visible={showCustomizeModal}
+        onClose={() => setShowCustomizeModal(false)}
+      />
     </View>
   );
 }
