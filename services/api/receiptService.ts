@@ -6,6 +6,8 @@ const RECEIPT_ENDPOINTS = {
   CREATE: '/api/receipts',
   GET_ALL: '/api/receipts',
   GET_BY_ID: (id: string | number) => `/api/receipts/${id}`,
+  UPDATE: (id: string | number) => `/api/receipts/${id}`,
+  DELETE: (id: string | number) => `/api/receipts/${id}`,
   GET_BY_DATE: '/api/receipts/by-date',
 };
 
@@ -23,6 +25,30 @@ export interface ReceiptResponse {
   totalRevenue: number;
 }
 
+export interface PaginatedReceiptResponse {
+  content: Receipt[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  hasMore: boolean;
+}
+
+// Backend response types
+interface BackendPaginatedResponse {
+  content: Receipt[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+}
+
+interface BackendLegacyResponse {
+  receipts: Receipt[];
+  totalCount: number;
+  totalRevenue: number;
+}
+
+type BackendReceiptResponse = BackendPaginatedResponse | BackendLegacyResponse | Receipt[];
+
 /**
  * Receipt API Client - Simple HTTP client for receipt operations
  */
@@ -35,17 +61,114 @@ export class ReceiptService {
   }
 
   /**
-   * Get all receipts
+   * Get all receipts with pagination
    */
-  static async getAllReceipts(limit?: number, offset?: number): Promise<ReceiptResponse> {
+  static async getAllReceipts(page = 0, size = 20): Promise<ReceiptResponse> {
     const params = new URLSearchParams();
-    if (limit) params.append('limit', limit.toString());
-    if (offset) params.append('offset', offset.toString());
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    params.append('sort', 'createdAt,desc');
 
-    const queryString = params.toString();
-    const url = queryString ? `${RECEIPT_ENDPOINTS.GET_ALL}?${queryString}` : RECEIPT_ENDPOINTS.GET_ALL;
+    const url = `${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`;
+    const response = await apiClient.get<BackendReceiptResponse>(url);
 
-    return await apiClient.get<ReceiptResponse>(url);
+    // Handle paginated response
+    if ('content' in response && Array.isArray(response.content)) {
+      return {
+        receipts: response.content,
+        totalCount: response.totalElements || 0,
+        totalRevenue: response.content.reduce((sum: number, r: Receipt) => sum + r.total, 0),
+      };
+    }
+    
+    // Handle legacy response
+    if ('receipts' in response && Array.isArray(response.receipts)) {
+      return {
+        receipts: response.receipts,
+        totalCount: response.totalCount || response.receipts.length,
+        totalRevenue: response.totalRevenue || 0,
+      };
+    }
+    
+    // Handle array response
+    if (Array.isArray(response)) {
+      return {
+        receipts: response,
+        totalCount: response.length,
+        totalRevenue: response.reduce((sum: number, r: Receipt) => sum + r.total, 0),
+      };
+    }
+
+    // Fallback for unexpected response
+    return {
+      receipts: [],
+      totalCount: 0,
+      totalRevenue: 0,
+    };
+  }
+
+  /**
+   * Get receipts with full pagination info
+   */
+  static async getReceiptsPaginated(page = 0, size = 20): Promise<PaginatedReceiptResponse> {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    params.append('sort', 'createdAt,desc');
+
+    const url = `${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`;
+    const response = await apiClient.get<BackendReceiptResponse>(url);
+
+    // Handle paginated response
+    if ('content' in response && Array.isArray(response.content)) {
+      const totalElements = response.totalElements || response.content.length;
+      const totalPages = response.totalPages || Math.ceil(totalElements / size);
+      const currentPage = response.number !== undefined ? response.number : page;
+
+      return {
+        content: response.content,
+        totalElements,
+        totalPages,
+        currentPage,
+        hasMore: currentPage < totalPages - 1,
+      };
+    }
+
+    // Handle legacy response
+    if ('receipts' in response && Array.isArray(response.receipts)) {
+      const totalElements = response.totalCount || response.receipts.length;
+      const totalPages = Math.ceil(totalElements / size);
+
+      return {
+        content: response.receipts,
+        totalElements,
+        totalPages,
+        currentPage: page,
+        hasMore: page < totalPages - 1,
+      };
+    }
+
+    // Handle array response
+    if (Array.isArray(response)) {
+      const totalPages = Math.ceil(response.length / size);
+
+      return {
+        content: response,
+        totalElements: response.length,
+        totalPages,
+        currentPage: page,
+        hasMore: page < totalPages - 1,
+      };
+    }
+
+    // Fallback for unexpected response
+    return {
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      currentPage: 0,
+      hasMore: false,
+    };
   }
 
   /**
@@ -65,6 +188,20 @@ export class ReceiptService {
 
     const url = `${RECEIPT_ENDPOINTS.GET_BY_DATE}?${params.toString()}`;
     return await apiClient.get<Receipt[]>(url);
+  }
+
+  /**
+   * Update an existing receipt
+   */
+  static async updateReceipt(id: string | number, receiptData: Partial<CreateReceiptRequest>): Promise<Receipt> {
+    return await apiClient.put<Receipt>(RECEIPT_ENDPOINTS.UPDATE(id), receiptData);
+  }
+
+  /**
+   * Delete a receipt
+   */
+  static async deleteReceipt(id: string | number): Promise<void> {
+    await apiClient.delete<void>(RECEIPT_ENDPOINTS.DELETE(id));
   }
 }
 
