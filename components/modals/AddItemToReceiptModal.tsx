@@ -17,6 +17,9 @@ import { ProductService } from '../../services/api/productService';
 import SearchBar from '../ui/SearchBar';
 import { Item } from '../../constants/types';
 
+// Debounce delay for product search (ms)
+const SEARCH_DEBOUNCE_DELAY = 500;
+
 interface AddItemToReceiptModalProps {
   visible: boolean;
   onClose: () => void;
@@ -59,12 +62,12 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
           category: product.category,
           description: product.description,
           sku: product.sku,
-          barcode: product.sku, // Use SKU as barcode if not available
+          barcode: product.sku, // Use SKU as fallback if barcode not available
           minStock: product.minStock,
           maxStock: product.maxStock,
           total: product.price * product.quantity,
           expanded: false,
-          salesCount: 0,
+          salesCount: 0, // Sales count not available from product API
         }));
         
         setSearchResults(items);
@@ -77,7 +80,7 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
       } finally {
         setIsSearching(false);
       }
-    }, 500); // 500ms debounce
+    }, SEARCH_DEBOUNCE_DELAY);
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery, useApiIntegration]);

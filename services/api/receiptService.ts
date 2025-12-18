@@ -33,6 +33,22 @@ export interface PaginatedReceiptResponse {
   hasMore: boolean;
 }
 
+// Backend response types
+interface BackendPaginatedResponse {
+  content: Receipt[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+}
+
+interface BackendLegacyResponse {
+  receipts: Receipt[];
+  totalCount: number;
+  totalRevenue: number;
+}
+
+type BackendReceiptResponse = BackendPaginatedResponse | BackendLegacyResponse | Receipt[];
+
 /**
  * Receipt API Client - Simple HTTP client for receipt operations
  */
@@ -54,24 +70,41 @@ export class ReceiptService {
     params.append('sort', 'createdAt,desc');
 
     const url = `${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`;
-    const response = await apiClient.get<any>(url);
+    const response = await apiClient.get<BackendReceiptResponse>(url);
 
-    // Handle both paginated and non-paginated responses
-    if (response.content) {
-      // Paginated response from backend
+    // Handle paginated response
+    if ('content' in response && Array.isArray(response.content)) {
       return {
-        receipts: response.content || [],
+        receipts: response.content,
         totalCount: response.totalElements || 0,
-        totalRevenue: response.content?.reduce((sum: number, r: Receipt) => sum + r.total, 0) || 0,
+        totalRevenue: response.content.reduce((sum: number, r: Receipt) => sum + r.total, 0),
       };
-    } else {
-      // Non-paginated response (legacy support)
+    }
+    
+    // Handle legacy response
+    if ('receipts' in response && Array.isArray(response.receipts)) {
       return {
-        receipts: response.receipts || response || [],
-        totalCount: response.totalCount || response.receipts?.length || 0,
+        receipts: response.receipts,
+        totalCount: response.totalCount || response.receipts.length,
         totalRevenue: response.totalRevenue || 0,
       };
     }
+    
+    // Handle array response
+    if (Array.isArray(response)) {
+      return {
+        receipts: response,
+        totalCount: response.length,
+        totalRevenue: response.reduce((sum: number, r: Receipt) => sum + r.total, 0),
+      };
+    }
+
+    // Fallback for unexpected response
+    return {
+      receipts: [],
+      totalCount: 0,
+      totalRevenue: 0,
+    };
   }
 
   /**
@@ -84,20 +117,57 @@ export class ReceiptService {
     params.append('sort', 'createdAt,desc');
 
     const url = `${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`;
-    const response = await apiClient.get<any>(url);
+    const response = await apiClient.get<BackendReceiptResponse>(url);
 
-    // Handle response structure
-    const content = response.content || response.receipts || [];
-    const totalElements = response.totalElements || response.totalCount || content.length;
-    const totalPages = response.totalPages || Math.ceil(totalElements / size);
-    const currentPage = response.number !== undefined ? response.number : page;
+    // Handle paginated response
+    if ('content' in response && Array.isArray(response.content)) {
+      const totalElements = response.totalElements || response.content.length;
+      const totalPages = response.totalPages || Math.ceil(totalElements / size);
+      const currentPage = response.number !== undefined ? response.number : page;
 
+      return {
+        content: response.content,
+        totalElements,
+        totalPages,
+        currentPage,
+        hasMore: currentPage < totalPages - 1,
+      };
+    }
+
+    // Handle legacy response
+    if ('receipts' in response && Array.isArray(response.receipts)) {
+      const totalElements = response.totalCount || response.receipts.length;
+      const totalPages = Math.ceil(totalElements / size);
+
+      return {
+        content: response.receipts,
+        totalElements,
+        totalPages,
+        currentPage: page,
+        hasMore: page < totalPages - 1,
+      };
+    }
+
+    // Handle array response
+    if (Array.isArray(response)) {
+      const totalPages = Math.ceil(response.length / size);
+
+      return {
+        content: response,
+        totalElements: response.length,
+        totalPages,
+        currentPage: page,
+        hasMore: page < totalPages - 1,
+      };
+    }
+
+    // Fallback for unexpected response
     return {
-      content,
-      totalElements,
-      totalPages,
-      currentPage,
-      hasMore: currentPage < totalPages - 1,
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      currentPage: 0,
+      hasMore: false,
     };
   }
 
