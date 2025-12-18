@@ -64,24 +64,56 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   }, [useApiIntegration, canMakeApiCalls]);
 
   const addItemToReceipt = useCallback((item: Item, quantity = 1) => {
-    if (item.quantity < quantity) {
-      Alert.alert('Insufficient Stock', `Only ${item.quantity} units available for ${item.name}`);
+    if (__DEV__) {
+      console.log(`🛒 Adding ${quantity}x ${item.name} (Stock: ${item.quantity || 0})`);
+    }
+
+    // Find existing item in cart
+    const existingItem = receiptItems.find(ri => ri.id === item.id);
+    
+    // Calculate total quantity if we add this
+    const currentQuantityInCart = existingItem?.quantity || 0;
+    const newTotalQuantity = currentQuantityInCart + quantity;
+
+    if (__DEV__) {
+      console.log(`  - Current in cart: ${currentQuantityInCart}`);
+      console.log(`  - Adding: ${quantity}`);
+      console.log(`  - New total would be: ${newTotalQuantity}`);
+      console.log(`  - Available stock: ${item.quantity || 0}`);
+    }
+
+    // ✅ CORRECT VALIDATION: Check if total quantity exceeds stock
+    const availableStock = item.quantity || 0;
+    
+    if (availableStock === 0) {
+      Alert.alert('Out of Stock', `${item.name} is currently out of stock.`);
       return;
     }
 
-    const existingItem = receiptItems.find(ri => ri.id === item.id);
+    if (newTotalQuantity > availableStock) {
+      Alert.alert(
+        'Insufficient Stock',
+        `Cannot add ${quantity} more ${item.name}.\n\n` +
+        `Already in cart: ${currentQuantityInCart}\n` +
+        `Available stock: ${availableStock}\n` +
+        `Maximum you can add: ${availableStock - currentQuantityInCart}`
+      );
+      return;
+    }
+
+    // ✅ Stock validation passed - add or update item
     if (existingItem) {
-      const newQuantity = existingItem.quantity + quantity;
-      if (newQuantity > item.quantity) {
-        Alert.alert('Insufficient Stock', `Only ${item.quantity} units available for ${item.name}`);
-        return;
-      }
+      // Update existing item quantity
       setReceiptItems(receiptItems.map(ri => 
         ri.id === item.id 
-          ? { ...ri, quantity: newQuantity, total: ri.price * newQuantity }
+          ? { ...ri, quantity: newTotalQuantity, total: ri.price * newTotalQuantity }
           : ri
       ));
+      if (__DEV__) {
+        console.log(`✅ Updated ${item.name} quantity to ${newTotalQuantity}`);
+      }
     } else {
+      // Add new item
       setReceiptItems([...receiptItems, { 
         id: item.id,
         name: item.name,
@@ -89,6 +121,9 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
         quantity,
         total: item.price * quantity
       }]);
+      if (__DEV__) {
+        console.log(`✅ Added new item: ${item.name} x${quantity}`);
+      }
     }
     Alert.alert('Success', `${item.name} added to receipt!`);
   }, [receiptItems]);
@@ -98,20 +133,49 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   }, [receiptItems]);
 
   const updateReceiptItemQuantity = useCallback((itemId: number, newQuantity: number) => {
+    const receiptItem = receiptItems.find(item => item.id === itemId);
+    if (!receiptItem) {
+      if (__DEV__) {
+        console.warn(`⚠️ Item ${itemId} not found in receipt`);
+      }
+      return;
+    }
+
+    if (__DEV__) {
+      console.log(`📝 Updating ${receiptItem.name} quantity from ${receiptItem.quantity} to ${newQuantity}`);
+    }
+
     if (newQuantity <= 0) {
+      if (__DEV__) {
+        console.log(`🗑️ Removing ${receiptItem.name} from receipt (quantity <= 0)`);
+      }
       removeItemFromReceipt(itemId);
       return;
     }
 
     const inventoryItem = items.find(item => item.id === itemId);
-    if (inventoryItem && newQuantity > inventoryItem.quantity) {
-      Alert.alert('Insufficient Stock', `Only ${inventoryItem.quantity} units available`);
+    const availableStock = inventoryItem?.quantity || 0;
+
+    if (newQuantity > availableStock) {
+      if (__DEV__) {
+        console.log(`❌ Cannot update quantity: ${newQuantity} exceeds available stock ${availableStock}`);
+      }
+      Alert.alert(
+        'Insufficient Stock',
+        `Cannot set quantity to ${newQuantity}.\n\n` +
+        `Product: ${receiptItem.name}\n` +
+        `Available stock: ${availableStock}\n` +
+        `Current in cart: ${receiptItem.quantity}`
+      );
       return;
     }
 
     setReceiptItems(receiptItems.map(item =>
       item.id === itemId ? { ...item, quantity: newQuantity, total: item.price * newQuantity } : item
     ));
+    if (__DEV__) {
+      console.log(`✅ Updated ${receiptItem.name} quantity to ${newQuantity}`);
+    }
   }, [receiptItems, items, removeItemFromReceipt]);
 
   const calculateTotal = useCallback(() => {
