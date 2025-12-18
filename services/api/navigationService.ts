@@ -34,14 +34,17 @@ class NavigationService {
       if (!forceRefresh) {
         const cached = await AsyncStorage.getItem(CACHE_KEY);
         if (cached) {
-          console.log('📱 Using cached navigation preferences');
-          return JSON.parse(cached);
+          const prefs = JSON.parse(cached);
+          console.log('📱 Using cached navigation preferences:', prefs.preferredTabs);
+          return prefs;
         }
       }
 
       // Fetch from API
-      console.log('📱 Fetching navigation preferences from API');
+      console.log('📱 Fetching navigation preferences from API...');
       const response = await httpClient.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.USER.NAVIGATION_PREFERENCES}`);
+      
+      console.log('📥 API Response:', JSON.stringify(response.data, null, 2));
       
       // Handle backend response format
       const data = response.data.data || response.data; // Support both formats
@@ -55,9 +58,24 @@ class NavigationService {
         role: data.role ?? defaults.role
       };
       
+      console.log('✅ Navigation preferences cached:', preferences.preferredTabs);
+      console.log('✅ Available tabs:', preferences.availableTabs);
+      
+      // ✅ Check if team is included
+      if (preferences.preferredTabs.includes('employees') || preferences.preferredTabs.includes('team')) {
+        console.log('✅ Team access GRANTED in preferredTabs!');
+      } else {
+        console.log('ℹ️ Team access not in preferredTabs');
+      }
+      
+      if (preferences.availableTabs.includes('employees') || preferences.availableTabs.includes('team')) {
+        console.log('✅ Team access available in availableTabs!');
+      } else {
+        console.log('ℹ️ Team access not in availableTabs');
+      }
+      
       // Cache the response
       await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(preferences));
-      console.log('✅ Navigation preferences cached:', preferences.preferredTabs);
       
       return preferences;
     } catch (error: any) {

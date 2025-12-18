@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { NavigationSettingsModal } from '../modals/NavigationSettingsModal';
 import { Colors } from '../../constants/Colors';
+import { navigationService } from '../../services/api/navigationService';
 
 interface HamburgerMenuProps {
   visible: boolean;
@@ -15,7 +16,7 @@ interface HamburgerMenuProps {
 
 export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
   const { user, logout } = useAuth();
-  const { availableOptions, selectedNavItems } = useNavigation();
+  const { availableOptions, selectedNavItems, refreshPreferences } = useNavigation();
   const [showNavSettings, setShowNavSettings] = useState(false);
 
   const handleSignOut = () => {
@@ -33,9 +34,28 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
   const openNavigationSettings = () => {
     setShowNavSettings(true);
   };
+  
+  const handleRefreshNavigation = async () => {
+    try {
+      await navigationService.clearCache();
+      await refreshPreferences();
+      Alert.alert('Success', 'Navigation preferences refreshed!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to refresh navigation preferences');
+    }
+  };
 
   const getCurrentDateTime = () => {
-    return '2025-08-25 17:19:32';
+    return new Date().toLocaleString('en-US', { 
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
   };
 
   const fixedMenuItems = [
@@ -64,6 +84,12 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
   ];
 
   const appOptions = [
+    {
+      icon: 'refresh-outline',
+      title: 'Refresh Navigation',
+      action: handleRefreshNavigation,
+      color: Colors.primary
+    },
     {
       icon: 'navigate-outline',
       title: 'Customize Navigation',
@@ -120,7 +146,12 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+              <ScrollView 
+                style={styles.content} 
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={true}
+                bounces={true}
+              >
                 {/* Profile Section */}
                 <View style={styles.profileSection}>
                   <View style={styles.profileAvatar}>
@@ -228,6 +259,9 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
                   <Ionicons name="log-out-outline" size={20} color="white" />
                   <Text style={styles.signOutText}>Sign Out</Text>
                 </TouchableOpacity>
+                
+                {/* Bottom padding for safe scrolling */}
+                <View style={styles.bottomPadding} />
               </ScrollView>
             </SafeAreaView>
           </View>
@@ -296,6 +330,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingBottom: 20,
   },
   
@@ -446,5 +482,8 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  bottomPadding: {
+    height: 50,
   },
 });
