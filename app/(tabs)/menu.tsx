@@ -43,7 +43,7 @@ export default function MenuScreen() {
           
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Current User</Text>
-            <Text style={styles.infoValue}>WinKyaw</Text>
+            <Text style={styles.infoValue}>{user?.name || 'User'}</Text>
           </View>
           
           <View style={styles.infoItem}>
