@@ -1,5 +1,5 @@
 // components/modals/AddItemToReceiptModal.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -8,10 +8,12 @@ import {
   FlatList,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useItems } from '../../context/ItemsContext';
 import { useReceipt } from '../../context/ReceiptContext';
+import { ProductService } from '../../services/api/productService';
 import SearchBar from '../ui/SearchBar';
 import { Item } from '../../constants/types';
 
@@ -25,18 +27,78 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
   onClose,
 }) => {
   const { items } = useItems();
-  const { addItemToReceipt, receiptItems } = useReceipt();
+  const { addItemToReceipt, receiptItems, useApiIntegration } = useReceipt();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Item[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  // Filter items based on search query
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    if (!useApiIntegration || !searchQuery.trim()) {
+      setSearchResults([]);
+      setHasSearched(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        setIsSearching(true);
+        const results = await ProductService.searchProducts({
+          query: searchQuery.trim(),
+          page: 0,
+          limit: 50,
+        });
+        
+        // Convert Product[] to Item[] format
+        const items: Item[] = results.products.map((product) => ({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: product.quantity,
+          category: product.category,
+          description: product.description,
+          sku: product.sku,
+          barcode: product.sku, // Use SKU as barcode if not available
+          minStock: product.minStock,
+          maxStock: product.maxStock,
+          total: product.price * product.quantity,
+          expanded: false,
+          salesCount: 0,
+        }));
+        
+        setSearchResults(items);
+        setHasSearched(true);
+      } catch (error) {
+        console.error('Error searching products:', error);
+        Alert.alert('Error', 'Failed to search products. Using local inventory.');
+        setSearchResults([]);
+        setHasSearched(true);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, useApiIntegration]);
+
+  // Filter items based on search query (local fallback)
   const filteredItems = useMemo(() => {
+    // Use API search results if available
+    if (useApiIntegration && (hasSearched || isSearching)) {
+      return searchResults;
+    }
+    
+    // Fall back to local filtering
     if (!searchQuery.trim()) return items;
     
     return items.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase())
+      item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.barcode?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [items, searchQuery]);
+  }, [items, searchQuery, searchResults, hasSearched, isSearching, useApiIntegration]);
 
   // Check if item is already in receipt
   const isItemInReceipt = (itemId: number) => {
@@ -66,6 +128,8 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
 
   const handleClose = () => {
     setSearchQuery('');
+    setSearchResults([]);
+    setHasSearched(false);
     onClose();
   };
 
@@ -126,36 +190,56 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
         </View>
 
         <SearchBar
-          placeholder="Search items by name or category..."
+          placeholder="Search items by name, category, SKU, or barcode..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          onClear={() => setSearchQuery('')}
+          onClear={() => {
+            setSearchQuery('');
+            setSearchResults([]);
+            setHasSearched(false);
+          }}
         />
 
         <View style={styles.itemCount}>
           <Text style={styles.itemCountText}>
-            {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} available
+            {isSearching ? (
+              'Searching...'
+            ) : (
+              `${filteredItems.length} item${filteredItems.length !== 1 ? 's' : ''} ${
+                useApiIntegration && hasSearched ? 'found' : 'available'
+              }`
+            )}
           </Text>
+          {useApiIntegration && (
+            <Text style={styles.apiIndicator}>• API Search Active</Text>
+          )}
         </View>
 
-        <FlatList
-          data={filteredItems}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          style={styles.list}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyTitle}>No Items Found</Text>
-              <Text style={styles.emptyText}>
-                {searchQuery.trim()
-                  ? "Try adjusting your search terms"
-                  : "No items available in inventory"}
-              </Text>
-            </View>
-          )}
-        />
+        {isSearching ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#F59E0B" />
+            <Text style={styles.loadingText}>Searching products...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredItems}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id.toString()}
+            style={styles.list}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="search-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyTitle}>No Items Found</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery.trim()
+                    ? "Try adjusting your search terms"
+                    : "No items available in inventory"}
+                </Text>
+              </View>
+            )}
+          />
+        )}
       </View>
     </Modal>
   );
@@ -189,11 +273,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   itemCountText: {
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  apiIndicator: {
+    fontSize: 12,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
   },
   list: {
     flex: 1,
