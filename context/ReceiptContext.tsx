@@ -209,8 +209,8 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     }
 
     // ✅ NO stock validation here - it was already done when adding items to cart!
-    // Stock was validated in addItemToReceipt() and stored in receiptItem.stock
-    // Re-validating here can cause false errors if inventory was updated elsewhere
+    // Stock is validated in addItemToReceipt() (lines 89-103) with proper error handling.
+    // Redundant validation here is unnecessary and was causing false "Insufficient Stock" errors.
 
     const subtotal = calculateTotal();
     const tax = calculateTax(subtotal);
