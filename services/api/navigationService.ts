@@ -42,7 +42,7 @@ class NavigationService {
 
       // Fetch from API
       console.log('📱 Fetching navigation preferences from API...');
-      const response = await httpClient.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.USER.NAVIGATION_PREFERENCES}`);
+      const response = await httpClient.get(API_ENDPOINTS.USER.NAVIGATION_PREFERENCES);
       
       console.log('📥 API Response:', JSON.stringify(response.data, null, 2));
       
@@ -105,7 +105,7 @@ class NavigationService {
       console.log('📱 Updating navigation preferences:', preferredTabs);
       
       const response = await httpClient.post(
-        `${API_CONFIG.BASE_URL}${API_ENDPOINTS.USER.NAVIGATION_PREFERENCES}`,
+        API_ENDPOINTS.USER.NAVIGATION_PREFERENCES,
         { preferredTabs }
       );
       
