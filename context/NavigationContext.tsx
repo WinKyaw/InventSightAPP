@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo, useRef, useCallback } from 'react';
 import { navigationService, NavigationPreferences } from '../services/api/navigationService';
 import { useAuth } from './AuthContext';
-import { canManageEmployees } from '../utils/permissions';
 
 interface NavigationOption {
   key: string;
@@ -27,13 +26,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
   
-  // ✅ FIX: Check if user is GM+ (can manage employees/team)
-  // Use useMemo to recompute when user role changes
-  const canAccessTeam = useMemo(() => {
-    return canManageEmployees(user?.role);
-  }, [user?.role]);
-  
-  // ✅ FIX: Filter available options based on user permissions
+  // ✅ All possible navigation options (no role filtering - trust backend)
   const allOptions: NavigationOption[] = [
     {
       key: 'items',
@@ -86,59 +79,28 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   ];
   
-  // Helper function to filter options based on Team access
-  const filterByTeamAccess = useCallback((options: NavigationOption[]) => {
-    return options.filter(option => {
-      if (option.key === 'employees') {
-        return canAccessTeam;
-      }
-      return true;
-    });
-  }, [canAccessTeam]);
+  // ✅ Map API tab keys to NavigationOption objects with normalization
+  // Handle both 'employees' and 'team' keys from the backend
+  const mapTabKeysToOptions = useCallback((tabKeys: string[]): NavigationOption[] => {
+    return tabKeys
+      .map(key => {
+        // Normalize 'team' to 'employees' for consistency
+        const normalizedKey = key === 'team' ? 'employees' : key;
+        return allOptions.find(opt => opt.key === normalizedKey);
+      })
+      .filter((opt): opt is NavigationOption => opt !== undefined);
+  }, []);
 
-  // ✅ FIX: Filter out Team option for non-GM users
-  const availableOptions: NavigationOption[] = useMemo(() => {
-    return filterByTeamAccess(allOptions);
-  }, [filterByTeamAccess]);
-
-  // ✅ FIX: Default to first available options, excluding Team for non-GM users
-  const getDefaultNavItems = useCallback((): NavigationOption[] => {
-    // For GM+ users: Items, Receipt, Team
-    // For non-GM users: Items, Receipt, Calendar
-    if (canAccessTeam) {
-      const items = availableOptions.find(o => o.key === 'items');
-      const receipt = availableOptions.find(o => o.key === 'receipt');
-      const team = availableOptions.find(o => o.key === 'employees');
-      
-      // Only return if all three are found (team should exist if canAccessTeam is true)
-      if (items && receipt && team) {
-        return [items, receipt, team];
-      }
-    }
-    // Non-GM users get first 3 available options (which won't include Team)
-    // Also used as fallback if any required option is missing
-    return availableOptions.slice(0, 3);
-  }, [canAccessTeam, availableOptions]);
-
+  // ✅ Safe initial state - will be updated when preferences load
   const [selectedNavItems, setSelectedNavItems] = useState<NavigationOption[]>(() => {
-    // Safe initial state without Team - will be updated when preferences load
-    // Using a static filter since availableOptions isn't computed yet
-    return allOptions.filter(o => o.key !== 'employees').slice(0, 3);
+    // Initial safe defaults (items, receipt, calendar)
+    return allOptions.filter(o => ['items', 'receipt', 'calendar'].includes(o.key));
   });
 
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
   const [preferences, setPreferences] = useState<NavigationPreferences | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  // Track previous canAccessTeam value to detect changes
-  const prevCanAccessTeamRef = useRef(canAccessTeam);
-
-  // Map API tab keys to NavigationOption objects
-  const mapTabKeysToOptions = useCallback((tabKeys: string[]): NavigationOption[] => {
-    return tabKeys
-      .map(key => availableOptions.find(opt => opt.key === key))
-      .filter((opt): opt is NavigationOption => opt !== undefined);
-  }, [availableOptions]);
+  const [availableOptions, setAvailableOptions] = useState<NavigationOption[]>([]);
 
   const loadPreferences = useCallback(async (forceRefresh = false) => {
     try {
@@ -149,48 +111,62 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       console.log('📱 Navigation preferences loaded:');
       console.log('  - Preferred tabs:', prefs.preferredTabs);
       console.log('  - Available tabs:', prefs.availableTabs);
-      console.log('  - User can access Team:', canAccessTeam);
       
+      // ✅ CRITICAL FIX: Trust backend authorization - no client-side filtering
       // Map preferredTabs from API to NavigationOption objects
-      const mappedOptions = mapTabKeysToOptions(prefs.preferredTabs);
-      console.log('  - Mapped options:', mappedOptions.map(o => o.key));
+      const mappedPreferred = mapTabKeysToOptions(prefs.preferredTabs);
+      const mappedAvailable = mapTabKeysToOptions(prefs.availableTabs);
       
-      // ✅ FIX: Filter out Team option if user doesn't have permission
-      const filteredOptions = filterByTeamAccess(mappedOptions);
-      console.log('  - Filtered options (after Team access check):', filteredOptions.map(o => o.key));
+      console.log('  - Mapped preferred options:', mappedPreferred.map((o: NavigationOption) => o.key));
+      console.log('  - Mapped available options:', mappedAvailable.map((o: NavigationOption) => o.key));
       
-      // Validate we have exactly 3 tabs, or use defaults
-      if (filteredOptions.length === 3) {
-        setSelectedNavItems(filteredOptions);
-        console.log('✅ Navigation preferences loaded:', filteredOptions.map(o => o.key));
-      } else if (filteredOptions.length > 0) {
+      // ✅ Set available options from backend response - NO filtering
+      setAvailableOptions(mappedAvailable);
+      
+      // Use backend-provided preferred tabs (up to 3 items)
+      if (mappedPreferred.length >= 3) {
+        setSelectedNavItems(mappedPreferred.slice(0, 3));
+        console.log('✅ Navigation preferences loaded:', mappedPreferred.slice(0, 3).map((o: NavigationOption) => o.key));
+      } else if (mappedPreferred.length > 0) {
         // If we have some options but not exactly 3, fill with available options
-        const needed = 3 - filteredOptions.length;
-        const additionalOptions = availableOptions
-          .filter(opt => !filteredOptions.find(fo => fo.key === opt.key))
+        const needed = 3 - mappedPreferred.length;
+        const additionalOptions = mappedAvailable
+          .filter((opt: NavigationOption) => !mappedPreferred.find((fo: NavigationOption) => fo.key === opt.key))
           .slice(0, needed);
-        const finalOptions = [...filteredOptions, ...additionalOptions].slice(0, 3);
+        const finalOptions = [...mappedPreferred, ...additionalOptions].slice(0, 3);
         setSelectedNavItems(finalOptions);
-        console.log('⚠️ Navigation preferences loaded with adjustment:', finalOptions.map(o => o.key));
+        console.log('⚠️ Navigation preferences loaded with adjustment:', finalOptions.map((o: NavigationOption) => o.key));
       } else {
-        console.log('⚠️ No valid navigation options mapped, using defaults');
-        setSelectedNavItems(getDefaultNavItems());
+        // Fallback to first 3 available options
+        const fallbackOptions = mappedAvailable.slice(0, 3);
+        if (fallbackOptions.length > 0) {
+          setSelectedNavItems(fallbackOptions);
+          console.log('⚠️ Using available tabs as fallback:', fallbackOptions.map((o: NavigationOption) => o.key));
+        } else {
+          // Ultimate fallback
+          const safeDefaults = allOptions.filter(o => ['items', 'receipt', 'calendar'].includes(o.key));
+          setSelectedNavItems(safeDefaults);
+          console.log('⚠️ Using safe default navigation preferences');
+        }
       }
     } catch (error: any) {
       // ✅ Don't throw - just use defaults
-      console.log('ℹ️ Using default navigation preferences');
-      setSelectedNavItems(getDefaultNavItems());
+      console.log('ℹ️ Using default navigation preferences due to error');
+      const safeDefaults = allOptions.filter(o => ['items', 'receipt', 'calendar'].includes(o.key));
+      setAvailableOptions(allOptions);
+      setSelectedNavItems(safeDefaults);
     } finally {
       setLoading(false);
     }
-  }, [filterByTeamAccess, getDefaultNavItems, mapTabKeysToOptions, canAccessTeam, availableOptions]);
+  }, [mapTabKeysToOptions]);
 
-  // Initialize selectedNavItems when availableOptions are ready
+  // Initialize selectedNavItems when component mounts
   useEffect(() => {
-    if (availableOptions.length > 0) {
-      setSelectedNavItems(getDefaultNavItems());
+    if (allOptions.length > 0) {
+      const safeDefaults = allOptions.filter(o => ['items', 'receipt', 'calendar'].includes(o.key));
+      setSelectedNavItems(safeDefaults);
     }
-  }, []); // Run once on mount - getDefaultNavItems has proper deps
+  }, []); // Run once on mount
 
   useEffect(() => {
     // ✅ Only load preferences if user is authenticated
@@ -203,20 +179,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   }, [isAuthenticated, loadPreferences]);
-
-  // ✅ FIX: Update navigation items when user role changes
-  useEffect(() => {
-    // Only act if canAccessTeam actually changed
-    if (prevCanAccessTeamRef.current !== canAccessTeam) {
-      prevCanAccessTeamRef.current = canAccessTeam;
-      
-      if (isAuthenticated && user) {
-        console.log('🔄 User role changed - reloading navigation preferences');
-        // Reload preferences to get filtered options
-        loadPreferences(true);
-      }
-    }
-  }, [canAccessTeam, isAuthenticated, user, loadPreferences]);
 
   const refreshPreferences = useCallback(async () => {
     await loadPreferences(true);
@@ -265,7 +227,6 @@ export function useNavigation(): NavigationContextType {
   if (context === undefined) {
     console.error('useNavigation must be used within a NavigationProvider');
     // Return a more complete default context to prevent crashes
-    // ✅ FIX: Don't include Team in default options (for safety)
     const defaultOptions: NavigationOption[] = [
       {
         key: 'items',
