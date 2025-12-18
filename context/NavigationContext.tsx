@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { navigationService, NavigationPreferences } from '../services/api/navigationService';
 import { useAuth } from './AuthContext';
 
@@ -24,7 +24,7 @@ interface NavigationContextType {
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   
   // ✅ All possible navigation options (no role filtering - trust backend)
   const allOptions: NavigationOption[] = [
