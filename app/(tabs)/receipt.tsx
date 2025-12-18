@@ -33,7 +33,7 @@ type TabType = "create" | "list";
 
 export default function ReceiptScreen() {
   // ✅ SECURITY FIX: Add authentication check
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated, isInitialized, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -551,7 +551,7 @@ export default function ReceiptScreen() {
                 <Ionicons name="person-outline" size={16} color="#F59E0B" />
                 <Text style={styles.receiptInfoLabel}>Cashier</Text>
               </View>
-              <Text style={styles.receiptInfoValue}>WinKyaw</Text>
+              <Text style={styles.receiptInfoValue}>{user?.name || 'Unknown'}</Text>
             </View>
             <View style={styles.customerInputSection}>
               <Text style={styles.customerInputLabel}>

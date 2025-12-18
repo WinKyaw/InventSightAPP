@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { NavigationSettingsModal } from '../../components/modals/NavigationSettingsModal';
 
@@ -8,7 +9,7 @@ export default function MenuScreen() {
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* User Profile Header - Fixed at top */}
       <View style={styles.header}>
         <View style={styles.profileSection}>
@@ -143,7 +144,7 @@ export default function MenuScreen() {
         visible={showCustomizeModal}
         onClose={() => setShowCustomizeModal(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
