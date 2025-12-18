@@ -208,14 +208,9 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Validate stock availability
-    for (const receiptItem of receiptItems) {
-      const inventoryItem = items.find(item => item.id === receiptItem.id);
-      if (!inventoryItem || inventoryItem.quantity < receiptItem.quantity) {
-        Alert.alert('Insufficient Stock', `Not enough stock for ${receiptItem.name}`);
-        return;
-      }
-    }
+    // ✅ NO stock validation here - it was already done when adding items to cart!
+    // Stock was validated in addItemToReceipt() and stored in receiptItem.stock
+    // Re-validating here can cause false errors if inventory was updated elsewhere
 
     const subtotal = calculateTotal();
     const tax = calculateTax(subtotal);
