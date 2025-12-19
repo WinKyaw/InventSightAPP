@@ -1831,4 +1831,30 @@ export const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 8,
   },
+
+  // Receipt details modal styles
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+    marginLeft: 4,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

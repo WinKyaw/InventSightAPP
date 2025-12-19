@@ -20,6 +20,7 @@ import DatePicker from "../../components/ui/DatePicker";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import AddItemToReceiptModal from "../../components/modals/AddItemToReceiptModal";
+import { ReceiptDetailsModal } from "../../components/modals/ReceiptDetailsModal";
 import SmartScanner from "../../components/ui/SmartScanner";
 import { OCRScanner } from "../../components/ui/OCRScanner";
 
@@ -73,6 +74,8 @@ export default function ReceiptScreen() {
   const [showAddToReceipt, setShowAddToReceipt] = useState(false);
   const [customerNameError, setCustomerNameError] = useState("");
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [showReceiptDetails, setShowReceiptDetails] = useState(false);
 
   // Receipt listing state
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -191,7 +194,13 @@ export default function ReceiptScreen() {
   };
 
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
-    <View style={styles.receiptItem}>
+    <TouchableOpacity
+      style={styles.receiptItem}
+      onPress={() => {
+        setSelectedReceipt(item);
+        setShowReceiptDetails(true);
+      }}
+    >
       <View style={styles.receiptItemInfo}>
         <Text style={styles.receiptItemName}>#{item.receiptNumber}</Text>
         <Text style={styles.receiptItemPrice}>{item.customerName || "Walk-in Customer"}</Text>
@@ -204,7 +213,7 @@ export default function ReceiptScreen() {
         <Text style={styles.receiptItemTotal}>${item.total.toFixed(2)}</Text>
         <Text style={styles.receiptItemName}>{formatDate(item.dateTime)}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const formatDate = (date: string | number | Date) => {
@@ -797,6 +806,18 @@ export default function ReceiptScreen() {
         visible={showOCRScanner}
         onClose={() => setShowOCRScanner(false)}
         onOCRResult={handleOCRResult}
+      />
+
+      <ReceiptDetailsModal
+        visible={showReceiptDetails}
+        onClose={() => {
+          setShowReceiptDetails(false);
+          setSelectedReceipt(null);
+        }}
+        receipt={selectedReceipt}
+        onUpdate={(updatedReceipt) => {
+          setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
+        }}
       />
     </SafeAreaView>
   );
