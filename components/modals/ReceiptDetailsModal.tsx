@@ -21,6 +21,13 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
   const [editedCustomerName, setEditedCustomerName] = useState('');
   const [editedPaymentMethod, setEditedPaymentMethod] = useState('CASH');
 
+  // Helper function to get item fields with fallback
+  const getItemFields = (item: any) => ({
+    name: item.productName || item.name || 'Unknown Product',
+    price: item.unitPrice || item.price || 0,
+    total: item.totalPrice || item.total || 0,
+  });
+
   useEffect(() => {
     if (visible && receipt) {
       setEditedCustomerName(receipt.customerName || '');
@@ -87,11 +94,9 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
     text += `--------------------------------\n`;
     
     receipt.items.forEach((item, index) => {
-      const itemName = (item as any).productName || item.name || 'Unknown Product';
-      const itemPrice = (item as any).unitPrice || item.price || 0;
-      const itemTotal = (item as any).totalPrice || item.total || 0;
-      text += `${index + 1}. ${itemName}\n`;
-      text += `   $${itemPrice.toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}\n`;
+      const itemFields = getItemFields(item);
+      text += `${index + 1}. ${itemFields.name}\n`;
+      text += `   $${itemFields.price.toFixed(2)} x ${item.quantity} = $${itemFields.total.toFixed(2)}\n`;
     });
     
     text += `--------------------------------\n`;
@@ -215,9 +220,7 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
         <View style={[styles.card, { marginBottom: 16 }]}>
           <Text style={[styles.title, { marginBottom: 12 }]}>Items</Text>
           {receipt.items.map((item, index) => {
-            const itemName = (item as any).productName || item.name || 'Unknown Product';
-            const itemPrice = (item as any).unitPrice || item.price || 0;
-            const itemTotal = (item as any).totalPrice || item.total || 0;
+            const itemFields = getItemFields(item);
             return (
               <View
                 key={`${item.id}-${index}`}
@@ -230,12 +233,12 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '600', fontSize: 14 }}>{itemName}</Text>
+                  <Text style={{ fontWeight: '600', fontSize: 14 }}>{itemFields.name}</Text>
                   <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }}>
-                    ${itemPrice.toFixed(2)} × {item.quantity}
+                    ${itemFields.price.toFixed(2)} × {item.quantity}
                   </Text>
                 </View>
-                <Text style={{ fontWeight: '600', fontSize: 14 }}>${itemTotal.toFixed(2)}</Text>
+                <Text style={{ fontWeight: '600', fontSize: 14 }}>${itemFields.total.toFixed(2)}</Text>
               </View>
             );
           })}

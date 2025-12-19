@@ -28,6 +28,11 @@ export default function EmployeeReceiptsScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [showReceiptDetails, setShowReceiptDetails] = useState(false);
+
+  // Helper function to get total amount with fallback
+  const getReceiptTotal = (receipt: Receipt): number => {
+    return receipt.totalAmount || receipt.total || 0;
+  };
   
   useEffect(() => {
     loadEmployeeReceipts();
@@ -69,7 +74,7 @@ export default function EmployeeReceiptsScreen() {
           {item.receiptNumber || `#${item.id}`}
         </Text>
         <Text style={styles.receiptTotal}>
-          ${(item.totalAmount || item.total || 0).toFixed(2)}
+          ${getReceiptTotal(item).toFixed(2)}
         </Text>
       </View>
       
@@ -104,9 +109,7 @@ export default function EmployeeReceiptsScreen() {
   );
   
   const getTotalSales = () => {
-    return receipts.reduce((sum, receipt) => 
-      sum + (receipt.totalAmount || receipt.total || 0), 0
-    );
+    return receipts.reduce((sum, receipt) => sum + getReceiptTotal(receipt), 0);
   };
   
   return (
