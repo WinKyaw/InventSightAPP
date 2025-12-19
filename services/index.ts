@@ -8,6 +8,9 @@ export { default as DashboardService } from './api/dashboardService';
 export { default as ReceiptService } from './api/receiptService';
 export { default as CalendarService } from './api/calendarService';
 
+// Receipt Service Types
+export type { CreateReceiptRequest, CreateReceiptItem } from './api/receiptService';
+
 // HTTP Clients
 export { httpClient } from './api/httpClient';
 export { default as apiClient } from './api/apiClient';
