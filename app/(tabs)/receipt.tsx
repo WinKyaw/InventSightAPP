@@ -655,10 +655,17 @@ export default function ReceiptScreen() {
             ref={scrollRef}
             style={styles.receiptContainer} 
             contentContainerStyle={styles.scrollViewContent}
-            showsVerticalScrollIndicator={true}
+            // ✅ Enable nested scrolling
             nestedScrollEnabled={true}
+            // ✅ Track scroll position
             onScroll={handleScroll}
             scrollEventThrottle={16}
+            // ✅ Show scroll indicator
+            showsVerticalScrollIndicator={true}
+            // ✅ Improve scroll performance
+            removeClippedSubviews={true}
+            // ✅ Enable momentum scrolling
+            decelerationRate="normal"
           >
           <View style={styles.receiptInfoCard}>
             <View style={styles.receiptInfoRow}>

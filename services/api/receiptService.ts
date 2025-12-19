@@ -217,7 +217,7 @@ export class ReceiptService {
   }
 
   /**
-   * Get receipts by employee and date
+   * Get receipts by employee and date (GM+ only)
    * @param employeeId - The ID of the employee
    * @param date - The date in YYYY-MM-DD format
    */
@@ -225,11 +225,22 @@ export class ReceiptService {
     employeeId: string,
     date: string
   ): Promise<Receipt[]> {
-    const params = new URLSearchParams();
-    params.append('date', date);
+    try {
+      console.log('📊 Fetching receipts for employee:', employeeId);
+      console.log('📅 Date:', date);
+      
+      const params = new URLSearchParams();
+      params.append('date', date);
 
-    const url = `/api/receipts/employee/${employeeId}?${params.toString()}`;
-    return await apiClient.get<Receipt[]>(url);
+      const url = `/api/receipts/employee/${employeeId}?${params.toString()}`;
+      const response = await apiClient.get<Receipt[]>(url);
+      
+      console.log('✅ Received receipts:', response.length);
+      return response;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch employee receipts:', error);
+      throw error;
+    }
   }
 
   /**
