@@ -105,16 +105,35 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
   const updateEmployee = useCallback(async (id: number, updates: Partial<Employee>) => {
     if (useApiIntegration && canMakeApiCalls) {
       try {
+        console.log('🔄 Starting employee update...');
+        
+        // Validate required fields
+        if (!id) {
+          throw new Error('Employee ID is required');
+        }
+        
         const updatedEmployee = await EmployeeService.updateEmployee(id, updates);
+        
+        // Update local state
         setEmployees(prev => prev.map(employee => 
           employee.id === id ? updatedEmployee : employee
         ));
-      } catch (error) {
-        console.error('Failed to update employee via API:', error);
+        
+        console.log('✅ Employee updated successfully');
+      } catch (error: any) {
+        console.error('❌ Employee update failed:', error);
+        
+        // Show detailed error message
+        const errorMessage = error.response?.data?.message || 
+                            error.message || 
+                            'Failed to update employee';
+        
         // Fallback to local update if API fails
         setEmployees(prev => prev.map(employee => 
           employee.id === id ? { ...employee, ...updates } : employee
         ));
+        
+        throw new Error(errorMessage);
       }
     } else {
       setEmployees(prev => prev.map(employee => 

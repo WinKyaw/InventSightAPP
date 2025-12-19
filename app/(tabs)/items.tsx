@@ -35,7 +35,11 @@ export default function ItemsScreen() {
     return null;
   }
 
-  const [canAdd, setCanAdd] = useState(false);
+  const [permissions, setPermissions] = useState({
+    canAdd: false,
+    canEdit: false,
+    canDelete: false,
+  });
 
   const {
     products,
@@ -72,6 +76,30 @@ export default function ItemsScreen() {
   // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
   const loadedRef = useRef(false);
 
+  // Load permissions once on mount
+  React.useEffect(() => {
+    loadPermissions();
+  }, []);
+
+  const loadPermissions = async () => {
+    try {
+      // Batch check all permissions at once
+      const results = await PermissionService.checkPermissions([
+        'ADD_ITEM',
+        'EDIT_ITEM',
+        'DELETE_ITEM',
+      ]);
+      
+      setPermissions({
+        canAdd: results.ADD_ITEM,
+        canEdit: results.EDIT_ITEM,
+        canDelete: results.DELETE_ITEM,
+      });
+    } catch (error) {
+      console.error('Failed to load permissions:', error);
+    }
+  };
+
   // ✅ LAZY LOADING: Load products and categories only when Items screen is focused
   useFocusEffect(
     React.useCallback(() => {
@@ -85,14 +113,6 @@ export default function ItemsScreen() {
       loadedRef.current = true;
       loadProducts();
       loadCategories();
-
-      // Check permissions
-      PermissionService.canAddItem()
-        .then(setCanAdd)
-        .catch((error) => {
-          console.error('Failed to check add item permission:', error);
-          setCanAdd(false);
-        });
     }, [loadProducts, loadCategories, loading])
   );
 
@@ -195,7 +215,7 @@ export default function ItemsScreen() {
         title="Inventory Management"
         backgroundColor="#10B981"
         rightComponent={
-          canAdd ? (
+          permissions.canAdd ? (
             <TouchableOpacity 
               style={styles.headerButton} 
               onPress={() => setShowAddModal(true)}
