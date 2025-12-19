@@ -108,13 +108,66 @@ export class EmployeeService {
    * Update an existing employee and invalidate cache
    */
   static async updateEmployee(id: number, updates: Partial<Employee>): Promise<Employee> {
-    const employee = await apiClient.put<Employee>(API_ENDPOINTS.EMPLOYEES.BY_ID(id), updates);
+    try {
+      if (__DEV__) {
+        console.log('📤 Updating employee:', id);
+        console.log('📤 Payload:', JSON.stringify(updates, null, 2));
+      }
+      
+      // Validate payload before sending
+      const validatedData = this.validateEmployeePayload(updates);
+      
+      const employee = await apiClient.put<Employee>(
+        API_ENDPOINTS.EMPLOYEES.BY_ID(id), 
+        validatedData
+      );
+      
+      if (__DEV__) {
+        console.log('✅ Employee updated successfully');
+      }
+      
+      // Invalidate employees and dashboard cache
+      CacheManager.invalidateEmployees();
+      CacheManager.invalidateDashboard();
+      
+      return employee;
+    } catch (error: any) {
+      console.error('❌ Employee update error:', error.response?.data);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Validate and clean employee payload
+   */
+  private static validateEmployeePayload(data: Partial<Employee>): any {
+    const payload: any = {};
     
-    // Invalidate employees and dashboard cache
-    CacheManager.invalidateEmployees();
-    CacheManager.invalidateDashboard();
+    // Only include fields that are actually being updated
+    if (data.firstName !== undefined) payload.firstName = data.firstName;
+    if (data.lastName !== undefined) payload.lastName = data.lastName;
+    if (data.phone !== undefined) payload.phone = data.phone;
+    if (data.hourlyRate !== undefined) payload.hourlyRate = data.hourlyRate;
+    if (data.title !== undefined) payload.title = data.title;
+    if (data.startDate !== undefined) payload.startDate = data.startDate;
+    if (data.status !== undefined) payload.status = data.status;
+    if (data.bonus !== undefined) payload.bonus = data.bonus;
     
-    return employee;
+    return payload;
+  }
+
+  /**
+   * Handle errors from API calls
+   */
+  private static handleError(error: any): Error {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.message || 
+                     error.response?.data?.error ||
+                     error.message || 
+                     'Failed to update employee';
+      return new Error(message);
+    }
+    return error;
   }
 
   /**
