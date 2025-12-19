@@ -303,27 +303,21 @@ export default function EmployeesScreen() {
                                       user?.role === 'FOUNDER' ||
                                       user?.role === 'ADMIN';
                       
-                      console.log('🔍 Employee Receipts Button Check:', {
-                        employeeId: employee.id,
-                        employeeName: `${employee.firstName} ${employee.lastName}`,
-                        userRole: user?.role,
-                        isGMPlus,
-                      });
+                      if (__DEV__ && isGMPlus) {
+                        console.log('✅ Showing receipts button for:', `${employee.firstName} ${employee.lastName}`);
+                      }
                       
                       if (!isGMPlus) {
-                        console.log('⏭️ NOT showing receipts button - user is not GM+');
                         return null;
                       }
                       
-                      console.log('✅ SHOWING receipts button for GM+ user');
                       return (
                         <TouchableOpacity 
                           style={[styles.headerButton, { backgroundColor: '#F59E0B' }]}
                           onPress={() => {
-                            console.log('📊 Navigating to employee receipts:', {
-                              employeeId: employee.id.toString(),
-                              employeeName: `${employee.firstName} ${employee.lastName}`,
-                            });
+                            if (__DEV__) {
+                              console.log('📊 Navigating to employee receipts:', employee.id);
+                            }
                             router.push({
                               pathname: '/employee-receipts',
                               params: {

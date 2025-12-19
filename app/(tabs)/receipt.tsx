@@ -108,15 +108,16 @@ export default function ReceiptScreen() {
                    user?.role === 'FOUNDER' ||
                    user?.role === 'ADMIN';
 
-  // ✅ Debug logging for GM+ status
+  // ✅ Debug logging for GM+ status (only in development)
   useEffect(() => {
-    console.log('🔍 Receipt Screen - User Debug:');
-    console.log('  - User role:', user?.role);
-    console.log('  - Is GM+:', isGMPlus);
-    console.log('  - Cashier stats count:', cashierStats?.length || 0);
-    console.log('  - Cashier stats data:', cashierStats);
-    console.log('  - Selected cashier:', selectedCashier);
-  }, [user?.role, isGMPlus, cashierStats, selectedCashier]);
+    if (__DEV__) {
+      console.log('🔍 Receipt Screen - User Debug:');
+      console.log('  - User role:', user?.role);
+      console.log('  - Is GM+:', isGMPlus);
+      console.log('  - Cashier stats count:', cashierStats?.length || 0);
+      console.log('  - Selected cashier:', selectedCashier);
+    }
+  }, [user?.role, isGMPlus, cashierStats?.length, selectedCashier]);
 
   useEffect(() => {
     if (activeTab === "list") {
@@ -341,18 +342,15 @@ export default function ReceiptScreen() {
       {/* GM+ Cashier Filter for History Tab */}
       {(() => {
         const shouldShowFilter = isGMPlus && cashierStats.length > 0;
-        console.log('🔍 Cashier Filter (History Tab) Render Check:', {
-          isGMPlus,
-          cashierStatsLength: cashierStats.length,
-          shouldShowFilter,
-        });
+        
+        if (__DEV__) {
+          console.log('🔍 Cashier Filter (History Tab) - isGMPlus:', isGMPlus, 'cashiers:', cashierStats.length);
+        }
         
         if (!shouldShowFilter) {
-          console.log('⏭️ NOT showing cashier filter on History tab');
           return null;
         }
         
-        console.log('✅ SHOWING cashier filter on History tab');
         return (
           <View style={styles.cashierFilterContainer}>
             <Text style={styles.cashierFilterLabel}>Filter by cashier:</Text>
@@ -906,18 +904,15 @@ export default function ReceiptScreen() {
           {/* GM+ Cashier Filter */}
           {(() => {
             const shouldShowFilter = isGMPlus && cashierStats.length > 0;
-            console.log('🔍 Cashier Filter (Create Tab) Render Check:', {
-              isGMPlus,
-              cashierStatsLength: cashierStats.length,
-              shouldShowFilter,
-            });
+            
+            if (__DEV__) {
+              console.log('🔍 Cashier Filter (Create Tab) - isGMPlus:', isGMPlus, 'cashiers:', cashierStats.length);
+            }
             
             if (!shouldShowFilter) {
-              console.log('⏭️ NOT showing cashier filter on Create tab');
               return null;
             }
             
-            console.log('✅ SHOWING cashier filter on Create tab');
             return (
               <View style={styles.cashierFilterContainer}>
                 <Text style={styles.cashierFilterLabel}>View receipts by cashier:</Text>

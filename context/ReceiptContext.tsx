@@ -466,15 +466,20 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   // Load cashier stats (GM+ only)
   const loadCashierStats = useCallback(async (): Promise<void> => {
     if (!isGMPlus) {
-      console.log('⏭️ ReceiptContext: Not GM+, skipping cashier stats');
+      if (__DEV__) {
+        console.log('⏭️ ReceiptContext: Not GM+, skipping cashier stats');
+      }
       return;
     }
     
     try {
-      console.log('📊 ReceiptContext: Loading cashier stats...');
+      if (__DEV__) {
+        console.log('📊 ReceiptContext: Loading cashier stats...');
+      }
       const data = await ReceiptService.getCashierStats();
-      console.log('✅ ReceiptContext: Cashier stats loaded:', data);
-      console.log('📊 Number of cashiers:', data.length);
+      if (__DEV__) {
+        console.log('✅ ReceiptContext: Loaded', data.length, 'cashier(s)');
+      }
       setCashierStats(data);
     } catch (error) {
       console.error('❌ ReceiptContext: Error loading cashier stats:', error);
@@ -484,22 +489,17 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
 
   // Load cashier stats when user is GM+ and on mount
   useEffect(() => {
-    console.log('🔍 ReceiptContext: GM+ check:', {
-      isGMPlus,
-      userRole: user?.role,
-      canMakeApiCalls,
-    });
+    if (__DEV__) {
+      console.log('🔍 ReceiptContext: GM+ check - isGMPlus:', isGMPlus, 'role:', user?.role);
+    }
     
     if (isGMPlus && canMakeApiCalls) {
-      console.log('✅ ReceiptContext: Loading cashier stats for GM+ user');
+      if (__DEV__) {
+        console.log('✅ ReceiptContext: Loading cashier stats for GM+ user');
+      }
       loadCashierStats();
-    } else {
-      console.log('⏭️ ReceiptContext: Skipping cashier stats', {
-        isGMPlus,
-        canMakeApiCalls,
-      });
     }
-  }, [isGMPlus, canMakeApiCalls, loadCashierStats, user?.role]);
+  }, [isGMPlus, canMakeApiCalls, loadCashierStats]);
 
   // Reload receipts when cashier filter changes
   useEffect(() => {
