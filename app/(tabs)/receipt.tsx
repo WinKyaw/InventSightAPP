@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -66,6 +66,9 @@ export default function ReceiptScreen() {
     useApiIntegration,
     setUseApiIntegration,
     addItemToReceipt,
+    selectedCashier,
+    setSelectedCashier,
+    cashierStats,
   } = useReceipt();
 
   const { items, addItem } = useItems();
@@ -94,6 +97,16 @@ export default function ReceiptScreen() {
   const [showSmartScanner, setShowSmartScanner] = useState(false);
   // OCRScanner state
   const [showOCRScanner, setShowOCRScanner] = useState(false);
+
+  // Scroll state and ref
+  const scrollRef = useRef<ScrollView>(null);
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
+
+  // Check if user is GM+
+  const isGMPlus = user?.role === 'GENERAL_MANAGER' || 
+                   user?.role === 'CEO' || 
+                   user?.role === 'FOUNDER' ||
+                   user?.role === 'ADMIN';
 
   useEffect(() => {
     if (activeTab === "list") {
@@ -194,6 +207,20 @@ export default function ReceiptScreen() {
     });
   };
 
+  // Scroll handlers
+  const scrollToTop = () => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const scrollToBottom = () => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  };
+
+  const handleScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setShowScrollButtons(offsetY > 100);
+  };
+
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
     <TouchableOpacity
       style={styles.receiptItem}
@@ -282,6 +309,50 @@ export default function ReceiptScreen() {
         )}
       </View>
 
+      {/* GM+ Cashier Filter for History Tab */}
+      {isGMPlus && cashierStats.length > 0 && (
+        <View style={styles.cashierFilterContainer}>
+          <Text style={styles.cashierFilterLabel}>Filter by cashier:</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.cashierFilterScroll}
+          >
+            <TouchableOpacity
+              style={[
+                styles.cashierFilterButton,
+                !selectedCashier && styles.cashierFilterButtonActive
+              ]}
+              onPress={() => setSelectedCashier(null)}
+            >
+              <Text style={[
+                styles.cashierFilterButtonText,
+                !selectedCashier && styles.cashierFilterButtonTextActive
+              ]}>
+                All
+              </Text>
+            </TouchableOpacity>
+            {cashierStats.map((cashier) => (
+              <TouchableOpacity
+                key={cashier.cashierId}
+                style={[
+                  styles.cashierFilterButton,
+                  selectedCashier === cashier.cashierId && styles.cashierFilterButtonActive
+                ]}
+                onPress={() => setSelectedCashier(cashier.cashierId)}
+              >
+                <Text style={[
+                  styles.cashierFilterButtonText,
+                  selectedCashier === cashier.cashierId && styles.cashierFilterButtonTextActive
+                ]}>
+                  {cashier.cashierName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Sort/Stats Header */}
       <View style={styles.employeeStats}>
         <TouchableOpacity style={styles.employeeStatCard} onPress={() => setSortBy("date")}>
@@ -331,6 +402,18 @@ export default function ReceiptScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled={true}
+          ListHeaderComponent={
+            isGMPlus && selectedCashier ? (
+              <View style={styles.filterBanner}>
+                <Text style={styles.filterBannerText}>
+                  Showing receipts by: {cashierStats.find(c => c.cashierId === selectedCashier)?.cashierName}
+                </Text>
+                <TouchableOpacity onPress={() => setSelectedCashier(null)}>
+                  <Text style={styles.clearFilterText}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={() => (
             <View style={styles.emptyReceiptCard}>
               <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
@@ -567,11 +650,16 @@ export default function ReceiptScreen() {
 
       {/* Tab Content */}
       {activeTab === "create" ? (
-        <ScrollView 
-          style={styles.receiptContainer} 
-          showsVerticalScrollIndicator={true}
-          nestedScrollEnabled={true}
-        >
+        <View style={{ flex: 1 }}>
+          <ScrollView 
+            ref={scrollRef}
+            style={styles.receiptContainer} 
+            contentContainerStyle={styles.scrollViewContent}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
           <View style={styles.receiptInfoCard}>
             <View style={styles.receiptInfoRow}>
               <View style={styles.receiptInfoItem}>
@@ -764,8 +852,59 @@ export default function ReceiptScreen() {
             </View>
           )}
 
+          {/* GM+ Cashier Filter */}
+          {isGMPlus && cashierStats.length > 0 && (
+            <View style={styles.cashierFilterContainer}>
+              <Text style={styles.cashierFilterLabel}>View receipts by cashier:</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.cashierFilterScroll}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.cashierFilterButton,
+                    !selectedCashier && styles.cashierFilterButtonActive
+                  ]}
+                  onPress={() => setSelectedCashier(null)}
+                >
+                  <Text style={[
+                    styles.cashierFilterButtonText,
+                    !selectedCashier && styles.cashierFilterButtonTextActive
+                  ]}>
+                    All Cashiers
+                  </Text>
+                </TouchableOpacity>
+                {cashierStats.map((cashier) => (
+                  <TouchableOpacity
+                    key={cashier.cashierId}
+                    style={[
+                      styles.cashierFilterButton,
+                      selectedCashier === cashier.cashierId && styles.cashierFilterButtonActive
+                    ]}
+                    onPress={() => setSelectedCashier(cashier.cashierId)}
+                  >
+                    <Text style={[
+                      styles.cashierFilterButtonText,
+                      selectedCashier === cashier.cashierId && styles.cashierFilterButtonTextActive
+                    ]}>
+                      {cashier.cashierName} ({cashier.receiptCount})
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.recentReceiptsSection}>
-            <Text style={styles.recentReceiptsTitle}>Recent Receipts</Text>
+            <Text style={styles.recentReceiptsTitle}>
+              Recent Receipts
+              {selectedCashier && cashierStats.find(c => c.cashierId === selectedCashier) && (
+                <Text style={styles.filterIndicator}>
+                  {' '}• {cashierStats.find(c => c.cashierId === selectedCashier)?.cashierName}
+                </Text>
+              )}
+            </Text>
             {receipts.length === 0 ? (
               <View style={styles.emptyRecentReceipts}>
                 <Text style={styles.emptyRecentReceiptsText}>
@@ -819,6 +958,26 @@ export default function ReceiptScreen() {
             </View>
           )}
         </ScrollView>
+
+        {/* Scroll Buttons */}
+        {showScrollButtons && (
+          <View style={styles.scrollButtonsContainer}>
+            <TouchableOpacity
+              style={styles.scrollButton}
+              onPress={scrollToTop}
+            >
+              <Text style={styles.scrollButtonText}>↑</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.scrollButton, { marginTop: 8 }]}
+              onPress={scrollToBottom}
+            >
+              <Text style={styles.scrollButtonText}>↓</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        </View>
       ) : (
         renderReceiptListTab()
       )}
@@ -1092,5 +1251,97 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 13,
     flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 20,
+  },
+  scrollButtonsContainer: {
+    position: "absolute",
+    right: 16,
+    bottom: 100,
+    zIndex: 1000,
+  },
+  scrollButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#F59E0B",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  scrollButtonText: {
+    fontSize: 24,
+    color: "#FFF",
+    fontWeight: "bold",
+  },
+  cashierFilterContainer: {
+    backgroundColor: "#FFF",
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  cashierFilterLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+    color: "#374151",
+  },
+  cashierFilterScroll: {
+    marginTop: 4,
+  },
+  cashierFilterButton: {
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginRight: 8,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  cashierFilterButtonActive: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#F59E0B",
+  },
+  cashierFilterButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  cashierFilterButtonTextActive: {
+    color: "#F59E0B",
+  },
+  filterIndicator: {
+    fontSize: 14,
+    color: "#F59E0B",
+    fontWeight: "normal",
+  },
+  filterBanner: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  filterBannerText: {
+    color: "#92400E",
+    fontSize: 14,
+    fontWeight: "600",
+    flex: 1,
+  },
+  clearFilterText: {
+    color: "#F59E0B",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });

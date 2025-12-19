@@ -9,7 +9,17 @@ const RECEIPT_ENDPOINTS = {
   UPDATE: (id: string | number) => `/api/receipts/${id}`,
   DELETE: (id: string | number) => `/api/receipts/${id}`,
   GET_BY_DATE: '/api/receipts/by-date',
+  GET_RECENT: '/api/receipts/recent',
+  GET_CASHIERS: '/api/receipts/cashiers',
 };
+
+// Cashier statistics interface for GM+ users
+export interface CashierStats {
+  cashierId: string;
+  cashierName: string;
+  receiptCount: number;
+  totalSales: number;
+}
 
 // ✅ Backend expects simplified item format with productId and quantity only
 export interface CreateReceiptItem {
@@ -234,6 +244,36 @@ export class ReceiptService {
    */
   static async deleteReceipt(id: string | number): Promise<void> {
     await apiClient.delete<void>(RECEIPT_ENDPOINTS.DELETE(id));
+  }
+
+  /**
+   * Get receipts with filters (GM+ can filter by cashier)
+   */
+  static async getReceipts(params?: {
+    startDate?: string;
+    endDate?: string;
+    cashierId?: string;
+    limit?: number;
+  }): Promise<Receipt[]> {
+    const url = RECEIPT_ENDPOINTS.GET_ALL;
+    return await apiClient.get<Receipt[]>(url, { params });
+  }
+
+  /**
+   * Get recent receipts
+   */
+  static async getRecentReceipts(limit: number = 10): Promise<Receipt[]> {
+    const params = { limit };
+    return await apiClient.get<Receipt[]>(RECEIPT_ENDPOINTS.GET_RECENT, { params });
+  }
+
+  /**
+   * Get cashier statistics (GM+ only)
+   */
+  static async getCashierStats(): Promise<CashierStats[]> {
+    const response = await apiClient.get<Record<string, CashierStats>>(RECEIPT_ENDPOINTS.GET_CASHIERS);
+    // Convert object to array
+    return Object.values(response);
   }
 }
 
