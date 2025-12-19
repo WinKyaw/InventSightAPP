@@ -113,10 +113,13 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
         }
         
         // ✅ FIX: Remove 'expanded' field before sending to API
-        const { expanded, ...validUpdates } = updates;
-        
-        if (expanded !== undefined && __DEV__) {
-          console.warn('⚠️ Removed "expanded" field from employee update - this is a UI-only field');
+        let validUpdates = updates;
+        if ('expanded' in updates) {
+          if (__DEV__) {
+            console.warn('⚠️ Removed "expanded" field from employee update - this is a UI-only field');
+          }
+          const { expanded, ...rest } = updates;
+          validUpdates = rest;
         }
         
         const updatedEmployee = await EmployeeService.updateEmployee(id, validUpdates);
