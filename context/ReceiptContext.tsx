@@ -220,22 +220,21 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     const tax = calculateTax(subtotal);
     const total = subtotal + tax;
 
-    const receiptData = {
-      customerName: customerName || 'Walk-in Customer',
-      items: [...receiptItems],
-      subtotal,
-      tax,
-      total,
-      paymentMethod,
+    // ✅ CRITICAL: Backend expects items array with productId and quantity only
+    const payload = {
+      items: receiptItems.map(item => ({
+        productId: item.id.toString(),  // Convert number ID to string as backend expects
+        quantity: item.quantity,         // Integer >= 1
+      })),
+      paymentMethod: paymentMethod || 'CASH',
+      customerName: customerName || undefined,  // Optional field, send undefined if empty
     };
 
     if (__DEV__) {
-      console.log('📝 Creating receipt with payload:', JSON.stringify({
-        paymentMethod,
-        customerName: customerName || 'Walk-in Customer',
-        itemsCount: receiptItems.length,
-        total,
-      }, null, 2));
+      console.log('📤 ========================================');
+      console.log('📤 SENDING TO BACKEND:');
+      console.log(JSON.stringify(payload, null, 2));
+      console.log('📤 ========================================');
     }
 
     setSubmitting(true);
@@ -248,9 +247,10 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
         if (__DEV__) {
           console.log('🌐 Sending receipt to API...');
         }
-        receipt = await ReceiptService.createReceipt(receiptData);
+        receipt = await ReceiptService.createReceipt(payload as any);
         if (__DEV__) {
           console.log('✅ Receipt created successfully:', receipt);
+          console.log(`✅ Receipt created: ${receipt.receiptNumber}`);
         }
         setReceipts(prev => [receipt, ...prev]);
       } else {
@@ -258,14 +258,14 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
         receipt = {
           id: Date.now(),
           receiptNumber: generateReceiptNumber(),
-          customerName: receiptData.customerName,
-          items: receiptData.items,
-          subtotal: receiptData.subtotal,
-          tax: receiptData.tax,
-          total: receiptData.total,
+          customerName: customerName || 'Walk-in Customer',
+          items: [...receiptItems],
+          subtotal,
+          tax,
+          total,
           dateTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
           status: 'completed',
-          paymentMethod: receiptData.paymentMethod,
+          paymentMethod: paymentMethod || 'CASH',
         };
         setReceipts(prev => [receipt, ...prev]);
       }
@@ -288,10 +288,16 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       );
 
       clearReceipt();
-      Alert.alert('Success', `Transaction completed successfully! Receipt #${receipt.receiptNumber}`);
+      Alert.alert(
+        'Success! 🎉',
+        `Receipt #${receipt.receiptNumber} created\n\nTotal: $${receipt.total.toFixed(2)}`,
+        [{ text: 'OK' }]
+      );
 
-    } catch (error) {
-      console.error('❌ Failed to create receipt:', error);
+    } catch (error: any) {
+      console.error('❌ Transaction failed:', error);
+      console.error('❌ Error details:', error.response?.data);
+      
       const errorMessage = error instanceof Error ? error.message : 'Failed to process transaction';
       Alert.alert('Error', errorMessage);
 
@@ -300,14 +306,14 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
         const receipt: Receipt = {
           id: Date.now(),
           receiptNumber: generateReceiptNumber(),
-          customerName: receiptData.customerName,
-          items: receiptData.items,
-          subtotal: receiptData.subtotal,
-          tax: receiptData.tax,
-          total: receiptData.total,
+          customerName: customerName || 'Walk-in Customer',
+          items: [...receiptItems],
+          subtotal,
+          tax,
+          total,
           dateTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
           status: 'completed',
-          paymentMethod: receiptData.paymentMethod,
+          paymentMethod: paymentMethod || 'CASH',
         };
         setReceipts(prev => [receipt, ...prev]);
         clearReceipt();
