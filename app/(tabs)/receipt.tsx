@@ -51,10 +51,12 @@ export default function ReceiptScreen() {
   const {
     receiptItems,
     customerName,
+    paymentMethod,
     loading,
     error,
     submitting,
     setCustomerName,
+    setPaymentMethod,
     updateReceiptItemQuantity,
     removeItemFromReceipt,
     calculateTotal,
@@ -70,6 +72,7 @@ export default function ReceiptScreen() {
   const [activeTab, setActiveTab] = useState<TabType>("create");
   const [showAddToReceipt, setShowAddToReceipt] = useState(false);
   const [customerNameError, setCustomerNameError] = useState("");
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
 
   // Receipt listing state
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -194,6 +197,7 @@ export default function ReceiptScreen() {
         <Text style={styles.receiptItemPrice}>{item.customerName || "Walk-in Customer"}</Text>
         <Text style={styles.receiptItemPrice}>
           {item.items?.length || 0} items • Tax: ${item.tax?.toFixed(2) || "0.00"}
+          {item.paymentMethod ? ` • ${item.paymentMethod}` : ''}
         </Text>
       </View>
       <View style={styles.receiptItemControls}>
@@ -571,6 +575,44 @@ export default function ReceiptScreen() {
                 </View>
               ) : null}
             </View>
+
+            <View style={styles.paymentMethodSection}>
+              <Text style={styles.paymentMethodLabel}>Payment Method</Text>
+              <View style={styles.paymentMethodButtons}>
+                {['CASH', 'CARD', 'MOBILE', 'OTHER'].map((method) => (
+                  <TouchableOpacity
+                    key={method}
+                    style={[
+                      styles.paymentMethodButton,
+                      paymentMethod === method && styles.paymentMethodButtonActive,
+                    ]}
+                    onPress={() => setPaymentMethod(method)}
+                  >
+                    <Ionicons
+                      name={
+                        method === 'CASH' 
+                          ? 'cash-outline' 
+                          : method === 'CARD' 
+                          ? 'card-outline' 
+                          : method === 'MOBILE'
+                          ? 'phone-portrait-outline'
+                          : 'wallet-outline'
+                      }
+                      size={20}
+                      color={paymentMethod === method ? '#F59E0B' : '#6B7280'}
+                    />
+                    <Text
+                      style={[
+                        styles.paymentMethodButtonText,
+                        paymentMethod === method && styles.paymentMethodButtonTextActive,
+                      ]}
+                    >
+                      {method}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -942,5 +984,43 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
     fontWeight: "500",
+  },
+  paymentMethodSection: {
+    marginTop: 16,
+  },
+  paymentMethodLabel: {
+    fontWeight: "600",
+    fontSize: 14,
+    marginBottom: 8,
+    color: "#374151",
+  },
+  paymentMethodButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  paymentMethodButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  paymentMethodButtonActive: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#F59E0B",
+  },
+  paymentMethodButtonText: {
+    marginLeft: 6,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  paymentMethodButtonTextActive: {
+    color: "#F59E0B",
   },
 });

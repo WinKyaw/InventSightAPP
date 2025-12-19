@@ -17,6 +17,7 @@ export interface CreateReceiptRequest {
   subtotal: number;
   tax: number;
   total: number;
+  paymentMethod: string;
 }
 
 export interface ReceiptResponse {
