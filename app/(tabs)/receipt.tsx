@@ -225,7 +225,7 @@ export default function ReceiptScreen() {
       
       // Check if date is valid
       if (isNaN(dateObj.getTime())) {
-        return 'Invalid Date';
+        return 'N/A';
       }
       
       return dateObj.toLocaleString("en-US", {
