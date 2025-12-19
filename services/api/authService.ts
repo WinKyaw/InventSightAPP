@@ -92,6 +92,8 @@ class AuthService {
         email: apiResponse.email,
         name: apiResponse.fullName,
         role: apiResponse.role.toLowerCase(),
+        activeStoreId: apiResponse.activeStoreId,  // ✅ Include store ID if provided
+        activeStoreName: apiResponse.activeStoreName,  // ✅ Include store name if provided
       },
       tokens: {
         accessToken: apiResponse.token,
@@ -112,6 +114,9 @@ class AuthService {
     console.log('✅ AuthService: Login successful for user:', loginData.user.email);
     console.log('  - User ID:', loginData.user.id);
     console.log('  - Role:', loginData.user.role);
+    if (loginData.user.activeStoreId) {
+      console.log('  - Active Store:', loginData.user.activeStoreName || loginData.user.activeStoreId);
+    }
     // Do NOT log the token - it's sensitive!
     
     return loginData;
@@ -225,6 +230,8 @@ class AuthService {
           email: apiResponse.email,
           name: apiResponse.fullName || `${credentials.firstName} ${credentials.lastName}`,
           role: apiResponse.role.toLowerCase(),
+          activeStoreId: apiResponse.activeStoreId,  // ✅ Include store ID if provided
+          activeStoreName: apiResponse.activeStoreName,  // ✅ Include store name if provided
         },
         tokens: {
           accessToken: apiResponse.token,
@@ -245,6 +252,9 @@ class AuthService {
       console.log('✅ AuthService: Signup successful for user:', signupData.user.email);
       console.log('  - User ID:', signupData.user.id);
       console.log('  - Role:', signupData.user.role);
+      if (signupData.user.activeStoreId) {
+        console.log('  - Active Store:', signupData.user.activeStoreName || signupData.user.activeStoreId);
+      }
       // Do NOT log the token - it's sensitive!
       
       return signupData;

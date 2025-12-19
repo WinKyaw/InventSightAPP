@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useItems } from './ItemsContext';
+import { useAuth } from './AuthContext';
 import { Receipt, ReceiptItem, Item } from '../types';
 import { ReceiptService, CreateReceiptRequest } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
@@ -37,6 +38,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   const [useApiIntegration, setUseApiIntegration] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { items, setItems } = useItems();
+  const { user } = useAuth();  // ✅ Get user from auth context
 
   // Authentication readiness check
   const { canMakeApiCalls } = useApiReadiness();
@@ -221,6 +223,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     const total = subtotal + tax;
 
     // ✅ CRITICAL: Backend expects items array with productId and quantity only
+    // ✅ Include storeId if user has an active store
     const payload: CreateReceiptRequest = {
       items: receiptItems.map(item => ({
         productId: item.id.toString(),  // Convert number ID to string as backend expects
@@ -228,12 +231,18 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       })),
       paymentMethod: paymentMethod || 'CASH',
       customerName: customerName || undefined,  // Optional field, send undefined if empty
+      storeId: user?.activeStoreId,  // ✅ Include user's active store ID if available
     };
 
     if (__DEV__) {
       console.log('📤 ========================================');
       console.log('📤 SENDING TO BACKEND:');
       console.log(JSON.stringify(payload, null, 2));
+      if (payload.storeId) {
+        console.log('✅ Store ID included:', payload.storeId);
+      } else {
+        console.log('⚠️  No store ID - backend may derive from user context');
+      }
       console.log('📤 ========================================');
     }
 
@@ -322,7 +331,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     } finally {
       setSubmitting(false);
     }
-  }, [receiptItems, items, calculateTotal, calculateTax, generateReceiptNumber, customerName, paymentMethod, useApiIntegration, canMakeApiCalls, setItems, clearReceipt]);
+  }, [receiptItems, items, calculateTotal, calculateTax, generateReceiptNumber, customerName, paymentMethod, useApiIntegration, canMakeApiCalls, setItems, clearReceipt, user?.activeStoreId]);
 
   const refreshReceipts = useCallback(async (): Promise<void> => {
     if (useApiIntegration && canMakeApiCalls) {

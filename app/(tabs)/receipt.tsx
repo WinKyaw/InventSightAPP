@@ -624,6 +624,16 @@ export default function ReceiptScreen() {
             </View>
           </View>
 
+          {/* Store Assignment Warning */}
+          {!user?.activeStoreId && (
+            <View style={styles.warningContainer}>
+              <Ionicons name="information-circle" size={16} color="#F59E0B" />
+              <Text style={styles.warningText}>
+                No store assigned. Contact admin if receipt creation fails.
+              </Text>
+            </View>
+          )}
+
           <TouchableOpacity
             style={styles.addItemToReceiptButton}
             onPress={() => setShowAddToReceipt(true)}
@@ -1043,5 +1053,21 @@ const styles = StyleSheet.create({
   },
   paymentMethodButtonTextActive: {
     color: "#F59E0B",
+  },
+  warningContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  warningText: {
+    color: "#92400E",
+    marginLeft: 8,
+    fontSize: 13,
+    flex: 1,
   },
 });

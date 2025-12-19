@@ -22,6 +22,7 @@ export interface CreateReceiptRequest {
   items: CreateReceiptItem[];  // Required: Array of items to purchase
   paymentMethod: string;        // Required: Payment method (e.g., 'CASH', 'CARD', 'MOBILE', 'OTHER')
   customerName?: string;        // Optional: Customer name (omit for walk-in customers)
+  storeId?: string;             // Optional: Store ID (backend may require this or derive from user context)
 }
 
 // Legacy interface for local storage (includes calculated fields)
