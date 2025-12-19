@@ -300,7 +300,8 @@ export default function EmployeesScreen() {
                     {(() => {
                       const isGMPlus = user?.role === 'GENERAL_MANAGER' || 
                                       user?.role === 'CEO' || 
-                                      user?.role === 'OWNER';
+                                      user?.role === 'FOUNDER' ||
+                                      user?.role === 'ADMIN';
                       
                       console.log('🔍 Employee Receipts Button Check:', {
                         employeeId: employee.id,
