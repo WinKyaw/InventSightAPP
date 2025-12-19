@@ -108,6 +108,17 @@ export default function ReceiptScreen() {
                    user?.role === 'FOUNDER' ||
                    user?.role === 'ADMIN';
 
+  // ✅ Debug logging for GM+ status (only in development)
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('🔍 Receipt Screen - User Debug:');
+      console.log('  - User role:', user?.role);
+      console.log('  - Is GM+:', isGMPlus);
+      console.log('  - Cashier stats count:', cashierStats?.length || 0);
+      console.log('  - Selected cashier:', selectedCashier);
+    }
+  }, [user?.role, isGMPlus, cashierStats?.length, selectedCashier]);
+
   useEffect(() => {
     if (activeTab === "list") {
       loadReceipts();
@@ -329,48 +340,60 @@ export default function ReceiptScreen() {
       </View>
 
       {/* GM+ Cashier Filter for History Tab */}
-      {isGMPlus && cashierStats.length > 0 && (
-        <View style={styles.cashierFilterContainer}>
-          <Text style={styles.cashierFilterLabel}>Filter by cashier:</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.cashierFilterScroll}
-          >
-            <TouchableOpacity
-              style={[
-                styles.cashierFilterButton,
-                !selectedCashier && styles.cashierFilterButtonActive
-              ]}
-              onPress={() => setSelectedCashier(null)}
+      {(() => {
+        const shouldShowFilter = isGMPlus && cashierStats.length > 0;
+        
+        if (__DEV__) {
+          console.log('🔍 Cashier Filter (History Tab) - isGMPlus:', isGMPlus, 'cashiers:', cashierStats.length);
+        }
+        
+        if (!shouldShowFilter) {
+          return null;
+        }
+        
+        return (
+          <View style={styles.cashierFilterContainer}>
+            <Text style={styles.cashierFilterLabel}>Filter by cashier:</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.cashierFilterScroll}
             >
-              <Text style={[
-                styles.cashierFilterButtonText,
-                !selectedCashier && styles.cashierFilterButtonTextActive
-              ]}>
-                All
-              </Text>
-            </TouchableOpacity>
-            {cashierStats.map((cashier) => (
               <TouchableOpacity
-                key={cashier.cashierId}
                 style={[
                   styles.cashierFilterButton,
-                  selectedCashier === cashier.cashierId && styles.cashierFilterButtonActive
+                  !selectedCashier && styles.cashierFilterButtonActive
                 ]}
-                onPress={() => setSelectedCashier(cashier.cashierId)}
+                onPress={() => setSelectedCashier(null)}
               >
                 <Text style={[
                   styles.cashierFilterButtonText,
-                  selectedCashier === cashier.cashierId && styles.cashierFilterButtonTextActive
+                  !selectedCashier && styles.cashierFilterButtonTextActive
                 ]}>
-                  {cashier.cashierName}
+                  All
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+              {cashierStats.map((cashier) => (
+                <TouchableOpacity
+                  key={cashier.cashierId}
+                  style={[
+                    styles.cashierFilterButton,
+                    selectedCashier === cashier.cashierId && styles.cashierFilterButtonActive
+                  ]}
+                  onPress={() => setSelectedCashier(cashier.cashierId)}
+                >
+                  <Text style={[
+                    styles.cashierFilterButtonText,
+                    selectedCashier === cashier.cashierId && styles.cashierFilterButtonTextActive
+                  ]}>
+                    {cashier.cashierName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        );
+      })()}
 
       {/* Sort/Stats Header */}
       <View style={styles.employeeStats}>
@@ -879,48 +902,60 @@ export default function ReceiptScreen() {
           )}
 
           {/* GM+ Cashier Filter */}
-          {isGMPlus && cashierStats.length > 0 && (
-            <View style={styles.cashierFilterContainer}>
-              <Text style={styles.cashierFilterLabel}>View receipts by cashier:</Text>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.cashierFilterScroll}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.cashierFilterButton,
-                    !selectedCashier && styles.cashierFilterButtonActive
-                  ]}
-                  onPress={() => setSelectedCashier(null)}
+          {(() => {
+            const shouldShowFilter = isGMPlus && cashierStats.length > 0;
+            
+            if (__DEV__) {
+              console.log('🔍 Cashier Filter (Create Tab) - isGMPlus:', isGMPlus, 'cashiers:', cashierStats.length);
+            }
+            
+            if (!shouldShowFilter) {
+              return null;
+            }
+            
+            return (
+              <View style={styles.cashierFilterContainer}>
+                <Text style={styles.cashierFilterLabel}>View receipts by cashier:</Text>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.cashierFilterScroll}
                 >
-                  <Text style={[
-                    styles.cashierFilterButtonText,
-                    !selectedCashier && styles.cashierFilterButtonTextActive
-                  ]}>
-                    All Cashiers
-                  </Text>
-                </TouchableOpacity>
-                {cashierStats.map((cashier) => (
                   <TouchableOpacity
-                    key={cashier.cashierId}
                     style={[
                       styles.cashierFilterButton,
-                      selectedCashier === cashier.cashierId && styles.cashierFilterButtonActive
+                      !selectedCashier && styles.cashierFilterButtonActive
                     ]}
-                    onPress={() => setSelectedCashier(cashier.cashierId)}
+                    onPress={() => setSelectedCashier(null)}
                   >
                     <Text style={[
                       styles.cashierFilterButtonText,
-                      selectedCashier === cashier.cashierId && styles.cashierFilterButtonTextActive
+                      !selectedCashier && styles.cashierFilterButtonTextActive
                     ]}>
-                      {cashier.cashierName} ({cashier.receiptCount})
+                      All Cashiers
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+                  {cashierStats.map((cashier) => (
+                    <TouchableOpacity
+                      key={cashier.cashierId}
+                      style={[
+                        styles.cashierFilterButton,
+                        selectedCashier === cashier.cashierId && styles.cashierFilterButtonActive
+                      ]}
+                      onPress={() => setSelectedCashier(cashier.cashierId)}
+                    >
+                      <Text style={[
+                        styles.cashierFilterButtonText,
+                        selectedCashier === cashier.cashierId && styles.cashierFilterButtonTextActive
+                      ]}>
+                        {cashier.cashierName} ({cashier.receiptCount})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            );
+          })()}
 
           <View style={styles.recentReceiptsSection}>
             <Text style={styles.recentReceiptsTitle}>

@@ -297,23 +297,41 @@ export default function EmployeesScreen() {
                   {/* Action Buttons */}
                   <View style={styles.employeeStats}>
                     {/* View Receipts Button - GM+ only */}
-                    {(user?.role === 'GENERAL_MANAGER' || user?.role === 'CEO' || user?.role === 'OWNER') && (
-                      <TouchableOpacity 
-                        style={[styles.headerButton, { backgroundColor: '#F59E0B' }]}
-                        onPress={() => {
-                          router.push({
-                            pathname: '/employee-receipts',
-                            params: {
-                              employeeId: employee.id.toString(),
-                              employeeName: `${employee.firstName} ${employee.lastName}`,
-                            },
-                          });
-                        }}
-                      >
-                        <Ionicons name="receipt" size={16} color="white" />
-                        <Text style={styles.headerButtonText}>Receipts</Text>
-                      </TouchableOpacity>
-                    )}
+                    {(() => {
+                      const isGMPlus = user?.role === 'GENERAL_MANAGER' || 
+                                      user?.role === 'CEO' || 
+                                      user?.role === 'FOUNDER' ||
+                                      user?.role === 'ADMIN';
+                      
+                      if (__DEV__ && isGMPlus) {
+                        console.log('✅ Showing receipts button for:', `${employee.firstName} ${employee.lastName}`);
+                      }
+                      
+                      if (!isGMPlus) {
+                        return null;
+                      }
+                      
+                      return (
+                        <TouchableOpacity 
+                          style={[styles.headerButton, { backgroundColor: '#F59E0B' }]}
+                          onPress={() => {
+                            if (__DEV__) {
+                              console.log('📊 Navigating to employee receipts:', employee.id);
+                            }
+                            router.push({
+                              pathname: '/employee-receipts',
+                              params: {
+                                employeeId: employee.id.toString(),
+                                employeeName: `${employee.firstName} ${employee.lastName}`,
+                              },
+                            });
+                          }}
+                        >
+                          <Ionicons name="receipt" size={16} color="white" />
+                          <Text style={styles.headerButtonText}>Receipts</Text>
+                        </TouchableOpacity>
+                      );
+                    })()}
                     
                     <TouchableOpacity 
                       style={[styles.headerButton, { backgroundColor: '#3B82F6' }]}
