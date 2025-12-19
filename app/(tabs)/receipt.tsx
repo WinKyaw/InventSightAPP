@@ -142,7 +142,7 @@ export default function ReceiptScreen() {
     let filtered = receipts;
     filtered = getFilteredReceiptsByDate(filtered);
     
-    // GM+ cashier filter
+    // Filter receipts by selected cashier for GM+ users
     if (isGMPlus && selectedCashier) {
       filtered = filtered.filter(
         (receipt) => receipt.processedById === selectedCashier
@@ -240,10 +240,10 @@ export default function ReceiptScreen() {
       <View style={styles.receiptItemInfo}>
         <Text style={styles.receiptItemName}>#{item.receiptNumber}</Text>
         
-        {/* GM+ Cashier Info */}
+        {/* Display cashier info for GM+ users */}
         {isGMPlus && item.processedByFullName && (
           <View style={styles.receiptItemCashier}>
-            <Text style={styles.receiptItemCashierIcon}>👤</Text>
+            <Ionicons name="person" size={14} color="#F59E0B" style={styles.receiptItemCashierIcon} />
             <Text style={styles.receiptItemCashierName}>
               {item.processedByFullName}
             </Text>
@@ -1377,7 +1377,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   receiptItemCashierIcon: {
-    fontSize: 14,
     marginRight: 6,
   },
   receiptItemCashierName: {
