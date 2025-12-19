@@ -141,14 +141,14 @@ export default function ReceiptScreen() {
       let valB: any;
       
       if (sortBy === "date") {
-        valA = new Date(a.dateTime || 0).getTime();
-        valB = new Date(b.dateTime || 0).getTime();
+        valA = new Date(a.createdAt || a.dateTime || 0).getTime();
+        valB = new Date(b.createdAt || b.dateTime || 0).getTime();
       } else if (sortBy === "customer") {
         valA = a.customerName || "";
         valB = b.customerName || "";
       } else if (sortBy === "total") {
-        valA = a.total;
-        valB = b.total;
+        valA = a.totalAmount || a.total || 0;
+        valB = b.totalAmount || b.total || 0;
       } else {
         valA = (a as any)[sortBy];
         valB = (b as any)[sortBy];
@@ -211,21 +211,34 @@ export default function ReceiptScreen() {
         </Text>
       </View>
       <View style={styles.receiptItemControls}>
-        <Text style={styles.receiptItemTotal}>${item.total.toFixed(2)}</Text>
-        <Text style={styles.receiptItemName}>{formatDate(item.dateTime)}</Text>
+        <Text style={styles.receiptItemTotal}>${(item.totalAmount || item.total || 0).toFixed(2)}</Text>
+        <Text style={styles.receiptItemName}>{formatDate(item.createdAt || item.dateTime)}</Text>
       </View>
     </TouchableOpacity>
   );
 
-  const formatDate = (date: string | number | Date) => {
-    if (!date) return "";
-    return new Date(date).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatDate = (date?: string | number | Date): string => {
+    if (!date) return 'N/A';
+    
+    try {
+      const dateObj = new Date(date);
+      
+      // Check if date is valid
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid Date';
+      }
+      
+      return dateObj.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
   };
 
   const renderReceiptListTab = () => (
