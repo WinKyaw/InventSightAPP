@@ -465,22 +465,41 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
 
   // Load cashier stats (GM+ only)
   const loadCashierStats = useCallback(async (): Promise<void> => {
-    if (!isGMPlus) return;
+    if (!isGMPlus) {
+      console.log('⏭️ ReceiptContext: Not GM+, skipping cashier stats');
+      return;
+    }
     
     try {
+      console.log('📊 ReceiptContext: Loading cashier stats...');
       const data = await ReceiptService.getCashierStats();
+      console.log('✅ ReceiptContext: Cashier stats loaded:', data);
+      console.log('📊 Number of cashiers:', data.length);
       setCashierStats(data);
     } catch (error) {
-      console.error('Error loading cashier stats:', error);
+      console.error('❌ ReceiptContext: Error loading cashier stats:', error);
+      setCashierStats([]);
     }
   }, [isGMPlus]);
 
   // Load cashier stats when user is GM+ and on mount
   useEffect(() => {
+    console.log('🔍 ReceiptContext: GM+ check:', {
+      isGMPlus,
+      userRole: user?.role,
+      canMakeApiCalls,
+    });
+    
     if (isGMPlus && canMakeApiCalls) {
+      console.log('✅ ReceiptContext: Loading cashier stats for GM+ user');
       loadCashierStats();
+    } else {
+      console.log('⏭️ ReceiptContext: Skipping cashier stats', {
+        isGMPlus,
+        canMakeApiCalls,
+      });
     }
-  }, [isGMPlus, canMakeApiCalls, loadCashierStats]);
+  }, [isGMPlus, canMakeApiCalls, loadCashierStats, user?.role]);
 
   // Reload receipts when cashier filter changes
   useEffect(() => {
