@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 import { useItems } from './ItemsContext';
 import { useAuth } from './AuthContext';
 import { Receipt, ReceiptItem, Item } from '../types';
-import { ReceiptService, CreateReceiptRequest } from '../services';
+import { ReceiptService, CreateReceiptRequest, CashierStats } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 
 // API response types for better type safety
@@ -71,6 +71,11 @@ interface ReceiptContextType {
   refreshReceipts: () => Promise<void>;
   useApiIntegration: boolean;
   setUseApiIntegration: (use: boolean) => void;
+  // GM+ cashier filter support
+  selectedCashier: string | null;
+  setSelectedCashier: (cashierId: string | null) => void;
+  cashierStats: CashierStats[];
+  loadCashierStats: () => Promise<void>;
 }
 
 const ReceiptContext = createContext<ReceiptContextType | undefined>(undefined);
@@ -84,6 +89,16 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { items, setItems } = useItems();
   const { user } = useAuth();  // ✅ Get user from auth context
+
+  // GM+ cashier filter state
+  const [selectedCashier, setSelectedCashier] = useState<string | null>(null);
+  const [cashierStats, setCashierStats] = useState<CashierStats[]>([]);
+
+  // Check if user is GM+
+  const isGMPlus = user?.role === 'GENERAL_MANAGER' || 
+                   user?.role === 'CEO' || 
+                   user?.role === 'FOUNDER' ||
+                   user?.role === 'ADMIN';
 
   // Authentication readiness check
   const { canMakeApiCalls } = useApiReadiness();
@@ -448,6 +463,32 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     }
   }, [useApiIntegration, canMakeApiCalls, fetchReceipts]);
 
+  // Load cashier stats (GM+ only)
+  const loadCashierStats = useCallback(async (): Promise<void> => {
+    if (!isGMPlus) return;
+    
+    try {
+      const data = await ReceiptService.getCashierStats();
+      setCashierStats(data);
+    } catch (error) {
+      console.error('Error loading cashier stats:', error);
+    }
+  }, [isGMPlus]);
+
+  // Load cashier stats when user is GM+ and on mount
+  useEffect(() => {
+    if (isGMPlus && canMakeApiCalls) {
+      loadCashierStats();
+    }
+  }, [isGMPlus, canMakeApiCalls, loadCashierStats]);
+
+  // Reload receipts when cashier filter changes
+  useEffect(() => {
+    if (useApiIntegration && canMakeApiCalls) {
+      fetchReceipts();
+    }
+  }, [selectedCashier, useApiIntegration, canMakeApiCalls]);
+
   return (
     <ReceiptContext.Provider value={{
       receiptItems,
@@ -469,6 +510,10 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       refreshReceipts,
       useApiIntegration,
       setUseApiIntegration,
+      selectedCashier,
+      setSelectedCashier,
+      cashierStats,
+      loadCashierStats,
     }}>
       {children}
     </ReceiptContext.Provider>
