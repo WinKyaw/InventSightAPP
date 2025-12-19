@@ -226,15 +226,16 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       subtotal,
       tax,
       total,
-      paymentMethod: paymentMethod,
+      paymentMethod,
     };
 
     if (__DEV__) {
-      console.log('📝 Creating receipt with payload:', JSON.stringify(receiptData, null, 2));
-      console.log('  - Payment Method:', paymentMethod);
-      console.log('  - Customer Name:', customerName || 'Walk-in Customer');
-      console.log('  - Items count:', receiptItems.length);
-      console.log('  - Total:', total);
+      console.log('📝 Creating receipt with payload:', JSON.stringify({
+        paymentMethod,
+        customerName: customerName || 'Walk-in Customer',
+        itemsCount: receiptItems.length,
+        total,
+      }, null, 2));
     }
 
     setSubmitting(true);
