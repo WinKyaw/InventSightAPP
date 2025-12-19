@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { Alert } from 'react-native';
 import { useItems } from './ItemsContext';
 import { Receipt, ReceiptItem, Item } from '../types';
-import { ReceiptService } from '../services';
+import { ReceiptService, CreateReceiptRequest } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 
 interface ReceiptContextType {
@@ -221,7 +221,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     const total = subtotal + tax;
 
     // ✅ CRITICAL: Backend expects items array with productId and quantity only
-    const payload = {
+    const payload: CreateReceiptRequest = {
       items: receiptItems.map(item => ({
         productId: item.id.toString(),  // Convert number ID to string as backend expects
         quantity: item.quantity,         // Integer >= 1
@@ -247,7 +247,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
         if (__DEV__) {
           console.log('🌐 Sending receipt to API...');
         }
-        receipt = await ReceiptService.createReceipt(payload as any);
+        receipt = await ReceiptService.createReceipt(payload);
         if (__DEV__) {
           console.log('✅ Receipt created successfully:', receipt);
           console.log(`✅ Receipt created: ${receipt.receiptNumber}`);

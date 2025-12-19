@@ -11,7 +11,21 @@ const RECEIPT_ENDPOINTS = {
   GET_BY_DATE: '/api/receipts/by-date',
 };
 
+// ✅ Backend expects simplified item format with productId and quantity only
+export interface CreateReceiptItem {
+  productId: string;  // Product ID as string (backend requirement)
+  quantity: number;   // Quantity must be >= 1
+}
+
+// ✅ Updated to match backend API expectations
 export interface CreateReceiptRequest {
+  items: CreateReceiptItem[];  // Required: Array of items to purchase
+  paymentMethod: string;        // Required: Payment method (e.g., 'CASH', 'CARD', 'MOBILE', 'OTHER')
+  customerName?: string;        // Optional: Customer name (omit for walk-in customers)
+}
+
+// Legacy interface for local storage (includes calculated fields)
+export interface LocalReceiptData {
   customerName: string;
   items: ReceiptItem[];
   subtotal: number;
