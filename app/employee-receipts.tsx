@@ -89,43 +89,51 @@ export default function EmployeeReceiptsScreen() {
     });
   };
 
-  const renderReceipt = ({ item }: { item: Receipt }) => (
-    <TouchableOpacity
-      style={styles.receiptCard}
-      onPress={() => handleReceiptPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.receiptHeader}>
-        <Text style={styles.receiptNumber}>
-          {item.receiptNumber || `#${item.id}`}
-        </Text>
-        <Text style={styles.receiptTotal}>
-          ${(item.totalAmount || item.total || 0).toFixed(2)}
-        </Text>
-      </View>
+  const renderReceipt = ({ item }: { item: Receipt }) => {
+    // Safely get the date/time value
+    const dateValue = item.createdAt || item.dateTime;
+    const timeString = dateValue 
+      ? new Date(dateValue).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        })
+      : 'N/A';
+    
+    return (
+      <TouchableOpacity
+        style={styles.receiptCard}
+        onPress={() => handleReceiptPress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.receiptHeader}>
+          <Text style={styles.receiptNumber}>
+            {item.receiptNumber || `#${item.id}`}
+          </Text>
+          <Text style={styles.receiptTotal}>
+            ${(item.totalAmount || item.total || 0).toFixed(2)}
+          </Text>
+        </View>
 
-      <View style={styles.receiptDetails}>
-        <Text style={styles.receiptTime}>
-          {new Date(item.createdAt || item.dateTime).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-          })}
-        </Text>
-        <Text style={styles.receiptItems}>
-          {item.items?.length || 0} items
-        </Text>
-        <Text style={styles.receiptPayment}>
-          {item.paymentMethod || 'CASH'}
-        </Text>
-      </View>
+        <View style={styles.receiptDetails}>
+          <Text style={styles.receiptTime}>
+            {timeString}
+          </Text>
+          <Text style={styles.receiptItems}>
+            {item.items?.length || 0} items
+          </Text>
+          <Text style={styles.receiptPayment}>
+            {item.paymentMethod || 'CASH'}
+          </Text>
+        </View>
 
-      {item.customerName && (
-        <Text style={styles.receiptCustomer}>
-          👤 {item.customerName}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
+        {item.customerName && (
+          <Text style={styles.receiptCustomer}>
+            👤 {item.customerName}
+          </Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -180,7 +188,7 @@ export default function EmployeeReceiptsScreen() {
         <FlatList
           data={receipts}
           renderItem={renderReceipt}
-          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+          keyExtractor={(item, index) => item.id?.toString() || `receipt-${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={true}
           ListHeaderComponent={
