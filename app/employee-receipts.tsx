@@ -6,15 +6,12 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  StatusBar,
+  Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import ReceiptService from '../services/api/receiptService';
 import DatePicker from '../components/ui/DatePicker';
 import { Receipt } from '../types';
-import { ReceiptDetailsModal } from '../components/modals/ReceiptDetailsModal';
 
 export default function EmployeeReceiptsScreen() {
   const params = useLocalSearchParams();
@@ -26,107 +23,123 @@ export default function EmployeeReceiptsScreen() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
-  const [showReceiptDetails, setShowReceiptDetails] = useState(false);
 
-  // Helper function to get total amount with fallback
-  const getReceiptTotal = (receipt: Receipt): number => {
-    return receipt.totalAmount || receipt.total || 0;
-  };
-  
   useEffect(() => {
+    console.log('🔍 Employee Receipts Screen mounted');
+    console.log('👤 Employee ID:', employeeId);
+    console.log('👤 Employee Name:', employeeName);
+    
+    if (!employeeId) {
+      Alert.alert('Error', 'Employee ID is missing');
+      router.back();
+      return;
+    }
+    
     loadEmployeeReceipts();
-  }, [selectedDate]);
-  
+  }, [selectedDate, employeeId]);
+
   const loadEmployeeReceipts = async () => {
     try {
       setLoading(true);
+      console.log('📊 Loading receipts...');
       
-      // Format date for API (YYYY-MM-DD)
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Format date as YYYY-MM-DD
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       
-      // Call API to get employee receipts for selected date
+      console.log('📅 Formatted date:', dateStr);
+      
       const data = await ReceiptService.getReceiptsByEmployeeAndDate(
         employeeId,
         dateStr
       );
       
+      console.log('✅ Loaded receipts:', data.length);
       setReceipts(data);
-    } catch (error) {
-      console.error('Error loading employee receipts:', error);
-      // On error, just show empty list
+    } catch (error: any) {
+      console.error('❌ Error loading employee receipts:', error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to load receipts';
+      
+      Alert.alert('Error', errorMessage);
       setReceipts([]);
     } finally {
       setLoading(false);
     }
   };
-  
+  const getTotalSales = () => {
+    return receipts.reduce((sum, receipt) => 
+      sum + (receipt.totalAmount || receipt.total || 0), 0
+    );
+  };
+
+  const handleReceiptPress = (receipt: Receipt) => {
+    console.log('🧾 Opening receipt:', receipt.id);
+    // Navigate to receipt details
+    router.push({
+      pathname: '/(tabs)/receipt',
+      params: { 
+        selectedReceiptId: receipt.id,
+        tab: 'history',
+      },
+    });
+  };
+
   const renderReceipt = ({ item }: { item: Receipt }) => (
     <TouchableOpacity
       style={styles.receiptCard}
-      onPress={() => {
-        setSelectedReceipt(item);
-        setShowReceiptDetails(true);
-      }}
+      onPress={() => handleReceiptPress(item)}
+      activeOpacity={0.7}
     >
       <View style={styles.receiptHeader}>
         <Text style={styles.receiptNumber}>
           {item.receiptNumber || `#${item.id}`}
         </Text>
         <Text style={styles.receiptTotal}>
-          ${getReceiptTotal(item).toFixed(2)}
+          ${(item.totalAmount || item.total || 0).toFixed(2)}
         </Text>
       </View>
-      
+
       <View style={styles.receiptDetails}>
         <Text style={styles.receiptTime}>
-          {item.createdAt 
-            ? new Date(item.createdAt).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-              })
-            : item.dateTime
-            ? new Date(item.dateTime).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-              })
-            : 'N/A'}
+          {new Date(item.createdAt || item.dateTime).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+          })}
         </Text>
         <Text style={styles.receiptItems}>
           {item.items?.length || 0} items
         </Text>
         <Text style={styles.receiptPayment}>
-          {item.paymentMethod || 'N/A'}
+          {item.paymentMethod || 'CASH'}
         </Text>
       </View>
-      
+
       {item.customerName && (
         <Text style={styles.receiptCustomer}>
-          Customer: {item.customerName}
+          👤 {item.customerName}
         </Text>
       )}
     </TouchableOpacity>
   );
-  
-  const getTotalSales = () => {
-    return receipts.reduce((sum, receipt) => sum + getReceiptTotal(receipt), 0);
-  };
-  
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#8B5CF6" barStyle="light-content" />
-      
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={styles.backButtonContainer}
+        >
+          <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>{employeeName}'s Receipts</Text>
-          <Text style={styles.subtitle}>View sales history</Text>
-        </View>
+        <Text style={styles.title}>{employeeName}'s Receipts</Text>
       </View>
-      
+
       {/* Date Selector */}
       <View style={styles.dateSelector}>
         <View style={styles.datePickerContainer}>
@@ -136,7 +149,7 @@ export default function EmployeeReceiptsScreen() {
             placeholder="Select Date"
           />
         </View>
-        
+
         <View style={styles.dateSummary}>
           <Text style={styles.dateSummaryLabel}>Total Sales:</Text>
           <Text style={styles.dateSummaryValue}>
@@ -144,19 +157,19 @@ export default function EmployeeReceiptsScreen() {
           </Text>
         </View>
       </View>
-      
+
       {/* Receipts List */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
+          <ActivityIndicator size="large" color="#FF9500" />
           <Text style={styles.loadingText}>Loading receipts...</Text>
         </View>
       ) : receipts.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="receipt-outline" size={64} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>No Receipts Found</Text>
+          <Text style={styles.emptyIcon}>📭</Text>
           <Text style={styles.emptyText}>
-            No receipts found for {selectedDate.toLocaleDateString('en-US', {
+            No receipts found for{'\n'}
+            {selectedDate.toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
               year: 'numeric',
@@ -167,34 +180,34 @@ export default function EmployeeReceiptsScreen() {
         <FlatList
           data={receipts}
           renderItem={renderReceipt}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={true}
+          ListHeaderComponent={
+            <Text style={styles.listHeader}>
+              {receipts.length} {receipts.length === 1 ? 'receipt' : 'receipts'} found
+            </Text>
+          }
         />
       )}
-      
+
       {/* Summary Footer */}
       {!loading && receipts.length > 0 && (
         <View style={styles.footer}>
-          <Text style={styles.footerLabel}>
-            {receipts.length} {receipts.length === 1 ? 'receipt' : 'receipts'}
-          </Text>
-          <Text style={styles.footerTotal}>
-            Total: ${getTotalSales().toFixed(2)}
-          </Text>
+          <View style={styles.footerStat}>
+            <Text style={styles.footerLabel}>Receipts</Text>
+            <Text style={styles.footerValue}>{receipts.length}</Text>
+          </View>
+          <View style={styles.footerDivider} />
+          <View style={styles.footerStat}>
+            <Text style={styles.footerLabel}>Total Sales</Text>
+            <Text style={styles.footerValue}>
+              ${getTotalSales().toFixed(2)}
+            </Text>
+          </View>
         </View>
       )}
-
-      {/* Receipt Details Modal */}
-      <ReceiptDetailsModal
-        visible={showReceiptDetails}
-        onClose={() => {
-          setShowReceiptDetails(false);
-          setSelectedReceipt(null);
-        }}
-        receipt={selectedReceipt}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -204,30 +217,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#FF9500',
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingTop: 48,
   },
-  headerTextContainer: {
-    marginLeft: 16,
-    flex: 1,
+  backButtonContainer: {
+    marginBottom: 8,
+  },
+  backButton: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#FFF',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#E9D5FF',
-    marginTop: 2,
   },
   dateSelector: {
     backgroundColor: '#FFF',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   datePickerContainer: {
     marginBottom: 12,
@@ -250,6 +266,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#10B981',
   },
+  listHeader: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
+    fontWeight: '600',
+  },
   listContent: {
     padding: 16,
     paddingBottom: 100,
@@ -268,7 +290,7 @@ const styles = StyleSheet.create({
   receiptHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   receiptNumber: {
     fontSize: 16,
@@ -276,14 +298,14 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   receiptTotal: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#10B981',
   },
   receiptDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: 8,
+    marginTop: 4,
   },
   receiptTime: {
     fontSize: 14,
@@ -298,22 +320,19 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   receiptCustomer: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
     marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    fontStyle: 'italic',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
+    fontSize: 16,
     color: '#6B7280',
   },
   emptyContainer: {
@@ -322,17 +341,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 16,
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
-    marginTop: 8,
+    lineHeight: 24,
   },
   footer: {
     backgroundColor: '#FFF',
@@ -340,14 +357,28 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  footerStat: {
+    flex: 1,
     alignItems: 'center',
   },
-  footerLabel: {
-    fontSize: 14,
-    color: '#6B7280',
+  footerDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E5E7EB',
   },
-  footerTotal: {
+  footerLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  footerValue: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#111827',
