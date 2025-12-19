@@ -331,7 +331,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     } finally {
       setSubmitting(false);
     }
-  }, [receiptItems, items, calculateTotal, calculateTax, generateReceiptNumber, customerName, paymentMethod, useApiIntegration, canMakeApiCalls, setItems, clearReceipt, user]);
+  }, [receiptItems, items, calculateTotal, calculateTax, generateReceiptNumber, customerName, paymentMethod, useApiIntegration, canMakeApiCalls, setItems, clearReceipt, user?.activeStoreId]);
 
   const refreshReceipts = useCallback(async (): Promise<void> => {
     if (useApiIntegration && canMakeApiCalls) {
