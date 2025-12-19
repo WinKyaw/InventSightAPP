@@ -223,7 +223,8 @@ export default function ItemsScreen() {
 
       <ScrollView 
         style={styles.itemsList} 
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

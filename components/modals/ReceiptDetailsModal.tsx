@@ -21,6 +21,13 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
   const [editedCustomerName, setEditedCustomerName] = useState('');
   const [editedPaymentMethod, setEditedPaymentMethod] = useState('CASH');
 
+  // Helper function to get item fields with fallback
+  const getItemFields = (item: any) => ({
+    name: item.productName || item.name || 'Unknown Product',
+    price: item.unitPrice || item.price || 0,
+    total: item.totalPrice || item.total || 0,
+  });
+
   useEffect(() => {
     if (visible && receipt) {
       setEditedCustomerName(receipt.customerName || '');
@@ -87,8 +94,9 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
     text += `--------------------------------\n`;
     
     receipt.items.forEach((item, index) => {
-      text += `${index + 1}. ${item.name}\n`;
-      text += `   $${item.price.toFixed(2)} x ${item.quantity} = $${item.total.toFixed(2)}\n`;
+      const itemFields = getItemFields(item);
+      text += `${index + 1}. ${itemFields.name}\n`;
+      text += `   $${itemFields.price.toFixed(2)} x ${item.quantity} = $${itemFields.total.toFixed(2)}\n`;
     });
     
     text += `--------------------------------\n`;
@@ -211,26 +219,29 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
         {/* Items List */}
         <View style={[styles.card, { marginBottom: 16 }]}>
           <Text style={[styles.title, { marginBottom: 12 }]}>Items</Text>
-          {receipt.items.map((item, index) => (
-            <View
-              key={`${item.id}-${index}`}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                paddingVertical: 8,
-                borderBottomWidth: index < receipt.items.length - 1 ? 1 : 0,
-                borderBottomColor: '#F3F4F6',
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '600', fontSize: 14 }}>{item.name}</Text>
-                <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }}>
-                  ${item.price.toFixed(2)} × {item.quantity}
-                </Text>
+          {receipt.items.map((item, index) => {
+            const itemFields = getItemFields(item);
+            return (
+              <View
+                key={`${item.id}-${index}`}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  paddingVertical: 8,
+                  borderBottomWidth: index < receipt.items.length - 1 ? 1 : 0,
+                  borderBottomColor: '#F3F4F6',
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '600', fontSize: 14 }}>{itemFields.name}</Text>
+                  <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }}>
+                    ${itemFields.price.toFixed(2)} × {item.quantity}
+                  </Text>
+                </View>
+                <Text style={{ fontWeight: '600', fontSize: 14 }}>${itemFields.total.toFixed(2)}</Text>
               </View>
-              <Text style={{ fontWeight: '600', fontSize: 14 }}>${item.total.toFixed(2)}</Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Totals */}
