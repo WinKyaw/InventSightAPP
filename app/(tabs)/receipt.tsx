@@ -141,6 +141,14 @@ export default function ReceiptScreen() {
   const getFilteredAndSortedReceipts = () => {
     let filtered = receipts;
     filtered = getFilteredReceiptsByDate(filtered);
+    
+    // Filter receipts by selected cashier for GM+ users
+    if (isGMPlus && selectedCashier) {
+      filtered = filtered.filter(
+        (receipt) => receipt.processedById === selectedCashier
+      );
+    }
+    
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(
@@ -231,6 +239,17 @@ export default function ReceiptScreen() {
     >
       <View style={styles.receiptItemInfo}>
         <Text style={styles.receiptItemName}>#{item.receiptNumber}</Text>
+        
+        {/* Display cashier info for GM+ users */}
+        {isGMPlus && item.processedByFullName && (
+          <View style={styles.receiptItemCashier}>
+            <Ionicons name="person" size={14} color="#F59E0B" style={styles.receiptItemCashierIcon} />
+            <Text style={styles.receiptItemCashierName}>
+              {item.processedByFullName}
+            </Text>
+          </View>
+        )}
+        
         <Text style={styles.receiptItemPrice}>{item.customerName || "Walk-in Customer"}</Text>
         <Text style={styles.receiptItemPrice}>
           {item.items?.length || 0} items • Tax: ${item.tax?.toFixed(2) || "0.00"}
@@ -1350,5 +1369,19 @@ const styles = StyleSheet.create({
     color: "#F59E0B",
     fontSize: 14,
     fontWeight: "bold",
+  },
+  receiptItemCashier: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  receiptItemCashierIcon: {
+    marginRight: 6,
+  },
+  receiptItemCashierName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#F59E0B",
   },
 });
