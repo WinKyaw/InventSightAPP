@@ -207,6 +207,22 @@ export class ReceiptService {
   }
 
   /**
+   * Get receipts by employee and date
+   * @param employeeId - The ID of the employee
+   * @param date - The date in YYYY-MM-DD format
+   */
+  static async getReceiptsByEmployeeAndDate(
+    employeeId: string,
+    date: string
+  ): Promise<Receipt[]> {
+    const params = new URLSearchParams();
+    params.append('date', date);
+
+    const url = `/api/receipts/employee/${employeeId}?${params.toString()}`;
+    return await apiClient.get<Receipt[]>(url);
+  }
+
+  /**
    * Update an existing receipt
    */
   static async updateReceipt(id: string | number, receiptData: Partial<CreateReceiptRequest>): Promise<Receipt> {
