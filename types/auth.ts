@@ -21,6 +21,8 @@ export interface AuthUser {
   role?: string;
   profilePicture?: string;
   verified?: boolean;
+  activeStoreId?: string;  // Active store ID for receipt creation
+  activeStoreName?: string;  // Active store name for display
 }
 
 export interface AuthTokens {
