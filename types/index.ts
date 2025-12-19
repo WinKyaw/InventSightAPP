@@ -52,11 +52,36 @@ export interface ReceiptItem {
 export interface Receipt {
   id: number;
   receiptNumber: string;
-  customerName: string;
+  customerName?: string;
   items: ReceiptItem[];
   subtotal: number;
-  tax: number;
-  total: number;
-  dateTime: string;
+  tax?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  
+  // New backend fields (primary)
+  totalAmount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  
+  // Legacy fields (for backward compatibility)
+  total?: number;
+  dateTime?: string;
+  
   status: string;
+  paymentMethod?: string;
+  
+  // Store info
+  storeId?: string;
+  storeName?: string;
+  
+  // User info
+  processedById?: string;
+  processedByUsername?: string;
+  processedByFullName?: string;
+  
+  // Customer info
+  customerEmail?: string;
+  customerPhone?: string;
+  notes?: string;
 }

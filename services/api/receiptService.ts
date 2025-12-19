@@ -93,7 +93,7 @@ export class ReceiptService {
       return {
         receipts: response.content,
         totalCount: response.totalElements || 0,
-        totalRevenue: response.content.reduce((sum: number, r: Receipt) => sum + r.total, 0),
+        totalRevenue: response.content.reduce((sum: number, r: Receipt) => sum + (r.totalAmount || r.total || 0), 0),
       };
     }
     
@@ -111,7 +111,7 @@ export class ReceiptService {
       return {
         receipts: response,
         totalCount: response.length,
-        totalRevenue: response.reduce((sum: number, r: Receipt) => sum + r.total, 0),
+        totalRevenue: response.reduce((sum: number, r: Receipt) => sum + (r.totalAmount || r.total || 0), 0),
       };
     }
 

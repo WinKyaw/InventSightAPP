@@ -78,7 +78,8 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
     text += `       RECEIPT\n`;
     text += `================================\n\n`;
     text += `Receipt #: ${receipt.receiptNumber}\n`;
-    text += `Date: ${new Date(receipt.dateTime).toLocaleString()}\n`;
+    const dateStr = receipt.createdAt || receipt.dateTime;
+    text += `Date: ${dateStr ? new Date(dateStr).toLocaleString() : 'N/A'}\n`;
     text += `Customer: ${receipt.customerName || 'Walk-in Customer'}\n`;
     text += `Payment: ${receipt.paymentMethod || 'N/A'}\n`;
     text += `================================\n\n`;
@@ -92,9 +93,11 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
     
     text += `--------------------------------\n`;
     text += `Subtotal: $${receipt.subtotal.toFixed(2)}\n`;
-    text += `Tax: $${receipt.tax.toFixed(2)}\n`;
+    const tax = receipt.taxAmount || receipt.tax || 0;
+    text += `Tax: $${tax.toFixed(2)}\n`;
     text += `================================\n`;
-    text += `TOTAL: $${receipt.total.toFixed(2)}\n`;
+    const total = receipt.totalAmount || receipt.total || 0;
+    text += `TOTAL: $${total.toFixed(2)}\n`;
     text += `================================\n`;
     text += `\nThank you for your business!\n`;
     
@@ -135,7 +138,13 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={16} color="#F59E0B" />
             <Text style={styles.infoLabel}>Date:</Text>
-            <Text style={styles.infoValue}>{new Date(receipt.dateTime).toLocaleString()}</Text>
+            <Text style={styles.infoValue}>
+              {receipt.createdAt 
+                ? new Date(receipt.createdAt).toLocaleString()
+                : receipt.dateTime
+                ? new Date(receipt.dateTime).toLocaleString()
+                : 'N/A'}
+            </Text>
           </View>
 
           <View style={styles.infoRow}>
@@ -232,7 +241,7 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={{ fontSize: 14, color: '#6B7280' }}>Tax:</Text>
-            <Text style={{ fontSize: 14, fontWeight: '600' }}>${receipt.tax.toFixed(2)}</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600' }}>${(receipt.taxAmount || receipt.tax || 0).toFixed(2)}</Text>
           </View>
           <View
             style={{
@@ -245,7 +254,7 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
           >
             <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Total:</Text>
             <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#10B981' }}>
-              ${receipt.total.toFixed(2)}
+              ${(receipt.totalAmount || receipt.total || 0).toFixed(2)}
             </Text>
           </View>
         </View>
