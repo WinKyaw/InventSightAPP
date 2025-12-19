@@ -55,11 +55,13 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   // Effect to sync API data with local state when API integration is enabled
   useEffect(() => {
     if (useApiIntegration && apiReceipts && apiReceipts.receipts) {
-      setReceipts(apiReceipts.receipts);
+      // Normalize all receipts from API
+      const normalizedReceipts = apiReceipts.receipts.map(normalizeReceipt);
+      setReceipts(normalizedReceipts);
     } else if (!useApiIntegration) {
       // Keep local receipts when API integration is disabled
     }
-  }, [useApiIntegration, apiReceipts]);
+  }, [useApiIntegration, apiReceipts, normalizeReceipt]);
 
   // Auto-fetch receipts when API integration is enabled
   useEffect(() => {
@@ -202,6 +204,58 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     return `RCP-${Date.now()}`;
   }, []);
 
+  // Normalize backend receipt response to match frontend expectations
+  const normalizeReceipt = useCallback((apiReceipt: any): Receipt => {
+    return {
+      id: apiReceipt.id,
+      receiptNumber: apiReceipt.receiptNumber || `RCP-${apiReceipt.id}`,
+      
+      // Customer
+      customerName: apiReceipt.customerName,
+      customerEmail: apiReceipt.customerEmail,
+      customerPhone: apiReceipt.customerPhone,
+      
+      // Amounts - prioritize new field names, fallback to legacy
+      subtotal: apiReceipt.subtotal || 0,
+      tax: apiReceipt.tax || apiReceipt.taxAmount || 0,
+      taxAmount: apiReceipt.taxAmount || apiReceipt.tax || 0,
+      discountAmount: apiReceipt.discountAmount || 0,
+      totalAmount: apiReceipt.totalAmount || apiReceipt.total || 0,
+      total: apiReceipt.totalAmount || apiReceipt.total || 0, // Legacy field
+      
+      // Status
+      status: apiReceipt.status || 'completed',
+      
+      // Store
+      storeId: apiReceipt.storeId,
+      storeName: apiReceipt.storeName,
+      
+      // User
+      processedById: apiReceipt.processedById,
+      processedByUsername: apiReceipt.processedByUsername,
+      processedByFullName: apiReceipt.processedByFullName,
+      
+      // Payment
+      paymentMethod: apiReceipt.paymentMethod || 'CASH',
+      notes: apiReceipt.notes,
+      
+      // Items
+      items: (apiReceipt.items || []).map((item: any) => ({
+        id: item.id || item.productId,
+        name: item.name || item.productName || item.product?.name || 'Unknown Item',
+        price: item.price || item.unitPrice || 0,
+        quantity: item.quantity || 0,
+        total: item.total || item.totalPrice || item.subtotal || 0,
+        stock: item.stock || 0,
+      })),
+      
+      // Timestamps - prioritize new field names, fallback to legacy
+      createdAt: apiReceipt.createdAt || apiReceipt.dateTime || new Date().toISOString(),
+      updatedAt: apiReceipt.updatedAt || apiReceipt.createdAt || new Date().toISOString(),
+      dateTime: apiReceipt.createdAt || apiReceipt.dateTime || new Date().toISOString(), // Legacy field
+    };
+  }, []);
+
   const clearReceipt = useCallback(() => {
     setReceiptItems([]);
     setCustomerName('');
@@ -256,7 +310,8 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
         if (__DEV__) {
           console.log('🌐 Sending receipt to API...');
         }
-        receipt = await ReceiptService.createReceipt(payload);
+        const apiReceipt = await ReceiptService.createReceipt(payload);
+        receipt = normalizeReceipt(apiReceipt); // ✅ Normalize backend response
         if (__DEV__) {
           console.log('✅ Receipt created successfully:', receipt);
           console.log(`✅ Receipt created: ${receipt.receiptNumber}`);
@@ -271,8 +326,12 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
           items: [...receiptItems],
           subtotal,
           tax,
+          taxAmount: tax,
           total,
+          totalAmount: total,
           dateTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           status: 'completed',
           paymentMethod: paymentMethod || 'CASH',
         };
@@ -299,7 +358,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       clearReceipt();
       Alert.alert(
         'Success! 🎉',
-        `Receipt #${receipt.receiptNumber} created\n\nTotal: $${receipt.total.toFixed(2)}`,
+        `Receipt #${receipt.receiptNumber} created\n\nTotal: $${(receipt.totalAmount || receipt.total || 0).toFixed(2)}`,
         [{ text: 'OK' }]
       );
 
@@ -319,8 +378,12 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
           items: [...receiptItems],
           subtotal,
           tax,
+          taxAmount: tax,
           total,
+          totalAmount: total,
           dateTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           status: 'completed',
           paymentMethod: paymentMethod || 'CASH',
         };

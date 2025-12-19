@@ -164,8 +164,9 @@ export default function ReceiptScreen() {
   const getFilteredReceiptsByDate = (receiptsList: Receipt[]) => {
     if (!startDate && !endDate) return receiptsList;
     return receiptsList.filter((receipt) => {
-      if (!receipt.dateTime) return true;
-      const receiptDate = new Date(receipt.dateTime);
+      const dateStr = receipt.createdAt || receipt.dateTime;
+      if (!dateStr) return true;
+      const receiptDate = new Date(dateStr);
       const start = startDate
         ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
         : null;
@@ -337,7 +338,7 @@ export default function ReceiptScreen() {
           </View>
           <View style={styles.employeeStatCard}>
             <Text style={styles.employeeStatValue}>
-              ${receipts.reduce((sum, receipt) => sum + receipt.total, 0).toLocaleString()}
+              ${receipts.reduce((sum, receipt) => sum + (receipt.totalAmount || receipt.total || 0), 0).toLocaleString()}
             </Text>
             <Text style={styles.employeeStatLabel}>Total Revenue</Text>
           </View>
@@ -765,10 +766,12 @@ export default function ReceiptScreen() {
                     </View>
                     <View style={styles.recentReceiptDetails}>
                       <Text style={styles.recentReceiptTotal}>
-                        ${receipt.total.toFixed(2)}
+                        ${(receipt.totalAmount || receipt.total || 0).toFixed(2)}
                       </Text>
                       <Text style={styles.recentReceiptDate}>
-                        {receipt.dateTime
+                        {receipt.createdAt
+                          ? new Date(receipt.createdAt).toLocaleDateString()
+                          : receipt.dateTime
                           ? new Date(receipt.dateTime).toLocaleDateString()
                           : "Today"}
                       </Text>
