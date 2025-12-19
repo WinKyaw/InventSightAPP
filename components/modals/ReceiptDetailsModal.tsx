@@ -87,8 +87,11 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
     text += `--------------------------------\n`;
     
     receipt.items.forEach((item, index) => {
-      text += `${index + 1}. ${item.name}\n`;
-      text += `   $${item.price.toFixed(2)} x ${item.quantity} = $${item.total.toFixed(2)}\n`;
+      const itemName = (item as any).productName || item.name || 'Unknown Product';
+      const itemPrice = (item as any).unitPrice || item.price || 0;
+      const itemTotal = (item as any).totalPrice || item.total || 0;
+      text += `${index + 1}. ${itemName}\n`;
+      text += `   $${itemPrice.toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}\n`;
     });
     
     text += `--------------------------------\n`;
@@ -211,26 +214,31 @@ export function ReceiptDetailsModal({ visible, onClose, receipt, onUpdate }: Rec
         {/* Items List */}
         <View style={[styles.card, { marginBottom: 16 }]}>
           <Text style={[styles.title, { marginBottom: 12 }]}>Items</Text>
-          {receipt.items.map((item, index) => (
-            <View
-              key={`${item.id}-${index}`}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                paddingVertical: 8,
-                borderBottomWidth: index < receipt.items.length - 1 ? 1 : 0,
-                borderBottomColor: '#F3F4F6',
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '600', fontSize: 14 }}>{item.name}</Text>
-                <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }}>
-                  ${item.price.toFixed(2)} × {item.quantity}
-                </Text>
+          {receipt.items.map((item, index) => {
+            const itemName = (item as any).productName || item.name || 'Unknown Product';
+            const itemPrice = (item as any).unitPrice || item.price || 0;
+            const itemTotal = (item as any).totalPrice || item.total || 0;
+            return (
+              <View
+                key={`${item.id}-${index}`}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  paddingVertical: 8,
+                  borderBottomWidth: index < receipt.items.length - 1 ? 1 : 0,
+                  borderBottomColor: '#F3F4F6',
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '600', fontSize: 14 }}>{itemName}</Text>
+                  <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }}>
+                    ${itemPrice.toFixed(2)} × {item.quantity}
+                  </Text>
+                </View>
+                <Text style={{ fontWeight: '600', fontSize: 14 }}>${itemTotal.toFixed(2)}</Text>
               </View>
-              <Text style={{ fontWeight: '600', fontSize: 14 }}>${item.total.toFixed(2)}</Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Totals */}
