@@ -77,11 +77,7 @@ export default function ItemsScreen() {
   const loadedRef = useRef(false);
 
   // Load permissions once on mount
-  React.useEffect(() => {
-    loadPermissions();
-  }, []);
-
-  const loadPermissions = async () => {
+  const loadPermissions = React.useCallback(async () => {
     try {
       // Batch check all permissions at once
       const results = await PermissionService.checkPermissions([
@@ -98,7 +94,11 @@ export default function ItemsScreen() {
     } catch (error) {
       console.error('Failed to load permissions:', error);
     }
-  };
+  }, []);
+
+  React.useEffect(() => {
+    loadPermissions();
+  }, [loadPermissions]);
 
   // ✅ LAZY LOADING: Load products and categories only when Items screen is focused
   useFocusEffect(

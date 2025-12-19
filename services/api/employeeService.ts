@@ -109,8 +109,10 @@ export class EmployeeService {
    */
   static async updateEmployee(id: number, updates: Partial<Employee>): Promise<Employee> {
     try {
-      console.log('📤 Updating employee:', id);
-      console.log('📤 Payload:', JSON.stringify(updates, null, 2));
+      if (__DEV__) {
+        console.log('📤 Updating employee:', id);
+        console.log('📤 Payload:', JSON.stringify(updates, null, 2));
+      }
       
       // Validate payload before sending
       const validatedData = this.validateEmployeePayload(updates);
@@ -120,7 +122,9 @@ export class EmployeeService {
         validatedData
       );
       
-      console.log('✅ Employee updated successfully');
+      if (__DEV__) {
+        console.log('✅ Employee updated successfully');
+      }
       
       // Invalidate employees and dashboard cache
       CacheManager.invalidateEmployees();
@@ -148,13 +152,6 @@ export class EmployeeService {
     if (data.startDate !== undefined) payload.startDate = data.startDate;
     if (data.status !== undefined) payload.status = data.status;
     if (data.bonus !== undefined) payload.bonus = data.bonus;
-    
-    // Remove null or undefined values
-    Object.keys(payload).forEach(key => {
-      if (payload[key] === null || payload[key] === undefined) {
-        delete payload[key];
-      }
-    });
     
     return payload;
   }

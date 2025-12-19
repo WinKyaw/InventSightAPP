@@ -30,11 +30,15 @@ export class PermissionService {
       const now = Date.now();
       
       if (cached && (now - cached.timestamp) < this.cacheDuration) {
-        console.log(`✅ Permission cache hit: ${type}`);
+        if (__DEV__) {
+          console.log(`✅ Permission cache hit: ${type}`);
+        }
         return cached.result;
       }
       
-      console.log(`🚀 Permission check: ${type}`);
+      if (__DEV__) {
+        console.log(`🚀 Permission check: ${type}`);
+      }
       
       const response = await apiClient.get<{ hasPermission: boolean }>(
         `${API_CONFIG.BASE_URL}/api/permissions/check?type=${type}`
@@ -81,7 +85,7 @@ export class PermissionService {
       // Cache all results
       Object.entries(results).forEach(([type, hasPermission]) => {
         this.permissionCache.set(type, {
-          result: hasPermission as boolean,
+          result: hasPermission,
           timestamp: now,
         });
       });
