@@ -20,6 +20,7 @@ import DatePicker from "../../components/ui/DatePicker";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import AddItemToReceiptModal from "../../components/modals/AddItemToReceiptModal";
+import { ReceiptDetailsModal } from "../../components/modals/ReceiptDetailsModal";
 import SmartScanner from "../../components/ui/SmartScanner";
 import { OCRScanner } from "../../components/ui/OCRScanner";
 
@@ -51,10 +52,12 @@ export default function ReceiptScreen() {
   const {
     receiptItems,
     customerName,
+    paymentMethod,
     loading,
     error,
     submitting,
     setCustomerName,
+    setPaymentMethod,
     updateReceiptItemQuantity,
     removeItemFromReceipt,
     calculateTotal,
@@ -70,6 +73,9 @@ export default function ReceiptScreen() {
   const [activeTab, setActiveTab] = useState<TabType>("create");
   const [showAddToReceipt, setShowAddToReceipt] = useState(false);
   const [customerNameError, setCustomerNameError] = useState("");
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [showReceiptDetails, setShowReceiptDetails] = useState(false);
 
   // Receipt listing state
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -188,19 +194,26 @@ export default function ReceiptScreen() {
   };
 
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
-    <View style={styles.receiptItem}>
+    <TouchableOpacity
+      style={styles.receiptItem}
+      onPress={() => {
+        setSelectedReceipt(item);
+        setShowReceiptDetails(true);
+      }}
+    >
       <View style={styles.receiptItemInfo}>
         <Text style={styles.receiptItemName}>#{item.receiptNumber}</Text>
         <Text style={styles.receiptItemPrice}>{item.customerName || "Walk-in Customer"}</Text>
         <Text style={styles.receiptItemPrice}>
           {item.items?.length || 0} items • Tax: ${item.tax?.toFixed(2) || "0.00"}
+          {item.paymentMethod ? ` • ${item.paymentMethod}` : ''}
         </Text>
       </View>
       <View style={styles.receiptItemControls}>
         <Text style={styles.receiptItemTotal}>${item.total.toFixed(2)}</Text>
         <Text style={styles.receiptItemName}>{formatDate(item.dateTime)}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const formatDate = (date: string | number | Date) => {
@@ -571,6 +584,44 @@ export default function ReceiptScreen() {
                 </View>
               ) : null}
             </View>
+
+            <View style={styles.paymentMethodSection}>
+              <Text style={styles.paymentMethodLabel}>Payment Method</Text>
+              <View style={styles.paymentMethodButtons}>
+                {['CASH', 'CARD', 'MOBILE', 'OTHER'].map((method) => (
+                  <TouchableOpacity
+                    key={method}
+                    style={[
+                      styles.paymentMethodButton,
+                      paymentMethod === method && styles.paymentMethodButtonActive,
+                    ]}
+                    onPress={() => setPaymentMethod(method)}
+                  >
+                    <Ionicons
+                      name={
+                        method === 'CASH' 
+                          ? 'cash-outline' 
+                          : method === 'CARD' 
+                          ? 'card-outline' 
+                          : method === 'MOBILE'
+                          ? 'phone-portrait-outline'
+                          : 'wallet-outline'
+                      }
+                      size={20}
+                      color={paymentMethod === method ? '#F59E0B' : '#6B7280'}
+                    />
+                    <Text
+                      style={[
+                        styles.paymentMethodButtonText,
+                        paymentMethod === method && styles.paymentMethodButtonTextActive,
+                      ]}
+                    >
+                      {method}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -755,6 +806,18 @@ export default function ReceiptScreen() {
         visible={showOCRScanner}
         onClose={() => setShowOCRScanner(false)}
         onOCRResult={handleOCRResult}
+      />
+
+      <ReceiptDetailsModal
+        visible={showReceiptDetails}
+        onClose={() => {
+          setShowReceiptDetails(false);
+          setSelectedReceipt(null);
+        }}
+        receipt={selectedReceipt}
+        onUpdate={(updatedReceipt) => {
+          setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
+        }}
       />
     </SafeAreaView>
   );
@@ -942,5 +1005,43 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
     fontWeight: "500",
+  },
+  paymentMethodSection: {
+    marginTop: 16,
+  },
+  paymentMethodLabel: {
+    fontWeight: "600",
+    fontSize: 14,
+    marginBottom: 8,
+    color: "#374151",
+  },
+  paymentMethodButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  paymentMethodButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  paymentMethodButtonActive: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#F59E0B",
+  },
+  paymentMethodButtonText: {
+    marginLeft: 6,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  paymentMethodButtonTextActive: {
+    color: "#F59E0B",
   },
 });
