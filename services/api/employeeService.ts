@@ -144,6 +144,7 @@ export class EmployeeService {
     const payload: any = {};
     
     // Only include fields that are actually being updated
+    // ❌ EXCLUDE 'expanded' - it's UI-only and should never be sent to API
     if (data.firstName !== undefined) payload.firstName = data.firstName;
     if (data.lastName !== undefined) payload.lastName = data.lastName;
     if (data.phone !== undefined) payload.phone = data.phone;
@@ -152,6 +153,13 @@ export class EmployeeService {
     if (data.startDate !== undefined) payload.startDate = data.startDate;
     if (data.status !== undefined) payload.status = data.status;
     if (data.bonus !== undefined) payload.bonus = data.bonus;
+    
+    // Explicitly check that we're not sending expanded field
+    if ('expanded' in data) {
+      if (__DEV__) {
+        console.warn('⚠️ Attempted to send "expanded" field to API - this is a UI-only field!');
+      }
+    }
     
     return payload;
   }

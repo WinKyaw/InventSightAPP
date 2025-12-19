@@ -46,6 +46,9 @@ export default function EmployeesScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // ✅ FIX: Local state for expand/collapse (no API calls)
+  const [expandedEmployees, setExpandedEmployees] = useState<Set<number>>(new Set());
 
   // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
   const loadedRef = useRef(false);
@@ -73,11 +76,22 @@ export default function EmployeesScreen() {
     }, [refreshEmployees, loading])
   );
 
+  // ✅ FIX: Toggle expand/collapse in local state only (no API call)
   const toggleEmployeeExpansion = (id: number) => {
-    const employee = employees.find(emp => emp.id === id);
-    if (employee) {
-      updateEmployee(id, { expanded: !employee.expanded });
-    }
+    setExpandedEmployees(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Helper to check if employee is expanded
+  const isEmployeeExpanded = (id: number): boolean => {
+    return expandedEmployees.has(id);
   };
 
   const handleEditEmployee = (employee: Employee) => {
@@ -243,7 +257,7 @@ export default function EmployeesScreen() {
                 </View>
               </TouchableOpacity>
               
-              {employee.expanded && (
+              {isEmployeeExpanded(employee.id) && (
                 <View style={styles.employeeExpanded}>
                   <View style={styles.employeeExpandedItem}>
                     <Text style={styles.employeeExpandedLabel}>Full Name:</Text>

@@ -28,7 +28,7 @@ export interface Employee {
   status: string;
   title: string;
   bonus: number;
-  expanded: boolean;
+  expanded: boolean; // ⚠️ UI-ONLY: Never send to API - managed in local component state
 }
 
 export interface Reminder {

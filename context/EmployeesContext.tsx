@@ -112,7 +112,14 @@ export function EmployeesProvider({ children }: { children: ReactNode }) {
           throw new Error('Employee ID is required');
         }
         
-        const updatedEmployee = await EmployeeService.updateEmployee(id, updates);
+        // ✅ FIX: Remove 'expanded' field before sending to API
+        const { expanded, ...validUpdates } = updates;
+        
+        if (expanded !== undefined && __DEV__) {
+          console.warn('⚠️ Removed "expanded" field from employee update - this is a UI-only field');
+        }
+        
+        const updatedEmployee = await EmployeeService.updateEmployee(id, validUpdates);
         
         // Update local state
         setEmployees(prev => prev.map(employee => 
