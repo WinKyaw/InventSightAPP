@@ -287,7 +287,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       
       // Items
       items: (apiReceipt.items || []).map((item: ApiReceiptItem) => ({
-        id: item.id || parseInt(item.productId || '0'),
+        id: item.id || (item.productId ? Number(item.productId) : 0),
         name: item.name || item.productName || item.product?.name || 'Unknown Item',
         price: item.price || item.unitPrice || 0,
         quantity: item.quantity || 0,
