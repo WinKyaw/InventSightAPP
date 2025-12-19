@@ -328,6 +328,9 @@ export default function ReceiptScreen() {
           keyExtractor={(item) => item.id?.toString() || item.receiptNumber || Math.random().toString()}
           refreshing={refreshing}
           onRefresh={handleRefreshReceipts}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
           ListEmptyComponent={() => (
             <View style={styles.emptyReceiptCard}>
               <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
@@ -564,7 +567,11 @@ export default function ReceiptScreen() {
 
       {/* Tab Content */}
       {activeTab === "create" ? (
-        <ScrollView style={styles.receiptContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.receiptContainer} 
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
+        >
           <View style={styles.receiptInfoCard}>
             <View style={styles.receiptInfoRow}>
               <View style={styles.receiptInfoItem}>

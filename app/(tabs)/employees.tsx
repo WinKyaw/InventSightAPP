@@ -147,7 +147,11 @@ export default function EmployeesScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.employeesList} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.employeesList} 
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+      >
         {/* Loading State */}
         {loading && (
           <View style={styles.loadingContainer}>
