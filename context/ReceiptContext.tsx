@@ -6,6 +6,51 @@ import { Receipt, ReceiptItem, Item } from '../types';
 import { ReceiptService, CreateReceiptRequest } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 
+// API response types for better type safety
+interface ApiReceiptItem {
+  id?: number;
+  productId?: string;
+  name?: string;
+  productName?: string;
+  price?: number;
+  unitPrice?: number;
+  quantity?: number;
+  total?: number;
+  totalPrice?: number;
+  subtotal?: number;
+  stock?: number;
+  product?: {
+    name?: string;
+    sku?: string;
+  };
+}
+
+interface ApiReceipt {
+  id: number;
+  receiptNumber?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  subtotal?: number;
+  tax?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  total?: number;
+  totalAmount?: number;
+  status?: string;
+  storeId?: string;
+  storeName?: string;
+  processedById?: string;
+  processedByUsername?: string;
+  processedByFullName?: string;
+  paymentMethod?: string;
+  notes?: string;
+  items?: ApiReceiptItem[];
+  createdAt?: string;
+  updatedAt?: string;
+  dateTime?: string;
+}
+
 interface ReceiptContextType {
   receiptItems: ReceiptItem[];
   customerName: string;
@@ -61,7 +106,8 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     } else if (!useApiIntegration) {
       // Keep local receipts when API integration is disabled
     }
-  }, [useApiIntegration, apiReceipts, normalizeReceipt]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useApiIntegration, apiReceipts]);
 
   // Auto-fetch receipts when API integration is enabled
   useEffect(() => {
@@ -205,7 +251,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Normalize backend receipt response to match frontend expectations
-  const normalizeReceipt = useCallback((apiReceipt: any): Receipt => {
+  const normalizeReceipt = useCallback((apiReceipt: ApiReceipt): Receipt => {
     return {
       id: apiReceipt.id,
       receiptNumber: apiReceipt.receiptNumber || `RCP-${apiReceipt.id}`,
@@ -217,8 +263,8 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       
       // Amounts - prioritize new field names, fallback to legacy
       subtotal: apiReceipt.subtotal || 0,
-      tax: apiReceipt.tax || apiReceipt.taxAmount || 0,
       taxAmount: apiReceipt.taxAmount || apiReceipt.tax || 0,
+      tax: apiReceipt.taxAmount || apiReceipt.tax || 0, // Legacy field
       discountAmount: apiReceipt.discountAmount || 0,
       totalAmount: apiReceipt.totalAmount || apiReceipt.total || 0,
       total: apiReceipt.totalAmount || apiReceipt.total || 0, // Legacy field
@@ -240,8 +286,8 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       notes: apiReceipt.notes,
       
       // Items
-      items: (apiReceipt.items || []).map((item: any) => ({
-        id: item.id || item.productId,
+      items: (apiReceipt.items || []).map((item: ApiReceiptItem) => ({
+        id: item.id || parseInt(item.productId || '0'),
         name: item.name || item.productName || item.product?.name || 'Unknown Item',
         price: item.price || item.unitPrice || 0,
         quantity: item.quantity || 0,
