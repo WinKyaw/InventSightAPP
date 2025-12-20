@@ -64,6 +64,20 @@ public class SaleService {
     }
 
     /**
+     * Get all receipts for a store without user filtering (GM+ only)
+     * This is used when GM+ wants to see ALL receipts regardless of cashier
+     */
+    public List<Sale> getAllReceiptsForStore(UUID storeId, LocalDateTime startDate, LocalDateTime endDate) {
+        System.out.println("📋 Getting all receipts for store: " + storeId);
+        
+        if (startDate != null && endDate != null) {
+            return saleRepository.findByStoreIdAndCreatedAtBetween(storeId, startDate, endDate);
+        } else {
+            return saleRepository.findByStoreId(storeId);
+        }
+    }
+
+    /**
      * Get recent receipts (last N) for current user or all users if GM+
      */
     public List<Sale> getRecentReceipts(UUID userId, UUID storeId, int limit) {

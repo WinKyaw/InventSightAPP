@@ -58,6 +58,10 @@ public class ReceiptController {
             String username = authentication.getName();
             User user = userService.getUserByUsername(username);
             
+            System.out.println("📄 InventSight - Getting receipts for user: " + username);
+            System.out.println("📄 CashierId filter: " + (cashierId != null ? cashierId : "None (all receipts)"));
+            System.out.println("📄 Is GM+: " + isGMPlus(user));
+            
             // Get user's active store
             Store activeStore = userActiveStoreService.getUserActiveStoreOrThrow(user.getId());
             
@@ -66,12 +70,24 @@ public class ReceiptController {
             
             List<Sale> receipts;
             
-            // If cashierId provided and user is GM+, filter by that cashier
-            if (cashierId != null && isGMPlus(user)) {
-                receipts = saleService.getReceiptsByStore(cashierId, activeStore.getId(), start, end);
+            // If user is GM+
+            if (isGMPlus(user)) {
+                if (cashierId != null) {
+                    // Filter by specific cashier
+                    System.out.println("🔍 GM+ filtering by cashier: " + cashierId);
+                    receipts = saleService.getReceiptsByStore(cashierId, activeStore.getId(), start, end);
+                } else {
+                    // No filter - get all receipts for the store
+                    System.out.println("📋 GM+ getting all receipts for store");
+                    receipts = saleService.getAllReceiptsForStore(activeStore.getId(), start, end);
+                }
             } else {
+                // Regular users only see their own receipts
+                System.out.println("🔒 Regular user - getting own receipts only");
                 receipts = saleService.getReceiptsByStore(user.getId(), activeStore.getId(), start, end);
             }
+            
+            System.out.println("✅ Returning " + receipts.size() + " receipts");
             
             // Convert to DTOs
             List<SaleResponse> response = receipts.stream()
@@ -80,6 +96,8 @@ public class ReceiptController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            System.err.println("❌ Error getting receipts: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(500)
                     .body(new ApiResponse(false, "Error fetching receipts: " + e.getMessage()));
         }

@@ -131,13 +131,26 @@ export default function ReceiptScreen() {
     loadReceipts();
   }, []);
 
+  // Reload receipts when cashier filter changes
+  useEffect(() => {
+    if (activeTab === "list") {
+      loadReceipts();
+    }
+  }, [selectedCashier]);
+
   const loadReceipts = async (showRefreshing = false) => {
     try {
       if (showRefreshing) setRefreshing(true);
       else setLoadingReceipts(true);
       setReceiptsError(null);
-      const response = await ReceiptService.getAllReceipts();
+      
+      // Pass selectedCashier to filter receipts
+      const response = await ReceiptService.getAllReceipts(0, 20, selectedCashier || undefined);
       setReceipts(response.receipts || []);
+      
+      if (__DEV__) {
+        console.log('📄 Loaded receipts with filter - cashier:', selectedCashier || 'All', 'count:', response.receipts?.length || 0);
+      }
     } catch (error: any) {
       setReceiptsError(error.message || "Failed to load receipts");
     } finally {
