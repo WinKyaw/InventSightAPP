@@ -514,7 +514,8 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       }
       fetchReceipts();
     }
-  }, [selectedCashier, useApiIntegration, canMakeApiCalls, fetchReceipts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCashier, useApiIntegration, canMakeApiCalls]);
 
   return (
     <ReceiptContext.Provider value={{

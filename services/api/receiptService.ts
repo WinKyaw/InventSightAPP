@@ -98,7 +98,9 @@ export class ReceiptService {
     // Add cashier filter if provided
     if (cashierId) {
       params.append('cashierId', cashierId);
-      console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+      if (__DEV__) {
+        console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+      }
     }
 
     const url = `${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`;
@@ -151,7 +153,9 @@ export class ReceiptService {
     // Add cashier filter if provided
     if (cashierId) {
       params.append('cashierId', cashierId);
-      console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+      if (__DEV__) {
+        console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+      }
     }
 
     const url = `${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`;
