@@ -241,8 +241,19 @@ export default function WarehouseScreen() {
     setSearchQuery(''); // Clear search when switching warehouses
   };
 
-  // Render restock item
-  const renderRestockItem = ({ item }: { item: WarehouseRestock }) => (
+  // Helper function to check if current tab data is empty
+  const isCurrentTabEmpty = useCallback(() => {
+    switch (activeTab) {
+      case 'inventory':
+        return inventory.length === 0;
+      case 'restocks':
+        return restocks.length === 0;
+      case 'sales':
+        return sales.length === 0;
+      default:
+        return true;
+    }
+  }, [activeTab, inventory.length, restocks.length, sales.length]);
     <View style={styles.listItem}>
       <View style={styles.itemHeader}>
         <Text style={styles.itemName}>{item.productName}</Text>
@@ -437,7 +448,7 @@ export default function WarehouseScreen() {
       </View>
 
       {/* Tab Content */}
-      {tabLoading && (activeTab === 'inventory' ? inventory.length === 0 : activeTab === 'restocks' ? restocks.length === 0 : sales.length === 0) ? (
+      {tabLoading && isCurrentTabEmpty() ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#6366F1" />
           <Text style={styles.statusText}>Loading {activeTab}...</Text>

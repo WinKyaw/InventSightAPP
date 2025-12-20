@@ -90,15 +90,13 @@ export async function getWarehouseRestocks(warehouseId: string): Promise<Warehou
       `/api/warehouses/${warehouseId}/restocks`
     );
     
-    // apiClient.get already extracts response.data, so response should be the data directly
-    // Handle case where data might be wrapped in a data property, or is the array itself
-    const restockData = (response as any)?.data ?? response;
-    
     // Ensure it's always an array
-    if (Array.isArray(restockData)) {
-      return restockData;
+    if (Array.isArray(response)) {
+      return response;
+    } else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as { data: unknown }).data)) {
+      return (response as { data: WarehouseRestock[] }).data;
     } else {
-      console.warn('⚠️ Unexpected restock response format:', typeof restockData);
+      console.warn('⚠️ Unexpected restock response format:', typeof response);
       return [];
     }
   } catch (error) {
@@ -121,15 +119,13 @@ export async function getWarehouseSales(warehouseId: string): Promise<WarehouseS
       `/api/warehouses/${warehouseId}/sales`
     );
     
-    // apiClient.get already extracts response.data, so response should be the data directly
-    // Handle case where data might be wrapped in a data property, or is the array itself
-    const salesData = (response as any)?.data ?? response;
-    
     // Ensure it's always an array
-    if (Array.isArray(salesData)) {
-      return salesData;
+    if (Array.isArray(response)) {
+      return response;
+    } else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as { data: unknown }).data)) {
+      return (response as { data: WarehouseSale[] }).data;
     } else {
-      console.warn('⚠️ Unexpected sales response format:', typeof salesData);
+      console.warn('⚠️ Unexpected sales response format:', typeof response);
       return [];
     }
   } catch (error) {
