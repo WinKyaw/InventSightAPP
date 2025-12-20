@@ -94,12 +94,13 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   const [selectedCashier, setSelectedCashier] = useState<string | null>(null);
   const [cashierStats, setCashierStats] = useState<CashierStats[]>([]);
 
-  // Check if user is GM+
-  const isGMPlus = user?.role === 'OWNER' ||
-                   user?.role === 'GENERAL_MANAGER' || 
-                   user?.role === 'CEO' || 
-                   user?.role === 'FOUNDER' ||
-                   user?.role === 'ADMIN';
+  // Check if user is GM+ (case-insensitive)
+  const userRoleUpper = user?.role?.toUpperCase();
+  const isGMPlus = userRoleUpper === 'OWNER' ||
+                   userRoleUpper === 'GENERAL_MANAGER' || 
+                   userRoleUpper === 'CEO' || 
+                   userRoleUpper === 'FOUNDER' ||
+                   userRoleUpper === 'ADMIN';
 
   // Authentication readiness check
   const { canMakeApiCalls } = useApiReadiness();

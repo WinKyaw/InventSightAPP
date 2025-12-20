@@ -298,11 +298,13 @@ export default function EmployeesScreen() {
                   <View style={styles.employeeStats}>
                     {/* View Receipts Button - GM+ only */}
                     {(() => {
-                      const isGMPlus = user?.role === 'OWNER' ||
-                                      user?.role === 'GENERAL_MANAGER' || 
-                                      user?.role === 'CEO' || 
-                                      user?.role === 'FOUNDER' ||
-                                      user?.role === 'ADMIN';
+                      // Check if user is GM+ (case-insensitive)
+                      const userRoleUpper = user?.role?.toUpperCase();
+                      const isGMPlus = userRoleUpper === 'OWNER' ||
+                                      userRoleUpper === 'GENERAL_MANAGER' || 
+                                      userRoleUpper === 'CEO' || 
+                                      userRoleUpper === 'FOUNDER' ||
+                                      userRoleUpper === 'ADMIN';
                       
                       if (__DEV__ && isGMPlus) {
                         console.log('✅ Showing receipts button for:', `${employee.firstName} ${employee.lastName}`);

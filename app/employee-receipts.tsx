@@ -26,12 +26,13 @@ export default function EmployeeReceiptsScreen() {
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Check if user is GM+
-  const isGMPlus = user?.role === 'OWNER' ||
-                   user?.role === 'GENERAL_MANAGER' || 
-                   user?.role === 'CEO' || 
-                   user?.role === 'FOUNDER' ||
-                   user?.role === 'ADMIN';
+  // Check if user is GM+ (case-insensitive)
+  const userRoleUpper = user?.role?.toUpperCase();
+  const isGMPlus = userRoleUpper === 'OWNER' ||
+                   userRoleUpper === 'GENERAL_MANAGER' || 
+                   userRoleUpper === 'CEO' || 
+                   userRoleUpper === 'FOUNDER' ||
+                   userRoleUpper === 'ADMIN';
 
   // Only GM+ should access this screen
   useEffect(() => {
