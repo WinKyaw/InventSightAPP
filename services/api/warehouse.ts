@@ -72,7 +72,7 @@ export async function getWarehouses(): Promise<WarehouseSummary[]> {
 export async function getWarehouseInventory(warehouseId: string): Promise<WarehouseInventoryRow[]> {
   try {
     console.log('📦 WarehouseService: Fetching inventory for warehouse:', warehouseId);
-    console.log('📦 API endpoint: /api/warehouses/' + warehouseId + '/inventory');
+    console.log(`📦 API endpoint: /api/warehouses/${warehouseId}/inventory`);
     
     const response = await apiClient.get<WarehouseInventoryRow[]>(
       `/api/warehouses/${warehouseId}/inventory`
@@ -87,7 +87,7 @@ export async function getWarehouseInventory(warehouseId: string): Promise<Wareho
     return inventoryList;
   } catch (error) {
     console.error('❌ WarehouseService: Error fetching inventory:', error);
-    console.error('❌ Failed endpoint: /api/warehouses/' + warehouseId + '/inventory');
+    console.error(`❌ Failed endpoint: /api/warehouses/${warehouseId}/inventory`);
     return []; // Return empty array on error instead of throwing
   }
 }
