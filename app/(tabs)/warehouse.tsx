@@ -326,6 +326,15 @@ export default function WarehouseScreen() {
             The warehouse management feature is not yet configured.
             {'\n'}Contact your administrator to set up warehouses.
           </Text>
+          {canAdd && (
+            <TouchableOpacity 
+              style={styles.addWarehouseButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+              <Text style={styles.addWarehouseButtonText}>Add Warehouse</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             style={styles.retryButton}
             onPress={handleRefresh}
@@ -333,6 +342,13 @@ export default function WarehouseScreen() {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
+        
+        {/* Add Warehouse Modal */}
+        <AddWarehouseModal 
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onWarehouseAdded={handleRefresh}
+        />
       </SafeAreaView>
     );
   }
@@ -606,6 +622,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addWarehouseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    backgroundColor: '#6366F1',
+    borderRadius: 12,
+    gap: 8,
+  },
+  addWarehouseButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
