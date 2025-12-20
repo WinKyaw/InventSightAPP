@@ -103,11 +103,12 @@ export default function ReceiptScreen() {
   const [showScrollButtons, setShowScrollButtons] = useState(false);
 
   // Check if user is GM+ (case-insensitive)
-  const isGMPlus = user?.role?.toUpperCase() === 'OWNER' ||
-                   user?.role?.toUpperCase() === 'GENERAL_MANAGER' || 
-                   user?.role?.toUpperCase() === 'CEO' || 
-                   user?.role?.toUpperCase() === 'FOUNDER' ||
-                   user?.role?.toUpperCase() === 'ADMIN';
+  const userRoleUpper = user?.role?.toUpperCase();
+  const isGMPlus = userRoleUpper === 'OWNER' ||
+                   userRoleUpper === 'GENERAL_MANAGER' || 
+                   userRoleUpper === 'CEO' || 
+                   userRoleUpper === 'FOUNDER' ||
+                   userRoleUpper === 'ADMIN';
 
   // ✅ Debug logging for GM+ status (only in development)
   useEffect(() => {
