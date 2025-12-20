@@ -8,17 +8,35 @@ import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, Warehouse
  */
 
 /**
- * Helper function to ensure API response is an array
+ * Helper function to parse API response and extract array data
+ * Handles different response formats from backend:
+ * 1. Direct array: [...]
+ * 2. Nested in data: { data: [...] }
+ * 3. Paginated: { data: { content: [...] } }
  */
-function ensureArray<T>(response: unknown): T[] {
-  if (Array.isArray(response)) {
-    return response;
-  } else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as { data: unknown }).data)) {
-    return (response as { data: T[] }).data;
-  } else {
-    console.warn('⚠️ Unexpected API response format:', typeof response);
+function parseArrayResponse<T>(response: unknown, context: string): T[] {
+  // apiClient.get may return response.data directly or the full response
+  // Try to access .data first, then fall back to the response itself
+  const data = (response as any)?.data ?? response;
+  
+  // Handle direct array
+  if (Array.isArray(data)) {
+    return data;
+  }
+  
+  // Handle paginated response with content
+  if (data && typeof data === 'object' && Array.isArray(data.content)) {
+    return data.content;
+  }
+  
+  // Handle null/undefined or unexpected format
+  if (data === undefined || data === null) {
+    console.warn(`⚠️ ${context} returned null/undefined`);
     return [];
   }
+  
+  console.warn(`⚠️ ${context} unexpected format:`, typeof data);
+  return [];
 }
 
 /**
@@ -27,29 +45,23 @@ function ensureArray<T>(response: unknown): T[] {
  */
 export async function getWarehouses(): Promise<WarehouseSummary[]> {
   try {
+    console.log('🏢 WarehouseService: Fetching warehouses');
     const response = await apiClient.get<WarehouseSummary[]>('/api/warehouses');
     
-    // apiClient.get already extracts response.data, so response should be the data directly
-    // Handle case where data might be wrapped in a data property, or is the array itself
-    const warehouseData = (response as any)?.data ?? response;
+    console.log('📦 Raw response type:', typeof response);
+    console.log('📦 Is array:', Array.isArray(response));
     
-    // Ensure it's always an array
-    if (Array.isArray(warehouseData)) {
-      return warehouseData;
-    } else if (warehouseData === undefined || warehouseData === null) {
-      console.warn('⚠️ Warehouse API returned null/undefined');
-      return [];
-    } else {
-      console.warn('⚠️ Unexpected warehouse response format:', typeof warehouseData);
-      return [];
-    }
+    const warehouseList = parseArrayResponse<WarehouseSummary>(response, 'Warehouses API');
+    console.log('✅ Parsed warehouses:', warehouseList.length, 'warehouses');
+    
+    return warehouseList;
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       console.warn('Warehouses endpoint not yet available');
       return [];
     }
-    console.error('Error fetching warehouses:', error);
+    console.error('❌ Error fetching warehouses:', error);
     return []; // Always return empty array on error instead of throwing
   }
 }
@@ -59,23 +71,19 @@ export async function getWarehouses(): Promise<WarehouseSummary[]> {
  */
 export async function getWarehouseInventory(warehouseId: string): Promise<WarehouseInventoryRow[]> {
   try {
+    console.log('📦 WarehouseService: Fetching inventory for warehouse:', warehouseId);
     const response = await apiClient.get<WarehouseInventoryRow[]>(
       `/api/sales/inventory/warehouse/${warehouseId}`
     );
     
-    // apiClient.get already extracts response.data, so response should be the data directly
-    // Handle case where data might be wrapped in a data property, or is the array itself
-    const inventoryData = (response as any)?.data ?? response;
+    console.log('📦 Inventory response type:', typeof response);
     
-    // Ensure it's always an array
-    if (Array.isArray(inventoryData)) {
-      return inventoryData;
-    } else {
-      console.warn('⚠️ Unexpected inventory response format:', typeof inventoryData);
-      return [];
-    }
+    const inventoryList = parseArrayResponse<WarehouseInventoryRow>(response, 'Inventory API');
+    console.log('✅ Loaded', inventoryList.length, 'inventory items');
+    
+    return inventoryList;
   } catch (error) {
-    console.error('Failed to fetch warehouse inventory:', error);
+    console.error('❌ Failed to fetch warehouse inventory:', error);
     return []; // Return empty array on error instead of throwing
   }
 }
@@ -100,17 +108,24 @@ export async function getProductAvailability(productId: string): Promise<Product
  */
 export async function getWarehouseRestocks(warehouseId: string): Promise<WarehouseRestock[]> {
   try {
+    console.log('📥 WarehouseService: Fetching restocks for warehouse:', warehouseId);
     const response = await apiClient.get<WarehouseRestock[]>(
       `/api/warehouses/${warehouseId}/restocks`
     );
-    return ensureArray<WarehouseRestock>(response);
+    
+    console.log('📥 Restocks response type:', typeof response);
+    
+    const restocksList = parseArrayResponse<WarehouseRestock>(response, 'Restocks API');
+    console.log('✅ Loaded', restocksList.length, 'restocks');
+    
+    return restocksList;
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       console.warn('Warehouse restocks endpoint not yet available');
       return [];
     }
-    console.error('Failed to fetch warehouse restocks:', error);
+    console.error('❌ Failed to fetch warehouse restocks:', error);
     return []; // Return empty array on error instead of throwing
   }
 }
@@ -120,17 +135,24 @@ export async function getWarehouseRestocks(warehouseId: string): Promise<Warehou
  */
 export async function getWarehouseSales(warehouseId: string): Promise<WarehouseSale[]> {
   try {
+    console.log('💰 WarehouseService: Fetching sales for warehouse:', warehouseId);
     const response = await apiClient.get<WarehouseSale[]>(
       `/api/warehouses/${warehouseId}/sales`
     );
-    return ensureArray<WarehouseSale>(response);
+    
+    console.log('💰 Sales response type:', typeof response);
+    
+    const salesList = parseArrayResponse<WarehouseSale>(response, 'Sales API');
+    console.log('✅ Loaded', salesList.length, 'sales');
+    
+    return salesList;
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       console.warn('Warehouse sales endpoint not yet available');
       return [];
     }
-    console.error('Failed to fetch warehouse sales:', error);
+    console.error('❌ Failed to fetch warehouse sales:', error);
     return []; // Return empty array on error instead of throwing
   }
 }
