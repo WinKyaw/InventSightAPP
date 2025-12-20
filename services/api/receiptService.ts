@@ -87,13 +87,19 @@ export class ReceiptService {
   }
 
   /**
-   * Get all receipts with pagination
+   * Get all receipts with pagination and optional cashier filter
    */
-  static async getAllReceipts(page = 0, size = 20): Promise<ReceiptResponse> {
+  static async getAllReceipts(page = 0, size = 20, cashierId?: string): Promise<ReceiptResponse> {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('size', size.toString());
     params.append('sort', 'createdAt,desc');
+    
+    // Add cashier filter if provided
+    if (cashierId) {
+      params.append('cashierId', cashierId);
+      console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+    }
 
     const url = `${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`;
     const response = await apiClient.get<BackendReceiptResponse>(url);
@@ -134,13 +140,19 @@ export class ReceiptService {
   }
 
   /**
-   * Get receipts with full pagination info
+   * Get receipts with full pagination info and optional cashier filter
    */
-  static async getReceiptsPaginated(page = 0, size = 20): Promise<PaginatedReceiptResponse> {
+  static async getReceiptsPaginated(page = 0, size = 20, cashierId?: string): Promise<PaginatedReceiptResponse> {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('size', size.toString());
     params.append('sort', 'createdAt,desc');
+    
+    // Add cashier filter if provided
+    if (cashierId) {
+      params.append('cashierId', cashierId);
+      console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+    }
 
     const url = `${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`;
     const response = await apiClient.get<BackendReceiptResponse>(url);

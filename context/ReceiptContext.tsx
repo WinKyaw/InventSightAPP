@@ -112,7 +112,10 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     error,
     execute: fetchReceipts,
     reset,
-  } = useAuthenticatedAPI(() => ReceiptService.getAllReceipts(), { immediate: false });
+  } = useAuthenticatedAPI(
+    () => ReceiptService.getAllReceipts(0, 20, selectedCashier || undefined), 
+    { immediate: false }
+  );
 
   // Effect to sync API data with local state when API integration is enabled
   useEffect(() => {
@@ -506,9 +509,12 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   // Reload receipts when cashier filter changes
   useEffect(() => {
     if (useApiIntegration && canMakeApiCalls) {
+      if (__DEV__) {
+        console.log('🔄 ReceiptContext: Reloading receipts - cashier:', selectedCashier || 'All');
+      }
       fetchReceipts();
     }
-  }, [selectedCashier, useApiIntegration, canMakeApiCalls]);
+  }, [selectedCashier, useApiIntegration, canMakeApiCalls, fetchReceipts]);
 
   return (
     <ReceiptContext.Provider value={{
