@@ -8,17 +8,35 @@ import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, Warehouse
  */
 
 /**
- * Helper function to ensure API response is an array
+ * Helper function to parse API response and extract array data
+ * Handles different response formats from backend:
+ * 1. Direct array: [...]
+ * 2. Nested in data: { data: [...] }
+ * 3. Paginated: { data: { content: [...] } }
  */
-function ensureArray<T>(response: unknown): T[] {
-  if (Array.isArray(response)) {
-    return response;
-  } else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as { data: unknown }).data)) {
-    return (response as { data: T[] }).data;
-  } else {
-    console.warn('⚠️ Unexpected API response format:', typeof response);
+function parseArrayResponse<T>(response: unknown, context: string): T[] {
+  // apiClient.get may return response.data directly or the full response
+  // Try to access .data first, then fall back to the response itself
+  const data = (response as any)?.data ?? response;
+  
+  // Handle direct array
+  if (Array.isArray(data)) {
+    return data;
+  }
+  
+  // Handle paginated response with content
+  if (data && typeof data === 'object' && Array.isArray(data.content)) {
+    return data.content;
+  }
+  
+  // Handle null/undefined or unexpected format
+  if (data === undefined || data === null) {
+    console.warn(`⚠️ ${context} returned null/undefined`);
     return [];
   }
+  
+  console.warn(`⚠️ ${context} unexpected format:`, typeof data);
+  return [];
 }
 
 /**
@@ -33,36 +51,9 @@ export async function getWarehouses(): Promise<WarehouseSummary[]> {
     console.log('📦 Raw response type:', typeof response);
     console.log('📦 Is array:', Array.isArray(response));
     
-    // apiClient.get already extracts response.data, so response should be the data directly
-    // Handle case where data might be wrapped in a data property, or is the array itself
-    const warehouseData = (response as any)?.data ?? response;
-    
-    // Handle different response formats:
-    // 1. Direct array: [...]
-    // 2. Nested in data: { data: [...] }
-    // 3. Paginated: { data: { content: [...] } }
-    let warehouseList: WarehouseSummary[] = [];
-    
-    if (Array.isArray(warehouseData)) {
-      // Direct array or nested array
-      warehouseList = warehouseData;
-    } else if (warehouseData && typeof warehouseData === 'object') {
-      // Check for paginated response with content
-      if (Array.isArray(warehouseData.content)) {
-        warehouseList = warehouseData.content;
-      } else {
-        console.warn('⚠️ Unexpected warehouse response format:', typeof warehouseData);
-        warehouseList = [];
-      }
-    } else if (warehouseData === undefined || warehouseData === null) {
-      console.warn('⚠️ Warehouse API returned null/undefined');
-      warehouseList = [];
-    } else {
-      console.warn('⚠️ Unexpected warehouse response format:', typeof warehouseData);
-      warehouseList = [];
-    }
-    
+    const warehouseList = parseArrayResponse<WarehouseSummary>(response, 'Warehouses API');
     console.log('✅ Parsed warehouses:', warehouseList.length, 'warehouses');
+    
     return warehouseList;
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
@@ -87,23 +78,9 @@ export async function getWarehouseInventory(warehouseId: string): Promise<Wareho
     
     console.log('📦 Inventory response type:', typeof response);
     
-    // apiClient.get already extracts response.data, so response should be the data directly
-    // Handle case where data might be wrapped in a data property, or is the array itself
-    const inventoryData = (response as any)?.data ?? response;
-    
-    // Handle different response formats
-    let inventoryList: WarehouseInventoryRow[] = [];
-    
-    if (Array.isArray(inventoryData)) {
-      inventoryList = inventoryData;
-    } else if (inventoryData && typeof inventoryData === 'object' && Array.isArray(inventoryData.content)) {
-      inventoryList = inventoryData.content;
-    } else {
-      console.warn('⚠️ Unexpected inventory response format:', typeof inventoryData);
-      inventoryList = [];
-    }
-    
+    const inventoryList = parseArrayResponse<WarehouseInventoryRow>(response, 'Inventory API');
     console.log('✅ Loaded', inventoryList.length, 'inventory items');
+    
     return inventoryList;
   } catch (error) {
     console.error('❌ Failed to fetch warehouse inventory:', error);
@@ -138,19 +115,9 @@ export async function getWarehouseRestocks(warehouseId: string): Promise<Warehou
     
     console.log('📥 Restocks response type:', typeof response);
     
-    const restocksData = (response as any)?.data ?? response;
-    let restocksList: WarehouseRestock[] = [];
-    
-    if (Array.isArray(restocksData)) {
-      restocksList = restocksData;
-    } else if (restocksData && typeof restocksData === 'object' && Array.isArray(restocksData.content)) {
-      restocksList = restocksData.content;
-    } else {
-      console.warn('⚠️ Unexpected restocks response format:', typeof restocksData);
-      restocksList = [];
-    }
-    
+    const restocksList = parseArrayResponse<WarehouseRestock>(response, 'Restocks API');
     console.log('✅ Loaded', restocksList.length, 'restocks');
+    
     return restocksList;
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
@@ -175,19 +142,9 @@ export async function getWarehouseSales(warehouseId: string): Promise<WarehouseS
     
     console.log('💰 Sales response type:', typeof response);
     
-    const salesData = (response as any)?.data ?? response;
-    let salesList: WarehouseSale[] = [];
-    
-    if (Array.isArray(salesData)) {
-      salesList = salesData;
-    } else if (salesData && typeof salesData === 'object' && Array.isArray(salesData.content)) {
-      salesList = salesData.content;
-    } else {
-      console.warn('⚠️ Unexpected sales response format:', typeof salesData);
-      salesList = [];
-    }
-    
+    const salesList = parseArrayResponse<WarehouseSale>(response, 'Sales API');
     console.log('✅ Loaded', salesList.length, 'sales');
+    
     return salesList;
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
