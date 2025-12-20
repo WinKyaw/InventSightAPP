@@ -254,6 +254,9 @@ export default function WarehouseScreen() {
         return true;
     }
   }, [activeTab, inventory.length, restocks.length, sales.length]);
+
+  // Render restock item
+  const renderRestockItem = ({ item }: { item: WarehouseRestock }) => (
     <View style={styles.listItem}>
       <View style={styles.itemHeader}>
         <Text style={styles.itemName}>{item.productName}</Text>

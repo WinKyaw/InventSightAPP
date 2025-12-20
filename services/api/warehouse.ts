@@ -8,6 +8,20 @@ import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, Warehouse
  */
 
 /**
+ * Helper function to ensure API response is an array
+ */
+function ensureArray<T>(response: unknown): T[] {
+  if (Array.isArray(response)) {
+    return response;
+  } else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as { data: unknown }).data)) {
+    return (response as { data: T[] }).data;
+  } else {
+    console.warn('⚠️ Unexpected API response format:', typeof response);
+    return [];
+  }
+}
+
+/**
  * Get list of all warehouses
  * Falls back to empty array if endpoint is not yet implemented
  */
@@ -89,16 +103,7 @@ export async function getWarehouseRestocks(warehouseId: string): Promise<Warehou
     const response = await apiClient.get<WarehouseRestock[]>(
       `/api/warehouses/${warehouseId}/restocks`
     );
-    
-    // Ensure it's always an array
-    if (Array.isArray(response)) {
-      return response;
-    } else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as { data: unknown }).data)) {
-      return (response as { data: WarehouseRestock[] }).data;
-    } else {
-      console.warn('⚠️ Unexpected restock response format:', typeof response);
-      return [];
-    }
+    return ensureArray<WarehouseRestock>(response);
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
     if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -118,16 +123,7 @@ export async function getWarehouseSales(warehouseId: string): Promise<WarehouseS
     const response = await apiClient.get<WarehouseSale[]>(
       `/api/warehouses/${warehouseId}/sales`
     );
-    
-    // Ensure it's always an array
-    if (Array.isArray(response)) {
-      return response;
-    } else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as { data: unknown }).data)) {
-      return (response as { data: WarehouseSale[] }).data;
-    } else {
-      console.warn('⚠️ Unexpected sales response format:', typeof response);
-      return [];
-    }
+    return ensureArray<WarehouseSale>(response);
   } catch (error) {
     // If endpoint doesn't exist yet, return empty array gracefully
     if (axios.isAxiosError(error) && error.response?.status === 404) {
