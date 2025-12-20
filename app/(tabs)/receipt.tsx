@@ -103,7 +103,8 @@ export default function ReceiptScreen() {
   const [showScrollButtons, setShowScrollButtons] = useState(false);
 
   // Check if user is GM+
-  const isGMPlus = user?.role === 'GENERAL_MANAGER' || 
+  const isGMPlus = user?.role === 'OWNER' ||
+                   user?.role === 'GENERAL_MANAGER' || 
                    user?.role === 'CEO' || 
                    user?.role === 'FOUNDER' ||
                    user?.role === 'ADMIN';
