@@ -353,7 +353,7 @@ export default function WarehouseScreen() {
           {__DEV__ && (
             <View style={styles.debugInfo}>
               <Text style={styles.debugText}>Debug Info:</Text>
-              <Text style={styles.debugText}>User: {user?.email || 'Not logged in'}</Text>
+              <Text style={styles.debugText}>User ID: {user?.id || 'Not logged in'}</Text>
               <Text style={styles.debugText}>Role: {user?.role || 'undefined'}</Text>
               <Text style={styles.debugText}>Can Add: {canAdd ? 'YES' : 'NO'}</Text>
             </View>
