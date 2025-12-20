@@ -1,11 +1,25 @@
 import axios from 'axios';
 import { apiClient } from './apiClient';
-import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability } from '../../types/warehouse';
+import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
 
 /**
  * Warehouse API Service
  * Handles warehouse inventory and availability operations
  */
+
+/**
+ * Helper function to ensure API response is an array
+ */
+function ensureArray<T>(response: unknown): T[] {
+  if (Array.isArray(response)) {
+    return response;
+  } else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as { data: unknown }).data)) {
+    return (response as { data: T[] }).data;
+  } else {
+    console.warn('⚠️ Unexpected API response format:', typeof response);
+    return [];
+  }
+}
 
 /**
  * Get list of all warehouses
@@ -81,10 +95,52 @@ export async function getProductAvailability(productId: string): Promise<Product
   }
 }
 
+/**
+ * Get warehouse restocks
+ */
+export async function getWarehouseRestocks(warehouseId: string): Promise<WarehouseRestock[]> {
+  try {
+    const response = await apiClient.get<WarehouseRestock[]>(
+      `/api/warehouses/${warehouseId}/restocks`
+    );
+    return ensureArray<WarehouseRestock>(response);
+  } catch (error) {
+    // If endpoint doesn't exist yet, return empty array gracefully
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      console.warn('Warehouse restocks endpoint not yet available');
+      return [];
+    }
+    console.error('Failed to fetch warehouse restocks:', error);
+    return []; // Return empty array on error instead of throwing
+  }
+}
+
+/**
+ * Get warehouse sales
+ */
+export async function getWarehouseSales(warehouseId: string): Promise<WarehouseSale[]> {
+  try {
+    const response = await apiClient.get<WarehouseSale[]>(
+      `/api/warehouses/${warehouseId}/sales`
+    );
+    return ensureArray<WarehouseSale>(response);
+  } catch (error) {
+    // If endpoint doesn't exist yet, return empty array gracefully
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      console.warn('Warehouse sales endpoint not yet available');
+      return [];
+    }
+    console.error('Failed to fetch warehouse sales:', error);
+    return []; // Return empty array on error instead of throwing
+  }
+}
+
 export const WarehouseService = {
   getWarehouses,
   getWarehouseInventory,
   getProductAvailability,
+  getWarehouseRestocks,
+  getWarehouseSales,
 };
 
 export default WarehouseService;

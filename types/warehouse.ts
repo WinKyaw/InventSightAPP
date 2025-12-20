@@ -42,3 +42,32 @@ export interface ProductAvailability {
   }>;
   totalAvailable: number;
 }
+
+/**
+ * Warehouse restock record
+ */
+export interface WarehouseRestock {
+  id: string;
+  warehouseId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  restockDate?: string;
+  createdAt?: string;
+  notes?: string;
+  sku?: string;
+}
+
+/**
+ * Warehouse sale record
+ */
+export interface WarehouseSale {
+  id: string;
+  warehouseId?: string;
+  receiptNumber?: string;
+  totalAmount: number;
+  saleDate?: string;
+  createdAt?: string;
+  customerName?: string;
+  items?: number;
+}

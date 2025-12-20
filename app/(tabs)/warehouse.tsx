@@ -10,6 +10,7 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,13 +18,15 @@ import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
 import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInventoryList';
 import { AddWarehouseModal } from '../../components/modals/AddWarehouseModal';
-import { WarehouseSummary, WarehouseInventoryRow } from '../../types/warehouse';
-import { getWarehouses, getWarehouseInventory } from '../../services/api/warehouse';
+import { WarehouseSummary, WarehouseInventoryRow, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
+import { getWarehouses, getWarehouseInventory, getWarehouseRestocks, getWarehouseSales } from '../../services/api/warehouse';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { useAuth } from '../../context/AuthContext';
 import { canManageWarehouses } from '../../utils/permissions';
 import { Colors } from '../../constants/Colors';
 import { styles as commonStyles } from '../../constants/Styles';
+
+type TabType = 'inventory' | 'restocks' | 'sales';
 
 export default function WarehouseScreen() {
   // ✅ SECURITY FIX: Add authentication check
@@ -48,8 +51,12 @@ export default function WarehouseScreen() {
   const [warehouses, setWarehouses] = useState<WarehouseSummary[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseSummary | null>(null);
   const [inventory, setInventory] = useState<WarehouseInventoryRow[]>([]);
+  const [restocks, setRestocks] = useState<WarehouseRestock[]>([]);
+  const [sales, setSales] = useState<WarehouseSale[]>([]);
+  const [activeTab, setActiveTab] = useState<TabType>('inventory');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tabLoading, setTabLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWarehousePicker, setShowWarehousePicker] = useState(false);
@@ -68,6 +75,33 @@ export default function WarehouseScreen() {
       item.warehouseName?.toLowerCase().includes(query)
     );
   }, [inventory, searchQuery]);
+
+  // Filter restocks based on search query
+  const filteredRestocks = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return restocks;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return restocks.filter(item => 
+      item.productName?.toLowerCase().includes(query) ||
+      item.sku?.toLowerCase().includes(query) ||
+      item.notes?.toLowerCase().includes(query)
+    );
+  }, [restocks, searchQuery]);
+
+  // Filter sales based on search query
+  const filteredSales = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return sales;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return sales.filter(item => 
+      item.receiptNumber?.toLowerCase().includes(query) ||
+      item.customerName?.toLowerCase().includes(query)
+    );
+  }, [sales, searchQuery]);
 
   // Load warehouses list
   const loadWarehouses = useCallback(async () => {
@@ -100,7 +134,7 @@ export default function WarehouseScreen() {
     if (!isReady || !selectedWarehouse) return;
 
     if (showLoadingState) {
-      setLoading(true);
+      setTabLoading(true);
     }
     setError(null);
 
@@ -112,20 +146,79 @@ export default function WarehouseScreen() {
       setError(err instanceof Error ? err.message : 'Failed to load inventory');
       setInventory([]);
     } finally {
-      setLoading(false);
+      setTabLoading(false);
       setRefreshing(false);
     }
   }, [isReady, selectedWarehouse]);
+
+  // Load restocks for selected warehouse
+  const loadRestocks = useCallback(async (showLoadingState = true) => {
+    if (!isReady || !selectedWarehouse) return;
+
+    if (showLoadingState) {
+      setTabLoading(true);
+    }
+    setError(null);
+
+    try {
+      const restocksData = await getWarehouseRestocks(selectedWarehouse.id);
+      setRestocks(restocksData);
+    } catch (err) {
+      console.error('Failed to load restocks:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load restocks');
+      setRestocks([]);
+    } finally {
+      setTabLoading(false);
+      setRefreshing(false);
+    }
+  }, [isReady, selectedWarehouse]);
+
+  // Load sales for selected warehouse
+  const loadSales = useCallback(async (showLoadingState = true) => {
+    if (!isReady || !selectedWarehouse) return;
+
+    if (showLoadingState) {
+      setTabLoading(true);
+    }
+    setError(null);
+
+    try {
+      const salesData = await getWarehouseSales(selectedWarehouse.id);
+      setSales(salesData);
+    } catch (err) {
+      console.error('Failed to load sales:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load sales');
+      setSales([]);
+    } finally {
+      setTabLoading(false);
+      setRefreshing(false);
+    }
+  }, [isReady, selectedWarehouse]);
+
+  // Load data based on active tab
+  const loadTabData = useCallback(async (showLoadingState = true) => {
+    switch (activeTab) {
+      case 'inventory':
+        await loadInventory(showLoadingState);
+        break;
+      case 'restocks':
+        await loadRestocks(showLoadingState);
+        break;
+      case 'sales':
+        await loadSales(showLoadingState);
+        break;
+    }
+  }, [activeTab, loadInventory, loadRestocks, loadSales]);
 
   // Refresh handler
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       loadWarehouses(),
-      loadInventory(false),
+      loadTabData(false),
     ]);
     setRefreshing(false);
-  }, [loadWarehouses, loadInventory]);
+  }, [loadWarehouses, loadTabData]);
 
   // Load warehouses on mount when auth is ready
   useEffect(() => {
@@ -134,12 +227,12 @@ export default function WarehouseScreen() {
     }
   }, [isReady, loadWarehouses]);
 
-  // Load inventory when warehouse changes
+  // Load data when warehouse or tab changes
   useEffect(() => {
     if (isReady && selectedWarehouse) {
-      loadInventory();
+      loadTabData();
     }
-  }, [isReady, selectedWarehouse, loadInventory]);
+  }, [isReady, selectedWarehouse, activeTab, loadTabData]);
 
   // Handle warehouse selection
   const handleWarehouseSelect = (warehouse: WarehouseSummary) => {
@@ -147,6 +240,53 @@ export default function WarehouseScreen() {
     setShowWarehousePicker(false);
     setSearchQuery(''); // Clear search when switching warehouses
   };
+
+  // Helper function to check if current tab data is empty
+  const isCurrentTabEmpty = useCallback(() => {
+    switch (activeTab) {
+      case 'inventory':
+        return inventory.length === 0;
+      case 'restocks':
+        return restocks.length === 0;
+      case 'sales':
+        return sales.length === 0;
+      default:
+        return true;
+    }
+  }, [activeTab, inventory.length, restocks.length, sales.length]);
+
+  // Render restock item
+  const renderRestockItem = ({ item }: { item: WarehouseRestock }) => (
+    <View style={styles.listItem}>
+      <View style={styles.itemHeader}>
+        <Text style={styles.itemName}>{item.productName}</Text>
+        <Text style={styles.itemQuantityPositive}>+{item.quantity}</Text>
+      </View>
+      {item.sku && <Text style={styles.itemSku}>SKU: {item.sku}</Text>}
+      <Text style={styles.itemDate}>
+        {new Date(item.restockDate || item.createdAt || '').toLocaleDateString()}
+      </Text>
+      {item.notes && <Text style={styles.itemNotes}>📝 {item.notes}</Text>}
+    </View>
+  );
+
+  // Render sale item
+  const renderSaleItem = ({ item }: { item: WarehouseSale }) => (
+    <View style={styles.listItem}>
+      <View style={styles.itemHeader}>
+        <Text style={styles.itemName}>
+          {item.receiptNumber || `Sale #${item.id}`}
+        </Text>
+        <Text style={styles.itemTotal}>${(item.totalAmount || 0).toFixed(2)}</Text>
+      </View>
+      <Text style={styles.itemDate}>
+        {new Date(item.saleDate || item.createdAt || '').toLocaleDateString()}
+      </Text>
+      {item.customerName && (
+        <Text style={styles.itemCustomer}>👤 {item.customerName}</Text>
+      )}
+    </View>
+  );
 
   // Render authentication states
   if (isAuthenticating) {
@@ -200,6 +340,15 @@ export default function WarehouseScreen() {
             The warehouse management feature is not yet configured.
             {'\n'}Contact your administrator to set up warehouses.
           </Text>
+          {canAdd && (
+            <TouchableOpacity 
+              style={styles.addWarehouseButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+              <Text style={styles.addWarehouseButtonText}>Add Warehouse</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             style={styles.retryButton}
             onPress={handleRefresh}
@@ -207,6 +356,13 @@ export default function WarehouseScreen() {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
+        
+        {/* Add Warehouse Modal */}
+        <AddWarehouseModal 
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onWarehouseAdded={handleRefresh}
+        />
       </SafeAreaView>
     );
   }
@@ -249,28 +405,108 @@ export default function WarehouseScreen() {
         onChangeText={setSearchQuery}
       />
 
-      {loading && inventory.length === 0 ? (
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'inventory' && styles.activeTab]}
+          onPress={() => setActiveTab('inventory')}
+        >
+          <Ionicons 
+            name="cube-outline" 
+            size={20} 
+            color={activeTab === 'inventory' ? '#6366F1' : Colors.textSecondary} 
+          />
+          <Text style={[styles.tabText, activeTab === 'inventory' && styles.activeTabText]}>
+            Inventory
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'restocks' && styles.activeTab]}
+          onPress={() => setActiveTab('restocks')}
+        >
+          <Ionicons 
+            name="arrow-down-circle-outline" 
+            size={20} 
+            color={activeTab === 'restocks' ? '#6366F1' : Colors.textSecondary} 
+          />
+          <Text style={[styles.tabText, activeTab === 'restocks' && styles.activeTabText]}>
+            Restocks
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'sales' && styles.activeTab]}
+          onPress={() => setActiveTab('sales')}
+        >
+          <Ionicons 
+            name="cash-outline" 
+            size={20} 
+            color={activeTab === 'sales' ? '#6366F1' : Colors.textSecondary} 
+          />
+          <Text style={[styles.tabText, activeTab === 'sales' && styles.activeTabText]}>
+            Sales
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tab Content */}
+      {tabLoading && isCurrentTabEmpty() ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#6366F1" />
-          <Text style={styles.statusText}>Loading inventory...</Text>
+          <Text style={styles.statusText}>Loading {activeTab}...</Text>
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle" size={48} color={Colors.danger} />
-          <Text style={styles.errorTitle}>Failed to Load Inventory</Text>
+          <Text style={styles.errorTitle}>Failed to Load {activeTab}</Text>
           <Text style={styles.errorMessage}>{error}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
-            onPress={() => loadInventory()}
+            onPress={() => loadTabData()}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.listWrapper}>
-          <WarehouseInventoryList
-            inventory={filteredInventory}
-          />
+          {activeTab === 'inventory' && (
+            <WarehouseInventoryList inventory={filteredInventory} />
+          )}
+          {activeTab === 'restocks' && (
+            <FlatList
+              data={filteredRestocks}
+              renderItem={renderRestockItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.flatListContent}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="arrow-down-circle-outline" size={64} color={Colors.lightGray} />
+                  <Text style={styles.emptyTitle}>No Restocks Found</Text>
+                  <Text style={styles.emptySubtext}>
+                    No restock records available for this warehouse.
+                  </Text>
+                </View>
+              }
+            />
+          )}
+          {activeTab === 'sales' && (
+            <FlatList
+              data={filteredSales}
+              renderItem={renderSaleItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.flatListContent}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="cash-outline" size={64} color={Colors.lightGray} />
+                  <Text style={styles.emptyTitle}>No Sales Found</Text>
+                  <Text style={styles.emptySubtext}>
+                    No sales records available for this warehouse.
+                  </Text>
+                </View>
+              }
+            />
+          )}
           {refreshing && (
             <View style={styles.refreshOverlay}>
               <ActivityIndicator size="small" color="#6366F1" />
@@ -404,6 +640,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  addWarehouseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    backgroundColor: '#6366F1',
+    borderRadius: 12,
+    gap: 8,
+  },
+  addWarehouseButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   warehouseButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -492,5 +744,96 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  // Tab styles
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    gap: 6,
+  },
+  activeTab: {
+    borderBottomColor: '#6366F1',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
+  activeTabText: {
+    color: '#6366F1',
+    fontWeight: '600',
+  },
+  // List item styles
+  flatListContent: {
+    padding: 16,
+  },
+  listItem: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  itemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    flex: 1,
+  },
+  itemQuantityPositive: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#10B981',
+  },
+  itemTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6366F1',
+  },
+  itemSku: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  itemDate: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  itemNotes: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  itemCustomer: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 64,
   },
 });
