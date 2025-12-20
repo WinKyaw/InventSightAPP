@@ -11,7 +11,6 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import ReceiptService from '../services/api/receiptService';
-import DatePicker from '../components/ui/DatePicker';
 import { Receipt } from '../types';
 
 export default function EmployeeReceiptsScreen() {
@@ -24,7 +23,6 @@ export default function EmployeeReceiptsScreen() {
   
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Check if user is GM+ (case-insensitive)
   const userRoleUpper = user?.role?.toUpperCase();
@@ -55,28 +53,18 @@ export default function EmployeeReceiptsScreen() {
     }
     
     loadEmployeeReceipts();
-  }, [selectedDate, employeeId]);
+  }, [employeeId]);
 
   const loadEmployeeReceipts = async () => {
     try {
       setLoading(true);
-      console.log('📊 Loading receipts...');
+      console.log('📊 Loading receipts for employee:', employeeId, employeeName);
       
-      // Format date as YYYY-MM-DD
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+      // Use getAllReceipts with cashierId filter to get employee's receipts
+      const data = await ReceiptService.getAllReceipts(0, 100, employeeId);
       
-      console.log('📅 Formatted date:', dateStr);
-      
-      const data = await ReceiptService.getReceiptsByEmployeeAndDate(
-        employeeId,
-        dateStr
-      );
-      
-      console.log('✅ Loaded receipts:', data.length);
-      setReceipts(data);
+      console.log('✅ Loaded', data.receipts?.length || 0, 'receipts for', employeeName);
+      setReceipts(data.receipts || []);
     } catch (error: any) {
       console.error('❌ Error loading employee receipts:', error);
       
@@ -111,6 +99,13 @@ export default function EmployeeReceiptsScreen() {
   const renderReceipt = ({ item }: { item: Receipt }) => {
     // Safely get the date/time value
     const dateValue = item.createdAt || item.dateTime;
+    const dateString = dateValue 
+      ? new Date(dateValue).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      : 'N/A';
     const timeString = dateValue 
       ? new Date(dateValue).toLocaleTimeString('en-US', {
           hour: 'numeric',
@@ -134,14 +129,14 @@ export default function EmployeeReceiptsScreen() {
         </View>
 
         <View style={styles.receiptDetails}>
+          <Text style={styles.receiptDate}>
+            {dateString}
+          </Text>
           <Text style={styles.receiptTime}>
             {timeString}
           </Text>
           <Text style={styles.receiptItems}>
             {item.items?.length || 0} items
-          </Text>
-          <Text style={styles.receiptPayment}>
-            {item.paymentMethod || 'CASH'}
           </Text>
         </View>
 
@@ -150,6 +145,12 @@ export default function EmployeeReceiptsScreen() {
             👤 {item.customerName}
           </Text>
         )}
+
+        <View style={styles.receiptPaymentRow}>
+          <Text style={styles.receiptPayment}>
+            💳 {item.paymentMethod || 'CASH'}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -164,25 +165,10 @@ export default function EmployeeReceiptsScreen() {
         >
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{employeeName}'s Receipts</Text>
-      </View>
-
-      {/* Date Selector */}
-      <View style={styles.dateSelector}>
-        <View style={styles.datePickerContainer}>
-          <DatePicker
-            value={selectedDate}
-            onChange={(date) => setSelectedDate(date || new Date())}
-            placeholder="Select Date"
-          />
-        </View>
-
-        <View style={styles.dateSummary}>
-          <Text style={styles.dateSummaryLabel}>Total Sales:</Text>
-          <Text style={styles.dateSummaryValue}>
-            ${getTotalSales().toFixed(2)}
-          </Text>
-        </View>
+        <Text style={styles.title}>📊 {employeeName}'s Receipts</Text>
+        <Text style={styles.subtitle}>
+          {receipts.length} receipt{receipts.length !== 1 ? 's' : ''}
+        </Text>
       </View>
 
       {/* Receipts List */}
@@ -194,13 +180,9 @@ export default function EmployeeReceiptsScreen() {
       ) : receipts.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📭</Text>
-          <Text style={styles.emptyText}>
-            No receipts found for{'\n'}
-            {selectedDate.toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            })}
+          <Text style={styles.emptyText}>No receipts found</Text>
+          <Text style={styles.emptySubtext}>
+            {employeeName} hasn't created any receipts yet
           </Text>
         </View>
       ) : (
@@ -210,11 +192,6 @@ export default function EmployeeReceiptsScreen() {
           keyExtractor={(item, index) => item.id?.toString() || `receipt-${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={true}
-          ListHeaderComponent={
-            <Text style={styles.listHeader}>
-              {receipts.length} {receipts.length === 1 ? 'receipt' : 'receipts'} found
-            </Text>
-          }
         />
       )}
 
@@ -260,44 +237,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFF',
+    marginBottom: 4,
   },
-  dateSelector: {
-    backgroundColor: '#FFF',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  datePickerContainer: {
-    marginBottom: 12,
-  },
-  dateSummary: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  dateSummaryLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  dateSummaryValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#10B981',
-  },
-  listHeader: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 12,
-    fontWeight: '600',
+  subtitle: {
+    fontSize: 16,
+    color: '#FFF',
+    opacity: 0.9,
   },
   listContent: {
     padding: 16,
@@ -334,6 +279,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 4,
   },
+  receiptDate: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
   receiptTime: {
     fontSize: 14,
     color: '#6B7280',
@@ -342,8 +291,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
+  receiptPaymentRow: {
+    marginTop: 8,
+  },
   receiptPayment: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
   },
   receiptCustomer: {
@@ -373,10 +325,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
     color: '#6B7280',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
     textAlign: 'center',
-    lineHeight: 24,
   },
   footer: {
     backgroundColor: '#FFF',
