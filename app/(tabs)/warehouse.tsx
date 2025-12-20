@@ -46,6 +46,11 @@ export default function WarehouseScreen() {
   }
 
   const canAdd = canManageWarehouses(user?.role);
+  console.log('🔍 Warehouse - Permission Check:');
+  console.log('  - User:', user?.email || 'Not logged in');
+  console.log('  - Role:', user?.role || 'undefined');
+  console.log('  - Can Manage Warehouses:', canAdd);
+  
   const { isReady, isAuthenticating, isUnauthenticated } = useApiReadiness();
   
   const [warehouses, setWarehouses] = useState<WarehouseSummary[]>([]);
@@ -108,7 +113,10 @@ export default function WarehouseScreen() {
     if (!isReady) return;
 
     try {
+      console.log('🏢 Loading warehouses...');
       const warehousesList = await getWarehouses();
+      
+      console.log('📦 Warehouses loaded:', warehousesList.length);
       
       // Ensure we always have an array
       if (Array.isArray(warehousesList)) {
@@ -116,6 +124,7 @@ export default function WarehouseScreen() {
         
         // Select first warehouse by default if available
         if (warehousesList.length > 0 && !selectedWarehouse) {
+          console.log('📍 Auto-selecting first warehouse:', warehousesList[0].name);
           setSelectedWarehouse(warehousesList[0]);
         }
       } else {
@@ -123,7 +132,7 @@ export default function WarehouseScreen() {
         setWarehouses([]);
       }
     } catch (err) {
-      console.error('Failed to load warehouses:', err);
+      console.error('❌ Failed to load warehouses:', err);
       // Silently fail for warehouses list - it may not be implemented yet
       setWarehouses([]);
     }
@@ -338,17 +347,40 @@ export default function WarehouseScreen() {
           <Text style={styles.emptyTitle}>No Warehouses Available</Text>
           <Text style={styles.emptySubtext}>
             The warehouse management feature is not yet configured.
-            {'\n'}Contact your administrator to set up warehouses.
           </Text>
-          {canAdd && (
-            <TouchableOpacity 
-              style={styles.addWarehouseButton}
-              onPress={() => setShowAddModal(true)}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-              <Text style={styles.addWarehouseButtonText}>Add Warehouse</Text>
-            </TouchableOpacity>
+          
+          {/* Debug Info in Development Mode */}
+          {__DEV__ && (
+            <View style={styles.debugInfo}>
+              <Text style={styles.debugText}>Debug Info:</Text>
+              <Text style={styles.debugText}>User: {user?.email || 'Not logged in'}</Text>
+              <Text style={styles.debugText}>Role: {user?.role || 'undefined'}</Text>
+              <Text style={styles.debugText}>Can Add: {canAdd ? 'YES' : 'NO'}</Text>
+            </View>
           )}
+          
+          {canAdd ? (
+            <>
+              <Text style={styles.emptySubtext}>
+                Click the button below to create your first warehouse.
+              </Text>
+              <TouchableOpacity 
+                style={styles.addWarehouseButton}
+                onPress={() => {
+                  console.log('➕ Add Warehouse button clicked');
+                  setShowAddModal(true);
+                }}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+                <Text style={styles.addWarehouseButtonText}>Add Warehouse</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.emptySubtext}>
+              Contact your administrator to set up warehouses.
+            </Text>
+          )}
+          
           <TouchableOpacity 
             style={styles.retryButton}
             onPress={handleRefresh}
@@ -835,5 +867,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 64,
+  },
+  debugInfo: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#92400E',
+    marginBottom: 4,
   },
 });

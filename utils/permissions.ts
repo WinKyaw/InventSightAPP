@@ -24,7 +24,9 @@ const ROLE_HIERARCHY = {
  * Check if a user has the minimum required role level
  */
 function hasMinimumRole(userRole: string | undefined, minimumRole: UserRole): boolean {
-  const level = ROLE_HIERARCHY[userRole as UserRole] || 0;
+  // Normalize role to uppercase for case-insensitive comparison
+  const normalizedRole = userRole?.toUpperCase();
+  const level = ROLE_HIERARCHY[normalizedRole as UserRole] || 0;
   return level >= ROLE_HIERARCHY[minimumRole];
 }
 
