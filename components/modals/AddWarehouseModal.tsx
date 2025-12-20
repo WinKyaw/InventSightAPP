@@ -40,8 +40,12 @@ export function AddWarehouseModal({ visible, onClose, onWarehouseAdded }: AddWar
       errors.name = 'Warehouse name must be less than 100 characters';
     }
 
-    // Location validation (optional but if provided, validate)
-    if (newWarehouse.location.trim() && newWarehouse.location.trim().length > 200) {
+    // Location validation (required)
+    if (!newWarehouse.location.trim()) {
+      errors.location = 'Location is required';
+    } else if (newWarehouse.location.trim().length < 2) {
+      errors.location = 'Location must be at least 2 characters';
+    } else if (newWarehouse.location.trim().length > 200) {
       errors.location = 'Location must be less than 200 characters';
     }
 
@@ -55,6 +59,7 @@ export function AddWarehouseModal({ visible, onClose, onWarehouseAdded }: AddWar
   };
 
   const handleInputChange = (field: keyof typeof newWarehouse, value: string) => {
+    console.log(`📝 ${field} changed:`, value);
     setNewWarehouse(prev => ({ ...prev, [field]: value }));
     
     // Clear validation error when user starts typing
@@ -69,17 +74,27 @@ export function AddWarehouseModal({ visible, onClose, onWarehouseAdded }: AddWar
       return;
     }
 
+    console.log('🔍 Warehouse form data:');
+    console.log('  Name:', newWarehouse.name);
+    console.log('  Location:', newWarehouse.location);
+    console.log('  Code:', newWarehouse.code);
+
     setIsSubmitting(true);
     
     try {
       const warehouseName = newWarehouse.name.trim();
-      
-      await apiClient.post('/api/warehouses', {
+      const warehouseData = {
         name: warehouseName,
-        location: newWarehouse.location.trim() || undefined,
+        location: newWarehouse.location.trim(),
         code: newWarehouse.code.trim() || undefined,
         isActive: true, // New warehouses are created as active by default
-      });
+      };
+      
+      console.log('➕ Creating warehouse:', JSON.stringify(warehouseData, null, 2));
+      
+      await apiClient.post('/api/warehouses', warehouseData);
+      
+      console.log('✅ Warehouse created successfully');
       
       // Reset form
       setNewWarehouse({ 
@@ -96,9 +111,14 @@ export function AddWarehouseModal({ visible, onClose, onWarehouseAdded }: AddWar
         onWarehouseAdded();
       }
     } catch (error) {
-      console.error('Failed to add warehouse:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to add warehouse. Please try again.';
-      Alert.alert('Error', errorMessage);
+      console.error('❌ Error creating warehouse:', error);
+      console.error('❌ Error response:', (error as any).response?.data);
+      
+      const errorMessage = (error as any).response?.data?.message || 
+                          (error as any).response?.data?.errors?.location ||
+                          error instanceof Error ? error.message : 'Failed to add warehouse. Please try again.';
+      
+      Alert.alert('Error', `Failed to create warehouse: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -123,7 +143,7 @@ export function AddWarehouseModal({ visible, onClose, onWarehouseAdded }: AddWar
         
         <View>
           <Input
-            placeholder="Location (Optional)"
+            placeholder="Location (Address) *"
             value={newWarehouse.location}
             onChangeText={(text) => handleInputChange('location', text)}
           />
