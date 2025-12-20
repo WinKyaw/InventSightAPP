@@ -9,11 +9,13 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
 import ReceiptService from '../services/api/receiptService';
 import DatePicker from '../components/ui/DatePicker';
 import { Receipt } from '../types';
 
 export default function EmployeeReceiptsScreen() {
+  const { user } = useAuth();
   const params = useLocalSearchParams();
   const router = useRouter();
   
@@ -23,6 +25,22 @@ export default function EmployeeReceiptsScreen() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Check if user is GM+
+  const isGMPlus = user?.role === 'OWNER' ||
+                   user?.role === 'GENERAL_MANAGER' || 
+                   user?.role === 'CEO' || 
+                   user?.role === 'FOUNDER' ||
+                   user?.role === 'ADMIN';
+
+  // Only GM+ should access this screen
+  useEffect(() => {
+    if (!isGMPlus) {
+      console.log('🔐 Employee Receipts: Access denied for role:', user?.role);
+      Alert.alert('Access Denied', 'You do not have permission to view employee receipts');
+      router.back();
+    }
+  }, [isGMPlus, user?.role, router]);
 
   useEffect(() => {
     console.log('🔍 Employee Receipts Screen mounted');

@@ -95,7 +95,8 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   const [cashierStats, setCashierStats] = useState<CashierStats[]>([]);
 
   // Check if user is GM+
-  const isGMPlus = user?.role === 'GENERAL_MANAGER' || 
+  const isGMPlus = user?.role === 'OWNER' ||
+                   user?.role === 'GENERAL_MANAGER' || 
                    user?.role === 'CEO' || 
                    user?.role === 'FOUNDER' ||
                    user?.role === 'ADMIN';
