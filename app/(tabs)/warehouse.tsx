@@ -59,13 +59,21 @@ export default function WarehouseScreen() {
     console.log('  - Can Manage Warehouses:', result);
     
     return result;
-  }, [user?.role, user?.email]); // ✅ Only depends on role and email
+  }, [user?.role]); // ✅ Only depends on role
   
   const { isReady, isAuthenticating, isUnauthenticated } = useApiReadiness();
   
   // Debounce timer and loading ref
   const tabSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadingRef = useRef(false);
+  
+  // Helper to clear the debounce timer
+  const clearTabSwitchTimer = useCallback(() => {
+    if (tabSwitchTimer.current) {
+      clearTimeout(tabSwitchTimer.current);
+      tabSwitchTimer.current = null;
+    }
+  }, []);
   
   const [warehouses, setWarehouses] = useState<WarehouseSummary[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseSummary | null>(null);
@@ -165,8 +173,8 @@ export default function WarehouseScreen() {
 
   // Load data based on active tab with debouncing support
   const loadTabData = useCallback(async (showLoadingState = true, forceRefresh = false) => {
-    if (!selectedWarehouse) {
-      console.log('⏭️ No warehouse selected, skipping load');
+    if (!isReady || !selectedWarehouse) {
+      console.log('⏭️ Not ready or no warehouse selected, skipping load');
       return;
     }
 
@@ -213,33 +221,32 @@ export default function WarehouseScreen() {
           setSales(sales);
           break;
       }
-    } catch (error: any) {
-      console.error('❌ Error loading tab data:', error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error loading tab data:', errorMessage);
       
-      if (error.response?.status !== 404) {
-        setError(error.message || `Failed to load ${activeTab}`);
+      if (!(error instanceof Error) || (error as any).response?.status !== 404) {
+        setError(errorMessage || `Failed to load ${activeTab}`);
       }
     } finally {
       setTabLoading(false);
       setRefreshing(false);
       isLoadingRef.current = false;
     }
-  }, [selectedWarehouse, activeTab]);
+  }, [isReady, selectedWarehouse, activeTab]);
 
   // Debounced version - waits 300ms before executing
   const debouncedLoadTabData = useCallback((forceRefresh: boolean = false) => {
     // Clear any pending timer
-    if (tabSwitchTimer.current) {
-      clearTimeout(tabSwitchTimer.current);
-      console.log('⏰ Clearing previous tab switch timer');
-    }
+    clearTabSwitchTimer();
+    console.log('⏰ Clearing previous tab switch timer');
 
     // Set new timer
     tabSwitchTimer.current = setTimeout(() => {
       console.log('✅ Debounce complete, loading tab data');
       loadTabData(true, forceRefresh);
     }, 300); // Wait 300ms for user to stop clicking
-  }, [loadTabData]);
+  }, [loadTabData, clearTabSwitchTimer]);
 
   // Refresh handler with force refresh
   const handleRefresh = useCallback(async () => {
@@ -267,12 +274,8 @@ export default function WarehouseScreen() {
     }
 
     // Cleanup timer on unmount
-    return () => {
-      if (tabSwitchTimer.current) {
-        clearTimeout(tabSwitchTimer.current);
-      }
-    };
-  }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData]);
+    return clearTabSwitchTimer;
+  }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData, clearTabSwitchTimer]);
 
   // Load products when Add Inventory modal opens
   useEffect(() => {
