@@ -75,6 +75,17 @@ export default function WarehouseScreen() {
     }
   }, []);
   
+  // Helper to check if error is an axios error with specific status
+  const isAxiosErrorWithStatus = (error: unknown, status: number): boolean => {
+    return error !== null && 
+      typeof error === 'object' && 
+      'response' in error && 
+      error.response !== null &&
+      typeof error.response === 'object' && 
+      'status' in error.response && 
+      error.response.status === status;
+  };
+  
   const [warehouses, setWarehouses] = useState<WarehouseSummary[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseSummary | null>(null);
   const [inventory, setInventory] = useState<WarehouseInventoryRow[]>([]);
@@ -225,16 +236,8 @@ export default function WarehouseScreen() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Error loading tab data:', errorMessage);
       
-      // Check if error is an axios error with response status
-      const hasNotFoundStatus = error && 
-        typeof error === 'object' && 
-        'response' in error && 
-        error.response && 
-        typeof error.response === 'object' && 
-        'status' in error.response && 
-        error.response.status === 404;
-      
-      if (!hasNotFoundStatus) {
+      // Don't show error for 404 (not found) responses
+      if (!isAxiosErrorWithStatus(error, 404)) {
         setError(errorMessage || `Failed to load ${activeTab}`);
       }
     } finally {
@@ -255,7 +258,7 @@ export default function WarehouseScreen() {
       console.log('✅ Debounce complete, loading tab data');
       loadTabData(true, forceRefresh);
     }, 300); // Wait 300ms for user to stop clicking
-  }, [loadTabData, clearTabSwitchTimer]);
+  }, [loadTabData]); // clearTabSwitchTimer has no dependencies, no need to include
 
   // Refresh handler with force refresh
   const handleRefresh = useCallback(async () => {
@@ -282,9 +285,9 @@ export default function WarehouseScreen() {
       debouncedLoadTabData(false);
     }
 
-    // Cleanup timer on unmount
-    return clearTabSwitchTimer;
-  }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData, clearTabSwitchTimer]);
+    // Cleanup timer on unmount or before next effect
+    return () => clearTabSwitchTimer();
+  }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData]); // clearTabSwitchTimer stable, no need in deps
 
   // Load products when Add Inventory modal opens
   useEffect(() => {
