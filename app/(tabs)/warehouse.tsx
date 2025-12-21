@@ -21,7 +21,6 @@ import { SearchBar } from '../../components/shared/SearchBar';
 import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInventoryList';
 import { AddWarehouseModal } from '../../components/modals/AddWarehouseModal';
 import { WarehouseSummary, WarehouseInventoryRow, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
-import { getWarehouses, getWarehouseInventory, getWarehouseRestocks, getWarehouseSales } from '../../services/api/warehouse';
 import WarehouseService from '../../services/api/warehouse';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { useAuth } from '../../context/AuthContext';
@@ -129,7 +128,7 @@ export default function WarehouseScreen() {
 
     try {
       console.log('🏢 Loading warehouses...');
-      const warehousesList = await getWarehouses();
+      const warehousesList = await WarehouseService.getWarehouses();
       
       console.log('📦 Warehouses loaded:', warehousesList.length);
       
@@ -163,7 +162,7 @@ export default function WarehouseScreen() {
     setError(null);
 
     try {
-      const inventoryData = await getWarehouseInventory(selectedWarehouse.id, forceRefresh);
+      const inventoryData = await WarehouseService.getWarehouseInventory(selectedWarehouse.id, forceRefresh);
       setInventory(inventoryData);
     } catch (err) {
       console.error('Failed to load inventory:', err);
@@ -185,7 +184,7 @@ export default function WarehouseScreen() {
     setError(null);
 
     try {
-      const restocksData = await getWarehouseRestocks(selectedWarehouse.id, forceRefresh);
+      const restocksData = await WarehouseService.getWarehouseRestocks(selectedWarehouse.id, forceRefresh);
       setRestocks(restocksData);
     } catch (err) {
       console.error('Failed to load restocks:', err);
@@ -207,7 +206,7 @@ export default function WarehouseScreen() {
     setError(null);
 
     try {
-      const salesData = await getWarehouseSales(selectedWarehouse.id, forceRefresh);
+      const salesData = await WarehouseService.getWarehouseSales(selectedWarehouse.id, forceRefresh);
       setSales(salesData);
     } catch (err) {
       console.error('Failed to load sales:', err);
@@ -270,6 +269,8 @@ export default function WarehouseScreen() {
     try {
       setLoadingProducts(true);
       console.log('📦 Loading products for inventory addition...');
+      // Note: Loading 100 products for simplicity. In production, consider implementing
+      // pagination or search functionality as the product catalog grows.
       const response = await ProductService.getAllProducts(1, 100);
       setProducts(response.products || []);
       console.log(`✅ Loaded ${response.products?.length || 0} products`);

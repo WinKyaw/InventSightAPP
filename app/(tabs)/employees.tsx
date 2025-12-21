@@ -13,6 +13,7 @@ import { Employee } from '../../types';
 import { styles } from '../../constants/Styles';
 import { PermissionService } from '../../services/api/permissionService';
 import WarehouseService from '../../services/api/warehouse';
+import { WarehouseAssignment } from '../../types/warehouse';
 import { Colors } from '../../constants/Colors';
 
 export default function EmployeesScreen() {
@@ -55,7 +56,7 @@ export default function EmployeesScreen() {
   // Warehouse assignment state
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [employeeWarehouses, setEmployeeWarehouses] = useState<any[]>([]);
+  const [employeeWarehouses, setEmployeeWarehouses] = useState<WarehouseAssignment[]>([]);
   const [availableWarehouses, setAvailableWarehouses] = useState<any[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
@@ -520,7 +521,7 @@ export default function EmployeesScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>🏢 Assign Warehouse</Text>
               <TouchableOpacity onPress={() => setShowWarehouseModal(false)}>
-                <Ionicons name="close" size={24} color={Colors?.text || '#000'} />
+                <Ionicons name="close" size={24} color={Colors.text} />
               </TouchableOpacity>
             </View>
 

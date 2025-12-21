@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { apiClient } from './apiClient';
-import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
+import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, WarehouseRestock, WarehouseSale, WarehouseAssignment } from '../../types/warehouse';
 
 /**
  * Warehouse API Service
@@ -410,13 +410,14 @@ class WarehouseServiceClass {
   /**
    * Get employee warehouse assignments
    */
-  async getEmployeeWarehouses(userId: string): Promise<any[]> {
+  async getEmployeeWarehouses(userId: string): Promise<WarehouseAssignment[]> {
     try {
       console.log('👤 Fetching warehouse assignments for user:', userId);
       
       const response = await apiClient.get(`/api/warehouse-assignments/user/${userId}`);
       
-      return response?.assignments || response?.data || [];
+      const assignments = response?.assignments || response?.data || [];
+      return Array.isArray(assignments) ? assignments : [];
     } catch (error: any) {
       console.error('❌ Error fetching employee warehouses:', error.message);
       return [];
