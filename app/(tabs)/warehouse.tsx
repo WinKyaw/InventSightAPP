@@ -31,6 +31,9 @@ import { ProductService } from '../../services/api/productService';
 
 type TabType = 'inventory' | 'restocks' | 'sales';
 
+// Debounce delay for tab switching (prevents rapid-fire API calls)
+const TAB_SWITCH_DEBOUNCE_MS = 300;
+
 export default function WarehouseScreen() {
   // ✅ SECURITY FIX: Add authentication check
   const { isAuthenticated, isInitialized, user } = useAuth();
@@ -238,7 +241,7 @@ export default function WarehouseScreen() {
       
       // Don't show error for 404 (not found) responses
       if (!isAxiosErrorWithStatus(error, 404)) {
-        setError(errorMessage || `Failed to load ${activeTab}`);
+        setError(errorMessage);
       }
     } finally {
       setTabLoading(false);
@@ -257,7 +260,7 @@ export default function WarehouseScreen() {
     tabSwitchTimer.current = setTimeout(() => {
       console.log('✅ Debounce complete, loading tab data');
       loadTabData(true, forceRefresh);
-    }, 300); // Wait 300ms for user to stop clicking
+    }, TAB_SWITCH_DEBOUNCE_MS);
   }, [loadTabData, clearTabSwitchTimer]);
 
   // Refresh handler with force refresh
