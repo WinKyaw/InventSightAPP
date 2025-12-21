@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,9 @@ import { EditEmployeeModal } from '../../components/modals/EditEmployeeModal';
 import { Employee } from '../../types';
 import { styles } from '../../constants/Styles';
 import { PermissionService } from '../../services/api/permissionService';
+import WarehouseService from '../../services/api/warehouse';
+import { WarehouseAssignment } from '../../types/warehouse';
+import { Colors } from '../../constants/Colors';
 
 export default function EmployeesScreen() {
   // ✅ SECURITY FIX: Add authentication check
@@ -49,6 +52,19 @@ export default function EmployeesScreen() {
   
   // ✅ FIX: Local state for expand/collapse (no API calls)
   const [expandedEmployees, setExpandedEmployees] = useState<Set<number>>(new Set());
+
+  // Warehouse assignment state
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [employeeWarehouses, setEmployeeWarehouses] = useState<WarehouseAssignment[]>([]);
+  const [availableWarehouses, setAvailableWarehouses] = useState<any[]>([]);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [newAssignment, setNewAssignment] = useState({
+    warehouseId: '',
+    isPermanent: true,
+    expiresAt: '',
+    notes: '',
+  });
 
   // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
   const loadedRef = useRef(false);
@@ -115,6 +131,107 @@ export default function EmployeesScreen() {
         }
       ]
     );
+  };
+
+  // Load employee warehouses
+  const loadEmployeeWarehouses = async (userId: number) => {
+    try {
+      setLoadingWarehouses(true);
+      console.log('👤 Loading warehouse assignments for employee:', userId);
+      const assignments = await WarehouseService.getEmployeeWarehouses(userId.toString());
+      setEmployeeWarehouses(assignments);
+      console.log(`✅ Loaded ${assignments.length} warehouse assignments`);
+    } catch (error: any) {
+      console.error('❌ Error loading employee warehouses:', error.message);
+      setEmployeeWarehouses([]);
+    } finally {
+      setLoadingWarehouses(false);
+    }
+  };
+
+  // Load available warehouses
+  const loadAvailableWarehouses = async () => {
+    try {
+      console.log('🏢 Loading available warehouses...');
+      const warehouses = await WarehouseService.getWarehouses();
+      setAvailableWarehouses(warehouses);
+      console.log(`✅ Loaded ${warehouses.length} warehouses`);
+    } catch (error: any) {
+      console.error('❌ Error loading warehouses:', error.message);
+      setAvailableWarehouses([]);
+    }
+  };
+
+  // Assign warehouse to employee
+  const handleAssignWarehouse = async () => {
+    if (!selectedEmployee || !newAssignment.warehouseId) {
+      Alert.alert('Error', 'Please select a warehouse');
+      return;
+    }
+
+    if (!newAssignment.isPermanent && !newAssignment.expiresAt) {
+      Alert.alert('Error', 'Please select expiration date for temporary assignment');
+      return;
+    }
+
+    try {
+      console.log('👤 Assigning warehouse to employee:', selectedEmployee.id);
+      
+      await WarehouseService.assignWarehouseToEmployee({
+        userId: selectedEmployee.id.toString(),
+        warehouseId: newAssignment.warehouseId,
+        isPermanent: newAssignment.isPermanent,
+        expiresAt: newAssignment.isPermanent ? undefined : newAssignment.expiresAt,
+        notes: newAssignment.notes,
+      });
+
+      Alert.alert('Success', 'Warehouse assigned successfully');
+      setNewAssignment({ warehouseId: '', isPermanent: true, expiresAt: '', notes: '' });
+      
+      // Reload employee warehouses
+      await loadEmployeeWarehouses(selectedEmployee.id);
+    } catch (error: any) {
+      console.error('❌ Error assigning warehouse:', error.message);
+      Alert.alert('Error', `Failed to assign warehouse: ${error.message}`);
+    }
+  };
+
+  // Remove warehouse assignment
+  const handleRemoveAssignment = async (assignmentId: string) => {
+    Alert.alert(
+      'Remove Assignment',
+      'Are you sure you want to remove this warehouse assignment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await WarehouseService.removeWarehouseAssignment(assignmentId);
+              Alert.alert('Success', 'Warehouse assignment removed');
+              
+              // Reload employee warehouses
+              if (selectedEmployee) {
+                await loadEmployeeWarehouses(selectedEmployee.id);
+              }
+            } catch (error: any) {
+              Alert.alert('Error', `Failed to remove assignment: ${error.message}`);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Open warehouse assignment modal
+  const openWarehouseModal = async (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setShowWarehouseModal(true);
+    await Promise.all([
+      loadEmployeeWarehouses(employee.id),
+      loadAvailableWarehouses(),
+    ]);
   };
 
   const filteredEmployees = employees.filter(employee =>
@@ -296,6 +413,17 @@ export default function EmployeesScreen() {
                   
                   {/* Action Buttons */}
                   <View style={styles.employeeStats}>
+                    {/* Assign Warehouse Button */}
+                    {canAdd && (
+                      <TouchableOpacity 
+                        style={[styles.headerButton, { backgroundColor: '#8B5CF6' }]}
+                        onPress={() => openWarehouseModal(employee)}
+                      >
+                        <Ionicons name="business" size={16} color="white" />
+                        <Text style={styles.headerButtonText}>Warehouse</Text>
+                      </TouchableOpacity>
+                    )}
+                    
                     {/* View Receipts Button - GM+ only */}
                     {(() => {
                       // Check if user is GM+ (case-insensitive)
@@ -380,6 +508,190 @@ export default function EmployeesScreen() {
           }
         }}
       />
+
+      {/* Warehouse Assignment Modal */}
+      <Modal
+        visible={showWarehouseModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowWarehouseModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>🏢 Assign Warehouse</Text>
+              <TouchableOpacity onPress={() => setShowWarehouseModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.modalSubtitle}>
+                Employee: {selectedEmployee?.firstName} {selectedEmployee?.lastName}
+              </Text>
+
+              {/* Current Assignments */}
+              <View style={styles.assignmentsSection}>
+                <Text style={styles.sectionTitle}>Current Assignments:</Text>
+                {loadingWarehouses ? (
+                  <ActivityIndicator size="small" color="#6366F1" />
+                ) : employeeWarehouses.length === 0 ? (
+                  <Text style={styles.noAssignments}>No warehouses assigned</Text>
+                ) : (
+                  employeeWarehouses.map((assignment) => (
+                    <View key={assignment.id} style={styles.assignmentItem}>
+                      <View style={styles.assignmentInfo}>
+                        <Text style={styles.assignmentName}>
+                          {assignment.warehouseName || 'Unknown Warehouse'}
+                        </Text>
+                        <Text style={styles.assignmentType}>
+                          {assignment.isPermanent ? '🔒 Permanent' : '⏰ Temporary'}
+                        </Text>
+                        {!assignment.isPermanent && assignment.expiresAt && (
+                          <Text style={styles.assignmentExpiry}>
+                            Expires: {new Date(assignment.expiresAt).toLocaleDateString()}
+                          </Text>
+                        )}
+                      </View>
+                      <TouchableOpacity
+                        style={styles.removeButton}
+                        onPress={() => handleRemoveAssignment(assignment.id)}
+                      >
+                        <Ionicons name="trash" size={20} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </View>
+
+              {/* New Assignment Form */}
+              <View style={styles.assignmentsSection}>
+                <Text style={styles.sectionTitle}>Add New Assignment:</Text>
+
+                {/* Warehouse Selection */}
+                <Text style={styles.inputLabel}>Warehouse *</Text>
+                <View style={styles.pickerContainer}>
+                  <ScrollView style={styles.warehousePicker} nestedScrollEnabled>
+                    {availableWarehouses.map((warehouse) => (
+                      <TouchableOpacity
+                        key={warehouse.id}
+                        style={[
+                          styles.warehouseOption,
+                          newAssignment.warehouseId === warehouse.id && styles.warehouseOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setNewAssignment({ ...newAssignment, warehouseId: warehouse.id });
+                        }}
+                      >
+                        <Text style={[
+                          styles.warehouseOptionText,
+                          newAssignment.warehouseId === warehouse.id && styles.warehouseOptionTextSelected,
+                        ]}>
+                          {warehouse.name} {warehouse.location ? `- ${warehouse.location}` : ''}
+                        </Text>
+                        {newAssignment.warehouseId === warehouse.id && (
+                          <Ionicons name="checkmark-circle" size={20} color="#6366F1" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Assignment Type */}
+                <Text style={styles.inputLabel}>Assignment Type *</Text>
+                <View style={styles.assignmentTypeContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeButton,
+                      newAssignment.isPermanent && styles.typeButtonActive,
+                    ]}
+                    onPress={() => setNewAssignment({ ...newAssignment, isPermanent: true, expiresAt: '' })}
+                  >
+                    <Ionicons 
+                      name="lock-closed" 
+                      size={20} 
+                      color={newAssignment.isPermanent ? '#fff' : '#6366F1'} 
+                    />
+                    <Text style={[
+                      styles.typeButtonText,
+                      newAssignment.isPermanent && styles.typeButtonTextActive,
+                    ]}>
+                      Permanent
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeButton,
+                      !newAssignment.isPermanent && styles.typeButtonActive,
+                    ]}
+                    onPress={() => setNewAssignment({ ...newAssignment, isPermanent: false })}
+                  >
+                    <Ionicons 
+                      name="time" 
+                      size={20} 
+                      color={!newAssignment.isPermanent ? '#fff' : '#6366F1'} 
+                    />
+                    <Text style={[
+                      styles.typeButtonText,
+                      !newAssignment.isPermanent && styles.typeButtonTextActive,
+                    ]}>
+                      Temporary
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Expiration Date (if temporary) */}
+                {!newAssignment.isPermanent && (
+                  <>
+                    <Text style={styles.inputLabel}>Expiration Date *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="YYYY-MM-DD"
+                      value={newAssignment.expiresAt}
+                      onChangeText={(text) =>
+                        setNewAssignment({ ...newAssignment, expiresAt: text })
+                      }
+                    />
+                  </>
+                )}
+
+                {/* Notes */}
+                <Text style={styles.inputLabel}>Notes (optional)</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Add notes about this assignment"
+                  value={newAssignment.notes}
+                  onChangeText={(text) =>
+                    setNewAssignment({ ...newAssignment, notes: text })
+                  }
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setShowWarehouseModal(false);
+                      setNewAssignment({ warehouseId: '', isPermanent: true, expiresAt: '', notes: '' });
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>Close</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleAssignWarehouse}
+                  >
+                    <Text style={styles.saveButtonText}>Assign</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

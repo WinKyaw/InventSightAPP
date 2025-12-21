@@ -71,3 +71,18 @@ export interface WarehouseSale {
   customerName?: string;
   items?: number;
 }
+
+/**
+ * Employee warehouse assignment
+ */
+export interface WarehouseAssignment {
+  id: string;
+  userId: string;
+  warehouseId: string;
+  warehouseName?: string;
+  isPermanent: boolean;
+  expiresAt?: string;
+  notes?: string;
+  createdAt?: string;
+  createdBy?: string;
+}

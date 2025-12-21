@@ -11,6 +11,8 @@ import {
   ScrollView,
   StyleSheet,
   FlatList,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,12 +21,13 @@ import { SearchBar } from '../../components/shared/SearchBar';
 import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInventoryList';
 import { AddWarehouseModal } from '../../components/modals/AddWarehouseModal';
 import { WarehouseSummary, WarehouseInventoryRow, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
-import { getWarehouses, getWarehouseInventory, getWarehouseRestocks, getWarehouseSales } from '../../services/api/warehouse';
+import WarehouseService from '../../services/api/warehouse';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { useAuth } from '../../context/AuthContext';
 import { canManageWarehouses } from '../../utils/permissions';
 import { Colors } from '../../constants/Colors';
 import { styles as commonStyles } from '../../constants/Styles';
+import { ProductService } from '../../services/api/productService';
 
 type TabType = 'inventory' | 'restocks' | 'sales';
 
@@ -66,6 +69,17 @@ export default function WarehouseScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showWarehousePicker, setShowWarehousePicker] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  
+  // Add Inventory modal state
+  const [showAddInventoryModal, setShowAddInventoryModal] = useState(false);
+  const [newInventoryItem, setNewInventoryItem] = useState({
+    productId: '',
+    productName: '',
+    quantity: '',
+    notes: '',
+  });
+  const [products, setProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Filter inventory based on search query
   const filteredInventory = useMemo(() => {
@@ -114,7 +128,7 @@ export default function WarehouseScreen() {
 
     try {
       console.log('🏢 Loading warehouses...');
-      const warehousesList = await getWarehouses();
+      const warehousesList = await WarehouseService.getWarehouses();
       
       console.log('📦 Warehouses loaded:', warehousesList.length);
       
@@ -139,7 +153,7 @@ export default function WarehouseScreen() {
   }, [isReady, selectedWarehouse]);
 
   // Load inventory for selected warehouse
-  const loadInventory = useCallback(async (showLoadingState = true) => {
+  const loadInventory = useCallback(async (showLoadingState = true, forceRefresh = false) => {
     if (!isReady || !selectedWarehouse) return;
 
     if (showLoadingState) {
@@ -148,7 +162,7 @@ export default function WarehouseScreen() {
     setError(null);
 
     try {
-      const inventoryData = await getWarehouseInventory(selectedWarehouse.id);
+      const inventoryData = await WarehouseService.getWarehouseInventory(selectedWarehouse.id, forceRefresh);
       setInventory(inventoryData);
     } catch (err) {
       console.error('Failed to load inventory:', err);
@@ -161,7 +175,7 @@ export default function WarehouseScreen() {
   }, [isReady, selectedWarehouse]);
 
   // Load restocks for selected warehouse
-  const loadRestocks = useCallback(async (showLoadingState = true) => {
+  const loadRestocks = useCallback(async (showLoadingState = true, forceRefresh = false) => {
     if (!isReady || !selectedWarehouse) return;
 
     if (showLoadingState) {
@@ -170,7 +184,7 @@ export default function WarehouseScreen() {
     setError(null);
 
     try {
-      const restocksData = await getWarehouseRestocks(selectedWarehouse.id);
+      const restocksData = await WarehouseService.getWarehouseRestocks(selectedWarehouse.id, forceRefresh);
       setRestocks(restocksData);
     } catch (err) {
       console.error('Failed to load restocks:', err);
@@ -183,7 +197,7 @@ export default function WarehouseScreen() {
   }, [isReady, selectedWarehouse]);
 
   // Load sales for selected warehouse
-  const loadSales = useCallback(async (showLoadingState = true) => {
+  const loadSales = useCallback(async (showLoadingState = true, forceRefresh = false) => {
     if (!isReady || !selectedWarehouse) return;
 
     if (showLoadingState) {
@@ -192,7 +206,7 @@ export default function WarehouseScreen() {
     setError(null);
 
     try {
-      const salesData = await getWarehouseSales(selectedWarehouse.id);
+      const salesData = await WarehouseService.getWarehouseSales(selectedWarehouse.id, forceRefresh);
       setSales(salesData);
     } catch (err) {
       console.error('Failed to load sales:', err);
@@ -205,16 +219,16 @@ export default function WarehouseScreen() {
   }, [isReady, selectedWarehouse]);
 
   // Load data based on active tab
-  const loadTabData = useCallback(async (showLoadingState = true) => {
+  const loadTabData = useCallback(async (showLoadingState = true, forceRefresh = false) => {
     switch (activeTab) {
       case 'inventory':
-        await loadInventory(showLoadingState);
+        await loadInventory(showLoadingState, forceRefresh);
         break;
       case 'restocks':
-        await loadRestocks(showLoadingState);
+        await loadRestocks(showLoadingState, forceRefresh);
         break;
       case 'sales':
-        await loadSales(showLoadingState);
+        await loadSales(showLoadingState, forceRefresh);
         break;
     }
   }, [activeTab, loadInventory, loadRestocks, loadSales]);
@@ -242,6 +256,75 @@ export default function WarehouseScreen() {
       loadTabData();
     }
   }, [isReady, selectedWarehouse, activeTab, loadTabData]);
+
+  // Load products when Add Inventory modal opens
+  useEffect(() => {
+    if (showAddInventoryModal && products.length === 0) {
+      loadProducts();
+    }
+  }, [showAddInventoryModal]);
+
+  // Load products for inventory addition
+  const loadProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      console.log('📦 Loading products for inventory addition...');
+      // Note: Loading 100 products for simplicity. In production, consider implementing
+      // pagination or search functionality as the product catalog grows.
+      const response = await ProductService.getAllProducts(1, 100);
+      setProducts(response.products || []);
+      console.log(`✅ Loaded ${response.products?.length || 0} products`);
+    } catch (error) {
+      console.error('❌ Failed to load products:', error);
+      Alert.alert('Error', 'Failed to load products');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // Handle add inventory
+  const handleAddInventory = async () => {
+    console.log('🔍 Add inventory form data:');
+    console.log('  Product:', newInventoryItem.productName);
+    console.log('  Quantity:', newInventoryItem.quantity);
+
+    if (!selectedWarehouse) {
+      Alert.alert('Error', 'Please select a warehouse first');
+      return;
+    }
+
+    if (!newInventoryItem.productId || !newInventoryItem.quantity) {
+      Alert.alert('Validation Error', 'Please select a product and enter quantity');
+      return;
+    }
+
+    const quantity = parseInt(newInventoryItem.quantity, 10);
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Validation Error', 'Quantity must be a positive number');
+      return;
+    }
+
+    try {
+      console.log('➕ Adding inventory to warehouse:', selectedWarehouse.id);
+      
+      await WarehouseService.addInventory({
+        warehouseId: selectedWarehouse.id,
+        productId: newInventoryItem.productId,
+        quantity: quantity,
+        notes: newInventoryItem.notes || undefined,
+      });
+
+      Alert.alert('Success', 'Inventory added successfully');
+      setShowAddInventoryModal(false);
+      setNewInventoryItem({ productId: '', productName: '', quantity: '', notes: '' });
+      
+      // Reload data with force refresh (bypasses cache)
+      await loadTabData(true, true);
+    } catch (error: any) {
+      console.error('❌ Error adding inventory:', error.message);
+      Alert.alert('Error', `Failed to add inventory: ${error.message}`);
+    }
+  };
 
   // Handle warehouse selection
   const handleWarehouseSelect = (warehouse: WarehouseSummary) => {
@@ -503,7 +586,18 @@ export default function WarehouseScreen() {
       ) : (
         <View style={styles.listWrapper}>
           {activeTab === 'inventory' && (
-            <WarehouseInventoryList inventory={filteredInventory} />
+            <>
+              <WarehouseInventoryList inventory={filteredInventory} />
+              {canAdd && selectedWarehouse && (
+                <TouchableOpacity
+                  style={styles.addInventoryButton}
+                  onPress={() => setShowAddInventoryModal(true)}
+                >
+                  <Ionicons name="add-circle" size={20} color="#fff" />
+                  <Text style={styles.addInventoryButtonText}>Add Inventory</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
           {activeTab === 'restocks' && (
             <FlatList
@@ -613,6 +707,111 @@ export default function WarehouseScreen() {
         onClose={() => setShowAddModal(false)}
         onWarehouseAdded={handleRefresh}
       />
+
+      {/* Add Inventory Modal */}
+      <Modal
+        visible={showAddInventoryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddInventoryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>➕ Add Inventory</Text>
+              <TouchableOpacity onPress={() => setShowAddInventoryModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.modalSubtitle}>
+                Warehouse: {selectedWarehouse?.name}
+              </Text>
+
+              {/* Product Dropdown - Simplified using TextInput for now */}
+              <Text style={styles.inputLabel}>Product *</Text>
+              {loadingProducts ? (
+                <ActivityIndicator size="small" color="#6366F1" />
+              ) : (
+                <View style={styles.pickerContainer}>
+                  <ScrollView style={styles.productPicker} nestedScrollEnabled>
+                    {products.map((product) => (
+                      <TouchableOpacity
+                        key={product.id}
+                        style={[
+                          styles.productOption,
+                          newInventoryItem.productId === product.id.toString() && styles.productOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setNewInventoryItem({
+                            ...newInventoryItem,
+                            productId: product.id.toString(),
+                            productName: product.name,
+                          });
+                        }}
+                      >
+                        <Text style={[
+                          styles.productOptionText,
+                          newInventoryItem.productId === product.id.toString() && styles.productOptionTextSelected,
+                        ]}>
+                          {product.name} {product.sku ? `(${product.sku})` : ''}
+                        </Text>
+                        {newInventoryItem.productId === product.id.toString() && (
+                          <Ionicons name="checkmark-circle" size={20} color="#6366F1" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              <Text style={styles.inputLabel}>Quantity *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter quantity"
+                value={newInventoryItem.quantity}
+                onChangeText={(text) => {
+                  setNewInventoryItem({ ...newInventoryItem, quantity: text });
+                }}
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.inputLabel}>Notes (optional)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Add notes about this inventory addition"
+                value={newInventoryItem.notes}
+                onChangeText={(text) => {
+                  setNewInventoryItem({ ...newInventoryItem, notes: text });
+                }}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setShowAddInventoryModal(false);
+                    setNewInventoryItem({ productId: '', productName: '', quantity: '', notes: '' });
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleAddInventory}
+                >
+                  <Text style={styles.saveButtonText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -880,5 +1079,117 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#92400E',
     marginBottom: 4,
+  },
+  // Add Inventory Button
+  addInventoryButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    gap: 8,
+  },
+  addInventoryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Modal Form Styles
+  modalForm: {
+    padding: 20,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: Colors.white,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    backgroundColor: Colors.white,
+    maxHeight: 200,
+  },
+  productPicker: {
+    maxHeight: 180,
+  },
+  productOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  productOptionSelected: {
+    backgroundColor: '#EEF2FF',
+  },
+  productOptionText: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+  },
+  productOptionTextSelected: {
+    fontWeight: '600',
+    color: '#6366F1',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  saveButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
