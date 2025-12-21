@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -31,6 +31,9 @@ import { ProductService } from '../../services/api/productService';
 
 type TabType = 'inventory' | 'restocks' | 'sales';
 
+// Debounce delay for tab switching (prevents rapid-fire API calls)
+const TAB_SWITCH_DEBOUNCE_MS = 300;
+
 export default function WarehouseScreen() {
   // ✅ SECURITY FIX: Add authentication check
   const { isAuthenticated, isInitialized, user } = useAuth();
@@ -48,13 +51,43 @@ export default function WarehouseScreen() {
     return null;
   }
 
-  const canAdd = canManageWarehouses(user?.role);
-  console.log('🔍 Warehouse - Permission Check:');
-  console.log('  - User:', user?.email || 'Not logged in');
-  console.log('  - Role:', user?.role || 'undefined');
-  console.log('  - Can Manage Warehouses:', canAdd);
+  // ✅ Memoize permission check (only recalculates when user.role changes)
+  const canAdd = useMemo(() => {
+    const result = canManageWarehouses(user?.role);
+    
+    // Only log once when role changes
+    console.log('🔍 Warehouse - Permission Check:');
+    console.log('  - User:', user?.email || 'Not logged in');
+    console.log('  - Role:', user?.role || 'undefined');
+    console.log('  - Can Manage Warehouses:', result);
+    
+    return result;
+  }, [user?.role]); // ✅ Only depends on role
   
   const { isReady, isAuthenticating, isUnauthenticated } = useApiReadiness();
+  
+  // Debounce timer and loading ref
+  const tabSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLoadingRef = useRef(false);
+  
+  // Helper to clear the debounce timer
+  const clearTabSwitchTimer = useCallback(() => {
+    if (tabSwitchTimer.current) {
+      clearTimeout(tabSwitchTimer.current);
+      tabSwitchTimer.current = null;
+    }
+  }, []);
+  
+  // Helper to check if error is an axios error with specific status
+  const isAxiosErrorWithStatus = (error: unknown, status: number): boolean => {
+    return error !== null && 
+      typeof error === 'object' && 
+      'response' in error && 
+      error.response !== null &&
+      typeof error.response === 'object' && 
+      'status' in error.response && 
+      error.response.status === status;
+  };
   
   const [warehouses, setWarehouses] = useState<WarehouseSummary[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseSummary | null>(null);
@@ -152,93 +185,91 @@ export default function WarehouseScreen() {
     }
   }, [isReady, selectedWarehouse]);
 
-  // Load inventory for selected warehouse
-  const loadInventory = useCallback(async (showLoadingState = true, forceRefresh = false) => {
-    if (!isReady || !selectedWarehouse) return;
-
-    if (showLoadingState) {
-      setTabLoading(true);
-    }
-    setError(null);
-
-    try {
-      const inventoryData = await WarehouseService.getWarehouseInventory(selectedWarehouse.id, forceRefresh);
-      setInventory(inventoryData);
-    } catch (err) {
-      console.error('Failed to load inventory:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load inventory');
-      setInventory([]);
-    } finally {
-      setTabLoading(false);
-      setRefreshing(false);
-    }
-  }, [isReady, selectedWarehouse]);
-
-  // Load restocks for selected warehouse
-  const loadRestocks = useCallback(async (showLoadingState = true, forceRefresh = false) => {
-    if (!isReady || !selectedWarehouse) return;
-
-    if (showLoadingState) {
-      setTabLoading(true);
-    }
-    setError(null);
-
-    try {
-      const restocksData = await WarehouseService.getWarehouseRestocks(selectedWarehouse.id, forceRefresh);
-      setRestocks(restocksData);
-    } catch (err) {
-      console.error('Failed to load restocks:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load restocks');
-      setRestocks([]);
-    } finally {
-      setTabLoading(false);
-      setRefreshing(false);
-    }
-  }, [isReady, selectedWarehouse]);
-
-  // Load sales for selected warehouse
-  const loadSales = useCallback(async (showLoadingState = true, forceRefresh = false) => {
-    if (!isReady || !selectedWarehouse) return;
-
-    if (showLoadingState) {
-      setTabLoading(true);
-    }
-    setError(null);
-
-    try {
-      const salesData = await WarehouseService.getWarehouseSales(selectedWarehouse.id, forceRefresh);
-      setSales(salesData);
-    } catch (err) {
-      console.error('Failed to load sales:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load sales');
-      setSales([]);
-    } finally {
-      setTabLoading(false);
-      setRefreshing(false);
-    }
-  }, [isReady, selectedWarehouse]);
-
-  // Load data based on active tab
+  // Load data based on active tab with debouncing support
   const loadTabData = useCallback(async (showLoadingState = true, forceRefresh = false) => {
-    switch (activeTab) {
-      case 'inventory':
-        await loadInventory(showLoadingState, forceRefresh);
-        break;
-      case 'restocks':
-        await loadRestocks(showLoadingState, forceRefresh);
-        break;
-      case 'sales':
-        await loadSales(showLoadingState, forceRefresh);
-        break;
+    if (!isReady || !selectedWarehouse) {
+      console.log('⏭️ Not ready or no warehouse selected, skipping load');
+      return;
     }
-  }, [activeTab, loadInventory, loadRestocks, loadSales]);
 
-  // Refresh handler
+    // Prevent multiple simultaneous loads
+    if (isLoadingRef.current && !forceRefresh) {
+      console.log('⏭️ Already loading, skipping duplicate request');
+      return;
+    }
+
+    try {
+      isLoadingRef.current = true;
+      if (showLoadingState) {
+        setTabLoading(true);
+      }
+      setError(null);
+      
+      console.log(`📦 Loading ${activeTab} for warehouse: ${selectedWarehouse.id} (forceRefresh: ${forceRefresh})`);
+
+      switch (activeTab) {
+        case 'inventory':
+          const inventory = await WarehouseService.getWarehouseInventory(
+            selectedWarehouse.id,
+            forceRefresh
+          );
+          console.log(`✅ Loaded ${inventory.length} inventory items`);
+          setInventory(inventory);
+          break;
+
+        case 'restocks':
+          const restocks = await WarehouseService.getWarehouseRestocks(
+            selectedWarehouse.id,
+            forceRefresh
+          );
+          console.log(`✅ Loaded ${restocks.length} restocks`);
+          setRestocks(restocks);
+          break;
+
+        case 'sales':
+          const sales = await WarehouseService.getWarehouseSales(
+            selectedWarehouse.id,
+            forceRefresh
+          );
+          console.log(`✅ Loaded ${sales.length} sales`);
+          setSales(sales);
+          break;
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error loading tab data:', errorMessage);
+      
+      // Don't show error for 404 (not found) responses
+      if (!isAxiosErrorWithStatus(error, 404)) {
+        setError(errorMessage);
+      }
+    } finally {
+      setTabLoading(false);
+      setRefreshing(false);
+      isLoadingRef.current = false;
+    }
+  }, [isReady, selectedWarehouse, activeTab]);
+
+  // Debounced version - waits 300ms before executing
+  const debouncedLoadTabData = useCallback((forceRefresh: boolean = false) => {
+    // Clear any pending timer
+    clearTabSwitchTimer();
+    console.log('⏰ Clearing previous tab switch timer');
+
+    // Set new timer
+    tabSwitchTimer.current = setTimeout(() => {
+      console.log('✅ Debounce complete, loading tab data');
+      loadTabData(true, forceRefresh);
+    }, TAB_SWITCH_DEBOUNCE_MS);
+  }, [loadTabData, clearTabSwitchTimer]);
+
+  // Refresh handler with force refresh
   const handleRefresh = useCallback(async () => {
+    console.log('🔄 Pull-to-refresh triggered');
     setRefreshing(true);
     await Promise.all([
       loadWarehouses(),
-      loadTabData(false),
+      loadTabData(false, true), // Force refresh (bypass cache)
     ]);
     setRefreshing(false);
   }, [loadWarehouses, loadTabData]);
@@ -250,12 +281,16 @@ export default function WarehouseScreen() {
     }
   }, [isReady, loadWarehouses]);
 
-  // Load data when warehouse or tab changes
+  // Load data when warehouse or tab changes (with debouncing)
   useEffect(() => {
-    if (isReady && selectedWarehouse) {
-      loadTabData();
+    if (isReady && selectedWarehouse && activeTab) {
+      console.log(`🔄 Tab/Warehouse changed: ${activeTab} - ${selectedWarehouse.name}`);
+      debouncedLoadTabData(false);
     }
-  }, [isReady, selectedWarehouse, activeTab, loadTabData]);
+
+    // Cleanup timer on unmount or before next effect
+    return () => clearTabSwitchTimer();
+  }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData, clearTabSwitchTimer]);
 
   // Load products when Add Inventory modal opens
   useEffect(() => {
@@ -281,6 +316,16 @@ export default function WarehouseScreen() {
       setLoadingProducts(false);
     }
   };
+
+  // Handle tab switch with debouncing
+  const handleTabSwitch = useCallback((tab: 'inventory' | 'restocks' | 'sales') => {
+    console.log(`🔄 User clicked tab: ${tab}`);
+    
+    // Update active tab immediately for UI
+    setActiveTab(tab);
+    
+    // Note: useEffect will trigger debouncedLoadTabData automatically
+  }, []);
 
   // Handle add inventory
   const handleAddInventory = async () => {
@@ -320,9 +365,10 @@ export default function WarehouseScreen() {
       
       // Reload data with force refresh (bypasses cache)
       await loadTabData(true, true);
-    } catch (error: any) {
-      console.error('❌ Error adding inventory:', error.message);
-      Alert.alert('Error', `Failed to add inventory: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error adding inventory:', errorMessage);
+      Alert.alert('Error', `Failed to add inventory: ${errorMessage}`);
     }
   };
 
@@ -524,7 +570,7 @@ export default function WarehouseScreen() {
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'inventory' && styles.activeTab]}
-          onPress={() => setActiveTab('inventory')}
+          onPress={() => handleTabSwitch('inventory')}
         >
           <Ionicons 
             name="cube-outline" 
@@ -538,7 +584,7 @@ export default function WarehouseScreen() {
 
         <TouchableOpacity
           style={[styles.tab, activeTab === 'restocks' && styles.activeTab]}
-          onPress={() => setActiveTab('restocks')}
+          onPress={() => handleTabSwitch('restocks')}
         >
           <Ionicons 
             name="arrow-down-circle-outline" 
@@ -552,7 +598,7 @@ export default function WarehouseScreen() {
 
         <TouchableOpacity
           style={[styles.tab, activeTab === 'sales' && styles.activeTab]}
-          onPress={() => setActiveTab('sales')}
+          onPress={() => handleTabSwitch('sales')}
         >
           <Ionicons 
             name="cash-outline" 
