@@ -21,7 +21,7 @@ import { SearchBar } from '../../components/shared/SearchBar';
 import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInventoryList';
 import { AddWarehouseModal } from '../../components/modals/AddWarehouseModal';
 import { WarehouseSummary, WarehouseInventoryRow, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
-import WarehouseService from '../../services/api/warehouse';
+import WarehouseService, { WarehouseAdditionTransactionType } from '../../services/api/warehouse';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { useAuth } from '../../context/AuthContext';
 import { canManageWarehouses } from '../../utils/permissions';
@@ -109,6 +109,7 @@ export default function WarehouseScreen() {
     productId: '',
     productName: '',
     quantity: '',
+    transactionType: WarehouseAdditionTransactionType.RECEIPT, // ✅ Default to RECEIPT
     notes: '',
   });
   const [products, setProducts] = useState<any[]>([]);
@@ -332,6 +333,7 @@ export default function WarehouseScreen() {
     console.log('🔍 Add inventory form data:');
     console.log('  Product:', newInventoryItem.productName);
     console.log('  Quantity:', newInventoryItem.quantity);
+    console.log('  Transaction Type:', newInventoryItem.transactionType);
 
     if (!selectedWarehouse) {
       Alert.alert('Error', 'Please select a warehouse first');
@@ -356,12 +358,19 @@ export default function WarehouseScreen() {
         warehouseId: selectedWarehouse.id,
         productId: newInventoryItem.productId,
         quantity: quantity,
+        transactionType: newInventoryItem.transactionType, // ✅ Pass transaction type
         notes: newInventoryItem.notes || undefined,
       });
 
       Alert.alert('Success', 'Inventory added successfully');
       setShowAddInventoryModal(false);
-      setNewInventoryItem({ productId: '', productName: '', quantity: '', notes: '' });
+      setNewInventoryItem({
+        productId: '',
+        productName: '',
+        quantity: '',
+        transactionType: WarehouseAdditionTransactionType.RECEIPT, // Reset to default
+        notes: '',
+      });
       
       // Reload data with force refresh (bypasses cache)
       await loadTabData(true, true);
@@ -823,6 +832,70 @@ export default function WarehouseScreen() {
                 keyboardType="numeric"
               />
 
+              {/* ✅ NEW: Transaction Type Picker */}
+              <Text style={styles.inputLabel}>Transaction Type *</Text>
+              <View style={styles.transactionTypeContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.transactionTypeButton,
+                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.RECEIPT && styles.transactionTypeButtonSelected,
+                  ]}
+                  onPress={() => setNewInventoryItem({ ...newInventoryItem, transactionType: WarehouseAdditionTransactionType.RECEIPT })}
+                >
+                  <Text style={[
+                    styles.transactionTypeButtonText,
+                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.RECEIPT && styles.transactionTypeButtonTextSelected,
+                  ]}>
+                    📦 Receipt
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.transactionTypeButton,
+                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.TRANSFER_IN && styles.transactionTypeButtonSelected,
+                  ]}
+                  onPress={() => setNewInventoryItem({ ...newInventoryItem, transactionType: WarehouseAdditionTransactionType.TRANSFER_IN })}
+                >
+                  <Text style={[
+                    styles.transactionTypeButtonText,
+                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.TRANSFER_IN && styles.transactionTypeButtonTextSelected,
+                  ]}>
+                    🚚 Transfer In
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.transactionTypeButton,
+                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.ADJUSTMENT_IN && styles.transactionTypeButtonSelected,
+                  ]}
+                  onPress={() => setNewInventoryItem({ ...newInventoryItem, transactionType: WarehouseAdditionTransactionType.ADJUSTMENT_IN })}
+                >
+                  <Text style={[
+                    styles.transactionTypeButtonText,
+                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.ADJUSTMENT_IN && styles.transactionTypeButtonTextSelected,
+                  ]}>
+                    🔄 Adjustment In
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.transactionTypeButton,
+                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.RETURN && styles.transactionTypeButtonSelected,
+                  ]}
+                  onPress={() => setNewInventoryItem({ ...newInventoryItem, transactionType: WarehouseAdditionTransactionType.RETURN })}
+                >
+                  <Text style={[
+                    styles.transactionTypeButtonText,
+                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.RETURN && styles.transactionTypeButtonTextSelected,
+                  ]}>
+                    ↩️ Return
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               <Text style={styles.inputLabel}>Notes (optional)</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
@@ -841,7 +914,13 @@ export default function WarehouseScreen() {
                   style={styles.cancelButton}
                   onPress={() => {
                     setShowAddInventoryModal(false);
-                    setNewInventoryItem({ productId: '', productName: '', quantity: '', notes: '' });
+                    setNewInventoryItem({
+                      productId: '',
+                      productName: '',
+                      quantity: '',
+                      transactionType: WarehouseAdditionTransactionType.RECEIPT, // Reset to default
+                      notes: '',
+                    });
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -1204,6 +1283,35 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   productOptionTextSelected: {
+    fontWeight: '600',
+    color: '#6366F1',
+  },
+  // Transaction Type Picker Styles
+  transactionTypeContainer: {
+    gap: 8,
+    marginBottom: 4,
+  },
+  transactionTypeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+  },
+  transactionTypeButtonSelected: {
+    borderColor: '#6366F1',
+    backgroundColor: '#EEF2FF',
+  },
+  transactionTypeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+  transactionTypeButtonTextSelected: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#6366F1',
   },

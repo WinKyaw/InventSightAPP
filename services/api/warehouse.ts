@@ -7,6 +7,22 @@ import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, Warehouse
  * Handles warehouse inventory and availability operations with 1-minute caching
  */
 
+// ✅ TypeScript enums for valid transaction types
+export enum WarehouseAdditionTransactionType {
+  RECEIPT = 'RECEIPT',
+  TRANSFER_IN = 'TRANSFER_IN',
+  ADJUSTMENT_IN = 'ADJUSTMENT_IN',
+  RETURN = 'RETURN',
+}
+
+export enum WarehouseWithdrawalTransactionType {
+  SALE = 'SALE',
+  TRANSFER_OUT = 'TRANSFER_OUT',
+  ADJUSTMENT_OUT = 'ADJUSTMENT_OUT',
+  DAMAGE = 'DAMAGE',
+  LOSS = 'LOSS',
+}
+
 // ✅ Cache with 1-minute expiration
 interface CacheEntry<T> {
   data: T;
@@ -319,12 +335,13 @@ class WarehouseServiceClass {
 
   /**
    * Add inventory to warehouse (clears cache after success)
+   * ✅ FIXED: Uses RECEIPT instead of MANUAL_ADDITION
    */
   async addInventory(request: {
     warehouseId: string;
     productId: string;
     quantity: number;
-    transactionType?: string;
+    transactionType?: WarehouseAdditionTransactionType | string;
     notes?: string;
   }): Promise<void> {
     try {
@@ -334,7 +351,7 @@ class WarehouseServiceClass {
         warehouseId: request.warehouseId,
         productId: request.productId,
         quantity: request.quantity,
-        transactionType: request.transactionType || 'MANUAL_ADDITION',
+        transactionType: request.transactionType || WarehouseAdditionTransactionType.RECEIPT,
         notes: request.notes,
       });
 
@@ -350,12 +367,13 @@ class WarehouseServiceClass {
 
   /**
    * Withdraw inventory from warehouse (clears cache after success)
+   * ✅ FIXED: Uses SALE instead of MANUAL_WITHDRAWAL
    */
   async withdrawInventory(request: {
     warehouseId: string;
     productId: string;
     quantity: number;
-    transactionType?: string;
+    transactionType?: WarehouseWithdrawalTransactionType | string;
     notes?: string;
   }): Promise<void> {
     try {
@@ -365,7 +383,7 @@ class WarehouseServiceClass {
         warehouseId: request.warehouseId,
         productId: request.productId,
         quantity: request.quantity,
-        transactionType: request.transactionType || 'MANUAL_WITHDRAWAL',
+        transactionType: request.transactionType || WarehouseWithdrawalTransactionType.SALE,
         notes: request.notes,
       });
 
