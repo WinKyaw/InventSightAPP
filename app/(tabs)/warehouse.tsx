@@ -225,7 +225,16 @@ export default function WarehouseScreen() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Error loading tab data:', errorMessage);
       
-      if (!(error instanceof Error) || (error as any).response?.status !== 404) {
+      // Check if error is an axios error with response status
+      const hasNotFoundStatus = error && 
+        typeof error === 'object' && 
+        'response' in error && 
+        error.response && 
+        typeof error.response === 'object' && 
+        'status' in error.response && 
+        error.response.status === 404;
+      
+      if (!hasNotFoundStatus) {
         setError(errorMessage || `Failed to load ${activeTab}`);
       }
     } finally {
@@ -350,9 +359,10 @@ export default function WarehouseScreen() {
       
       // Reload data with force refresh (bypasses cache)
       await loadTabData(true, true);
-    } catch (error: any) {
-      console.error('❌ Error adding inventory:', error.message);
-      Alert.alert('Error', `Failed to add inventory: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error adding inventory:', errorMessage);
+      Alert.alert('Error', `Failed to add inventory: ${errorMessage}`);
     }
   };
 
