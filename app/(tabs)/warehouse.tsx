@@ -115,6 +115,7 @@ export default function WarehouseScreen() {
   });
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [warehouseProducts, setWarehouseProducts] = useState<any[]>([]); // ✅ Products in current warehouse
 
   // Withdraw Inventory modal state
   const [showWithdrawInventoryModal, setShowWithdrawInventoryModal] = useState(false);
@@ -124,12 +125,14 @@ export default function WarehouseScreen() {
     quantity: string;
     transactionType: WarehouseWithdrawalTransactionType;
     notes: string;
+    maxQuantity: number;
   }>({
     productId: '',
     productName: '',
     quantity: '',
-    transactionType: WarehouseWithdrawalTransactionType.SALE, // Default to SALE
+    transactionType: WarehouseWithdrawalTransactionType.ISSUE, // ✅ Default to ISSUE (valid enum)
     notes: '',
+    maxQuantity: 0,
   });
 
   // Filter inventory based on search query
@@ -335,6 +338,38 @@ export default function WarehouseScreen() {
     }
   };
 
+  // ✅ Load products from current warehouse inventory (not all products)
+  const loadWarehouseProducts = useCallback(async () => {
+    if (!selectedWarehouse) return;
+
+    try {
+      console.log('📦 Loading products for warehouse:', selectedWarehouse.id);
+      
+      // Get inventory items for this warehouse
+      const inventoryItems = await WarehouseService.getWarehouseInventory(
+        selectedWarehouse.id,
+        false // Use cache
+      );
+      
+      // Extract unique products with available quantity
+      const productsInWarehouse = inventoryItems
+        .filter(item => (item.availableQuantity || item.quantity) > 0)
+        .map(item => ({
+          id: item.productId,
+          name: item.productName,
+          availableQuantity: item.availableQuantity || item.quantity,
+          sku: item.sku,
+        }));
+      
+      console.log(`✅ Found ${productsInWarehouse.length} products in warehouse`);
+      setWarehouseProducts(productsInWarehouse);
+      
+    } catch (error: any) {
+      console.error('❌ Error loading warehouse products:', error.message);
+      setWarehouseProducts([]);
+    }
+  }, [selectedWarehouse]);
+
   // Handle tab switch with debouncing
   const handleTabSwitch = useCallback((tab: 'inventory' | 'restocks' | 'sales') => {
     console.log(`🔄 User clicked tab: ${tab}`);
@@ -404,6 +439,7 @@ export default function WarehouseScreen() {
     console.log('  Product:', withdrawInventoryItem.productName);
     console.log('  Quantity:', withdrawInventoryItem.quantity);
     console.log('  Transaction Type:', withdrawInventoryItem.transactionType);
+    console.log('  Max Available:', withdrawInventoryItem.maxQuantity);
 
     if (!selectedWarehouse) {
       Alert.alert('Error', 'Please select a warehouse first');
@@ -421,6 +457,15 @@ export default function WarehouseScreen() {
       return;
     }
 
+    // ✅ Validate against available quantity
+    if (quantity > withdrawInventoryItem.maxQuantity) {
+      Alert.alert(
+        'Insufficient Quantity',
+        `Cannot withdraw ${quantity} units. Only ${withdrawInventoryItem.maxQuantity} available.`
+      );
+      return;
+    }
+
     try {
       console.log('➖ Withdrawing inventory from warehouse:', selectedWarehouse.id);
       
@@ -429,7 +474,7 @@ export default function WarehouseScreen() {
         productId: withdrawInventoryItem.productId,
         quantity: quantity,
         transactionType: withdrawInventoryItem.transactionType,
-        notes: withdrawInventoryItem.notes,
+        notes: withdrawInventoryItem.notes || undefined,
       });
 
       Alert.alert('Success', 'Inventory withdrawn successfully');
@@ -438,8 +483,9 @@ export default function WarehouseScreen() {
         productId: '',
         productName: '',
         quantity: '',
-        transactionType: WarehouseWithdrawalTransactionType.SALE,
+        transactionType: WarehouseWithdrawalTransactionType.ISSUE,
         notes: '',
+        maxQuantity: 0,
       });
       
       // Reload data with force refresh (bypasses cache)
@@ -449,6 +495,12 @@ export default function WarehouseScreen() {
       console.error('❌ Error withdrawing inventory:', errorMessage);
       Alert.alert('Error', `Failed to withdraw inventory: ${errorMessage}`);
     }
+  };
+
+  // ✅ Open withdraw modal and load warehouse products
+  const handleOpenWithdrawModal = () => {
+    loadWarehouseProducts();
+    setShowWithdrawInventoryModal(true);
   };
 
   // Handle warehouse selection
@@ -554,11 +606,12 @@ export default function WarehouseScreen() {
     // Get transaction type icon
     const getWithdrawalIcon = (type: string) => {
       switch (type?.toUpperCase()) {
-        case 'SALE': return '💰';
+        case 'ISSUE': return '📤';
         case 'TRANSFER_OUT': return '🚚';
         case 'ADJUSTMENT_OUT': return '🔄';
         case 'DAMAGE': return '💥';
-        case 'LOSS': return '❌';
+        case 'THEFT': return '🚨';
+        case 'EXPIRED': return '⏰';
         default: return '📤';
       }
     };
@@ -578,7 +631,7 @@ export default function WarehouseScreen() {
         {/* Transaction Type */}
         <View style={styles.itemDetails}>
           <Text style={styles.itemTransactionType}>
-            {getWithdrawalIcon(item.transactionType || '')} {item.transactionType || 'SALE'}
+            {getWithdrawalIcon(item.transactionType || '')} {item.transactionType || 'ISSUE'}
           </Text>
         </View>
 
@@ -824,7 +877,7 @@ export default function WarehouseScreen() {
 
                   <TouchableOpacity
                     style={styles.withdrawInventoryButton}
-                    onPress={() => setShowWithdrawInventoryModal(true)}
+                    onPress={handleOpenWithdrawModal}
                   >
                     <Text style={styles.actionButtonText}>➖ Withdraw</Text>
                   </TouchableOpacity>
@@ -1138,47 +1191,61 @@ export default function WarehouseScreen() {
                 Warehouse: {selectedWarehouse?.name}
               </Text>
 
-              {/* Product Dropdown */}
+              {/* ✅ Product Dropdown - Only Warehouse Products */}
               <Text style={styles.inputLabel}>Product *</Text>
               {loadingProducts ? (
                 <ActivityIndicator size="small" color="#6366F1" />
               ) : (
                 <View style={styles.pickerContainer}>
                   <ScrollView style={styles.productPicker} nestedScrollEnabled>
-                    {products.map((product) => (
-                      <TouchableOpacity
-                        key={product.id}
-                        style={[
-                          styles.productOption,
-                          withdrawInventoryItem.productId === product.id.toString() && styles.productOptionSelected,
-                        ]}
-                        onPress={() => {
-                          setWithdrawInventoryItem({
-                            ...withdrawInventoryItem,
-                            productId: product.id.toString(),
-                            productName: product.name,
-                          });
-                        }}
-                      >
-                        <Text style={[
-                          styles.productOptionText,
-                          withdrawInventoryItem.productId === product.id.toString() && styles.productOptionTextSelected,
-                        ]}>
-                          {product.name} {product.sku ? `(${product.sku})` : ''}
-                        </Text>
-                        {withdrawInventoryItem.productId === product.id.toString() && (
-                          <Ionicons name="checkmark-circle" size={20} color="#6366F1" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
+                    {warehouseProducts.length === 0 ? (
+                      <View style={styles.emptyPickerContainer}>
+                        <Text style={styles.emptyPickerText}>No products in warehouse</Text>
+                      </View>
+                    ) : (
+                      warehouseProducts.map((product) => (
+                        <TouchableOpacity
+                          key={product.id}
+                          style={[
+                            styles.productOption,
+                            withdrawInventoryItem.productId === product.id.toString() && styles.productOptionSelected,
+                          ]}
+                          onPress={() => {
+                            setWithdrawInventoryItem({
+                              ...withdrawInventoryItem,
+                              productId: product.id.toString(),
+                              productName: product.name,
+                              maxQuantity: product.availableQuantity,
+                            });
+                          }}
+                        >
+                          <Text style={[
+                            styles.productOptionText,
+                            withdrawInventoryItem.productId === product.id.toString() && styles.productOptionTextSelected,
+                          ]}>
+                            {product.name} (Available: {product.availableQuantity})
+                          </Text>
+                          {withdrawInventoryItem.productId === product.id.toString() && (
+                            <Ionicons name="checkmark-circle" size={20} color="#6366F1" />
+                          )}
+                        </TouchableOpacity>
+                      ))
+                    )}
                   </ScrollView>
                 </View>
+              )}
+
+              {/* Show Available Quantity */}
+              {withdrawInventoryItem.productId && (
+                <Text style={styles.availableQuantityText}>
+                  📦 Available: {withdrawInventoryItem.maxQuantity}
+                </Text>
               )}
 
               <Text style={styles.inputLabel}>Quantity *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter quantity"
+                placeholder={withdrawInventoryItem.maxQuantity > 0 ? `Enter quantity (Max: ${withdrawInventoryItem.maxQuantity})` : "Enter quantity"}
                 value={withdrawInventoryItem.quantity}
                 onChangeText={(text) => {
                   setWithdrawInventoryItem({ ...withdrawInventoryItem, quantity: text });
@@ -1186,7 +1253,7 @@ export default function WarehouseScreen() {
                 keyboardType="numeric"
               />
 
-              {/* Transaction Type Picker */}
+              {/* ✅ Transaction Type Picker - Valid Backend Enums */}
               <Text style={styles.inputLabel}>Transaction Type *</Text>
               <View style={styles.pickerContainer}>
                 <Picker
@@ -1196,11 +1263,12 @@ export default function WarehouseScreen() {
                   }
                   style={styles.picker}
                 >
-                  <Picker.Item label="💰 Sale (Sold to Customer)" value={WarehouseWithdrawalTransactionType.SALE} />
+                  <Picker.Item label="📤 Issue (Sold/Issued to Customer)" value={WarehouseWithdrawalTransactionType.ISSUE} />
                   <Picker.Item label="🚚 Transfer Out (To Another Warehouse)" value={WarehouseWithdrawalTransactionType.TRANSFER_OUT} />
                   <Picker.Item label="🔄 Adjustment Out (Inventory Correction)" value={WarehouseWithdrawalTransactionType.ADJUSTMENT_OUT} />
                   <Picker.Item label="💥 Damage (Damaged Goods)" value={WarehouseWithdrawalTransactionType.DAMAGE} />
-                  <Picker.Item label="❌ Loss (Lost/Stolen)" value={WarehouseWithdrawalTransactionType.LOSS} />
+                  <Picker.Item label="🚨 Theft (Stolen/Lost)" value={WarehouseWithdrawalTransactionType.THEFT} />
+                  <Picker.Item label="⏰ Expired (Expired Goods)" value={WarehouseWithdrawalTransactionType.EXPIRED} />
                 </Picker>
               </View>
 
@@ -1226,8 +1294,9 @@ export default function WarehouseScreen() {
                       productId: '',
                       productName: '',
                       quantity: '',
-                      transactionType: WarehouseWithdrawalTransactionType.SALE,
+                      transactionType: WarehouseWithdrawalTransactionType.ISSUE,
                       notes: '',
+                      maxQuantity: 0,
                     });
                   }}
                 >
@@ -1724,5 +1793,21 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 50,
+  },
+  availableQuantityText: {
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '600',
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  emptyPickerContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyPickerText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
 });
