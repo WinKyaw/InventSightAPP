@@ -40,6 +40,38 @@ function parseArrayResponse<T>(response: unknown, context: string): T[] {
 }
 
 /**
+ * Helper function to parse warehouse-inventory API responses
+ * Handles the specific response format: { success: true, [fieldName]: [...], count: 0 }
+ * @param response The API response
+ * @param fieldName The field name containing the array (e.g., 'inventory', 'additions', 'withdrawals')
+ * @param context Context string for logging
+ */
+function parseWarehouseInventoryResponse<T>(response: unknown, fieldName: string, context: string): T[] {
+  // Check if response has the expected field directly
+  if ((response as any)?.[fieldName]) {
+    return (response as any)[fieldName];
+  }
+  
+  // Check if response is a direct array
+  if (Array.isArray(response)) {
+    return response;
+  }
+  
+  // Check if response.data has the expected field
+  if ((response as any)?.data?.[fieldName]) {
+    return (response as any).data[fieldName];
+  }
+  
+  // Check if response.data is a direct array
+  if (Array.isArray((response as any)?.data)) {
+    return (response as any).data;
+  }
+  
+  // Fallback to the generic parser
+  return parseArrayResponse<T>(response, context);
+}
+
+/**
  * Get list of all warehouses
  * Falls back to empty array if endpoint is not yet implemented
  */
@@ -81,21 +113,11 @@ export async function getWarehouseInventory(warehouseId: string): Promise<Wareho
     
     console.log('📦 Inventory response:', response);
     
-    // Handle response format: { success: true, inventory: [...], count: 0 }
-    if (response?.inventory) {
-      return response.inventory;
-    } else if (Array.isArray(response)) {
-      return response;
-    } else if (response?.data) {
-      // If response has a data field, check if it contains inventory
-      if (response.data?.inventory) {
-        return response.data.inventory;
-      } else if (Array.isArray(response.data)) {
-        return response.data;
-      }
-    }
-    
-    const inventoryList = parseArrayResponse<WarehouseInventoryRow>(response, 'Inventory API');
+    const inventoryList = parseWarehouseInventoryResponse<WarehouseInventoryRow>(
+      response, 
+      'inventory', 
+      'Inventory API'
+    );
     console.log('✅ Loaded', inventoryList.length, 'inventory items');
     
     return inventoryList;
@@ -136,21 +158,11 @@ export async function getWarehouseRestocks(warehouseId: string): Promise<Warehou
     
     console.log('📥 Restocks response:', response);
     
-    // Handle response format: { success: true, additions: [...], count: 0 }
-    if (response?.additions) {
-      return response.additions;
-    } else if (Array.isArray(response)) {
-      return response;
-    } else if (response?.data) {
-      // If response has a data field, check if it contains additions
-      if (response.data?.additions) {
-        return response.data.additions;
-      } else if (Array.isArray(response.data)) {
-        return response.data;
-      }
-    }
-    
-    const restocksList = parseArrayResponse<WarehouseRestock>(response, 'Restocks API');
+    const restocksList = parseWarehouseInventoryResponse<WarehouseRestock>(
+      response,
+      'additions',
+      'Restocks API'
+    );
     console.log('✅ Loaded', restocksList.length, 'restocks');
     
     return restocksList;
@@ -176,21 +188,11 @@ export async function getWarehouseSales(warehouseId: string): Promise<WarehouseS
     
     console.log('💰 Sales response:', response);
     
-    // Handle response format: { success: true, withdrawals: [...], count: 0 }
-    if (response?.withdrawals) {
-      return response.withdrawals;
-    } else if (Array.isArray(response)) {
-      return response;
-    } else if (response?.data) {
-      // If response has a data field, check if it contains withdrawals
-      if (response.data?.withdrawals) {
-        return response.data.withdrawals;
-      } else if (Array.isArray(response.data)) {
-        return response.data;
-      }
-    }
-    
-    const salesList = parseArrayResponse<WarehouseSale>(response, 'Sales API');
+    const salesList = parseWarehouseInventoryResponse<WarehouseSale>(
+      response,
+      'withdrawals',
+      'Sales API'
+    );
     console.log('✅ Loaded', salesList.length, 'sales');
     
     return salesList;
