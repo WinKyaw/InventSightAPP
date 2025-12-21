@@ -54,6 +54,8 @@ export interface WarehouseRestock {
   quantity: number;
   restockDate?: string;
   createdAt?: string;
+  createdBy?: string;
+  transactionType?: string;
   notes?: string;
   sku?: string;
 }
@@ -64,12 +66,19 @@ export interface WarehouseRestock {
 export interface WarehouseSale {
   id: string;
   warehouseId?: string;
+  productId?: string;
+  productName?: string;
+  quantity?: number;
   receiptNumber?: string;
-  totalAmount: number;
+  totalAmount?: number; // Optional for withdrawals that aren't traditional sales
   saleDate?: string;
+  withdrawalDate?: string;
   createdAt?: string;
+  createdBy?: string;
+  transactionType?: string;
   customerName?: string;
   items?: number;
+  notes?: string;
 }
 
 /**
