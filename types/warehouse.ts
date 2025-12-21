@@ -70,7 +70,7 @@ export interface WarehouseSale {
   productName?: string;
   quantity?: number;
   receiptNumber?: string;
-  totalAmount?: number;
+  totalAmount?: number; // Optional for withdrawals that aren't traditional sales
   saleDate?: string;
   withdrawalDate?: string;
   createdAt?: string;

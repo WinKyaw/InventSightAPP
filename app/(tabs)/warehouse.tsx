@@ -118,11 +118,17 @@ export default function WarehouseScreen() {
 
   // Withdraw Inventory modal state
   const [showWithdrawInventoryModal, setShowWithdrawInventoryModal] = useState(false);
-  const [withdrawInventoryItem, setWithdrawInventoryItem] = useState({
+  const [withdrawInventoryItem, setWithdrawInventoryItem] = useState<{
+    productId: string;
+    productName: string;
+    quantity: string;
+    transactionType: WarehouseWithdrawalTransactionType;
+    notes: string;
+  }>({
     productId: '',
     productName: '',
     quantity: '',
-    transactionType: 'SALE', // Default to SALE
+    transactionType: WarehouseWithdrawalTransactionType.SALE, // Default to SALE
     notes: '',
   });
 
@@ -432,7 +438,7 @@ export default function WarehouseScreen() {
         productId: '',
         productName: '',
         quantity: '',
-        transactionType: 'SALE',
+        transactionType: WarehouseWithdrawalTransactionType.SALE,
         notes: '',
       });
       
@@ -1190,11 +1196,11 @@ export default function WarehouseScreen() {
                   }
                   style={styles.picker}
                 >
-                  <Picker.Item label="💰 Sale (Sold to Customer)" value="SALE" />
-                  <Picker.Item label="🚚 Transfer Out (To Another Warehouse)" value="TRANSFER_OUT" />
-                  <Picker.Item label="🔄 Adjustment Out (Inventory Correction)" value="ADJUSTMENT_OUT" />
-                  <Picker.Item label="💥 Damage (Damaged Goods)" value="DAMAGE" />
-                  <Picker.Item label="❌ Loss (Lost/Stolen)" value="LOSS" />
+                  <Picker.Item label="💰 Sale (Sold to Customer)" value={WarehouseWithdrawalTransactionType.SALE} />
+                  <Picker.Item label="🚚 Transfer Out (To Another Warehouse)" value={WarehouseWithdrawalTransactionType.TRANSFER_OUT} />
+                  <Picker.Item label="🔄 Adjustment Out (Inventory Correction)" value={WarehouseWithdrawalTransactionType.ADJUSTMENT_OUT} />
+                  <Picker.Item label="💥 Damage (Damaged Goods)" value={WarehouseWithdrawalTransactionType.DAMAGE} />
+                  <Picker.Item label="❌ Loss (Lost/Stolen)" value={WarehouseWithdrawalTransactionType.LOSS} />
                 </Picker>
               </View>
 
@@ -1220,7 +1226,7 @@ export default function WarehouseScreen() {
                       productId: '',
                       productName: '',
                       quantity: '',
-                      transactionType: 'SALE',
+                      transactionType: WarehouseWithdrawalTransactionType.SALE,
                       notes: '',
                     });
                   }}
