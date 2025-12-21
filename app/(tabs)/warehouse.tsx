@@ -423,7 +423,7 @@ export default function WarehouseScreen() {
         productId: withdrawInventoryItem.productId,
         quantity: quantity,
         transactionType: withdrawInventoryItem.transactionType,
-        notes: withdrawInventoryItem.notes || undefined,
+        notes: withdrawInventoryItem.notes,
       });
 
       Alert.alert('Success', 'Inventory withdrawn successfully');
@@ -466,29 +466,29 @@ export default function WarehouseScreen() {
     }
   }, [activeTab, inventory.length, restocks.length, sales.length]);
 
+  // Shared utility function to format date and time
+  const formatDateTime = useCallback((dateString: string) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      const dateStr = date.toLocaleDateString('en-US', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: 'numeric' 
+      });
+      const timeStr = date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      return `${dateStr} at ${timeStr}`;
+    } catch (error) {
+      return dateString;
+    }
+  }, []);
+
   // Render restock item
   const renderRestockItem = ({ item }: { item: WarehouseRestock }) => {
-    // Format date and time
-    const formatDateTime = (dateString: string) => {
-      if (!dateString) return 'N/A';
-      
-      try {
-        const date = new Date(dateString);
-        const dateStr = date.toLocaleDateString('en-US', { 
-          month: '2-digit', 
-          day: '2-digit', 
-          year: 'numeric' 
-        });
-        const timeStr = date.toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
-        return `${dateStr} at ${timeStr}`;
-      } catch (error) {
-        return dateString;
-      }
-    };
-
     // Get transaction type icon
     const getTransactionIcon = (type: string) => {
       switch (type?.toUpperCase()) {
@@ -515,7 +515,7 @@ export default function WarehouseScreen() {
         {/* Transaction Type */}
         <View style={styles.itemDetails}>
           <Text style={styles.itemTransactionType}>
-            {getTransactionIcon((item as any).transactionType)} {(item as any).transactionType || 'RECEIPT'}
+            {getTransactionIcon(item.transactionType || '')} {item.transactionType || 'RECEIPT'}
           </Text>
         </View>
 
@@ -527,9 +527,9 @@ export default function WarehouseScreen() {
         </View>
 
         {/* Added By */}
-        {(item as any).createdBy && (
+        {item.createdBy && (
           <Text style={styles.itemCreatedBy}>
-            👤 By: {(item as any).createdBy}
+            👤 By: {item.createdBy}
           </Text>
         )}
 
@@ -545,27 +545,6 @@ export default function WarehouseScreen() {
 
   // Render sale item
   const renderSaleItem = ({ item }: { item: WarehouseSale }) => {
-    // Format date and time
-    const formatDateTime = (dateString: string) => {
-      if (!dateString) return 'N/A';
-      
-      try {
-        const date = new Date(dateString);
-        const dateStr = date.toLocaleDateString('en-US', { 
-          month: '2-digit', 
-          day: '2-digit', 
-          year: 'numeric' 
-        });
-        const timeStr = date.toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
-        return `${dateStr} at ${timeStr}`;
-      } catch (error) {
-        return dateString;
-      }
-    };
-
     // Get transaction type icon
     const getWithdrawalIcon = (type: string) => {
       switch (type?.toUpperCase()) {
@@ -583,38 +562,38 @@ export default function WarehouseScreen() {
         {/* Product Name Header */}
         <View style={styles.itemHeader}>
           <Text style={styles.itemProductName}>
-            {(item as any).productName || 'Unknown Product'}
+            {item.productName || 'Unknown Product'}
           </Text>
           <Text style={styles.itemQuantityNegative}>
-            -{(item as any).quantity || 0}
+            -{item.quantity || 0}
           </Text>
         </View>
 
         {/* Transaction Type */}
         <View style={styles.itemDetails}>
           <Text style={styles.itemTransactionType}>
-            {getWithdrawalIcon((item as any).transactionType)} {(item as any).transactionType || 'SALE'}
+            {getWithdrawalIcon(item.transactionType || '')} {item.transactionType || 'SALE'}
           </Text>
         </View>
 
         {/* Date and Time */}
         <View style={styles.itemFooter}>
           <Text style={styles.itemDateTime}>
-            🕒 {formatDateTime(item.createdAt || item.saleDate || (item as any).withdrawalDate || '')}
+            🕒 {formatDateTime(item.createdAt || item.saleDate || item.withdrawalDate || '')}
           </Text>
         </View>
 
         {/* Withdrawn By */}
-        {(item as any).createdBy && (
+        {item.createdBy && (
           <Text style={styles.itemCreatedBy}>
-            👤 By: {(item as any).createdBy}
+            👤 By: {item.createdBy}
           </Text>
         )}
 
         {/* Notes */}
-        {(item as any).notes && (
+        {item.notes && (
           <Text style={styles.itemNotes}>
-            📝 {(item as any).notes}
+            📝 {item.notes}
           </Text>
         )}
       </View>
