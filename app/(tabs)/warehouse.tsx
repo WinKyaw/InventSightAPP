@@ -14,6 +14,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/shared/Header';
@@ -21,7 +22,7 @@ import { SearchBar } from '../../components/shared/SearchBar';
 import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInventoryList';
 import { AddWarehouseModal } from '../../components/modals/AddWarehouseModal';
 import { WarehouseSummary, WarehouseInventoryRow, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
-import WarehouseService, { WarehouseAdditionTransactionType } from '../../services/api/warehouse';
+import WarehouseService, { WarehouseAdditionTransactionType, WarehouseWithdrawalTransactionType } from '../../services/api/warehouse';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { useAuth } from '../../context/AuthContext';
 import { canManageWarehouses } from '../../utils/permissions';
@@ -114,6 +115,16 @@ export default function WarehouseScreen() {
   });
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // Withdraw Inventory modal state
+  const [showWithdrawInventoryModal, setShowWithdrawInventoryModal] = useState(false);
+  const [withdrawInventoryItem, setWithdrawInventoryItem] = useState({
+    productId: '',
+    productName: '',
+    quantity: '',
+    transactionType: 'SALE', // Default to SALE
+    notes: '',
+  });
 
   // Filter inventory based on search query
   const filteredInventory = useMemo(() => {
@@ -293,12 +304,12 @@ export default function WarehouseScreen() {
     return () => clearTabSwitchTimer();
   }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData, clearTabSwitchTimer]);
 
-  // Load products when Add Inventory modal opens
+  // Load products when Add Inventory or Withdraw Inventory modal opens
   useEffect(() => {
-    if (showAddInventoryModal && products.length === 0) {
+    if ((showAddInventoryModal || showWithdrawInventoryModal) && products.length === 0) {
       loadProducts();
     }
-  }, [showAddInventoryModal]);
+  }, [showAddInventoryModal, showWithdrawInventoryModal]);
 
   // Load products for inventory addition
   const loadProducts = async () => {
@@ -381,6 +392,59 @@ export default function WarehouseScreen() {
     }
   };
 
+  // Handle withdraw inventory
+  const handleWithdrawInventory = async () => {
+    console.log('🔍 Withdraw inventory form data:');
+    console.log('  Product:', withdrawInventoryItem.productName);
+    console.log('  Quantity:', withdrawInventoryItem.quantity);
+    console.log('  Transaction Type:', withdrawInventoryItem.transactionType);
+
+    if (!selectedWarehouse) {
+      Alert.alert('Error', 'Please select a warehouse first');
+      return;
+    }
+
+    if (!withdrawInventoryItem.productId || !withdrawInventoryItem.quantity) {
+      Alert.alert('Validation Error', 'Please select a product and enter quantity');
+      return;
+    }
+
+    const quantity = parseInt(withdrawInventoryItem.quantity, 10);
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Validation Error', 'Quantity must be a positive number');
+      return;
+    }
+
+    try {
+      console.log('➖ Withdrawing inventory from warehouse:', selectedWarehouse.id);
+      
+      await WarehouseService.withdrawInventory({
+        warehouseId: selectedWarehouse.id,
+        productId: withdrawInventoryItem.productId,
+        quantity: quantity,
+        transactionType: withdrawInventoryItem.transactionType,
+        notes: withdrawInventoryItem.notes || undefined,
+      });
+
+      Alert.alert('Success', 'Inventory withdrawn successfully');
+      setShowWithdrawInventoryModal(false);
+      setWithdrawInventoryItem({
+        productId: '',
+        productName: '',
+        quantity: '',
+        transactionType: 'SALE',
+        notes: '',
+      });
+      
+      // Reload data with force refresh (bypasses cache)
+      await loadTabData(true, true);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error withdrawing inventory:', errorMessage);
+      Alert.alert('Error', `Failed to withdraw inventory: ${errorMessage}`);
+    }
+  };
+
   // Handle warehouse selection
   const handleWarehouseSelect = (warehouse: WarehouseSummary) => {
     setSelectedWarehouse(warehouse);
@@ -403,37 +467,159 @@ export default function WarehouseScreen() {
   }, [activeTab, inventory.length, restocks.length, sales.length]);
 
   // Render restock item
-  const renderRestockItem = ({ item }: { item: WarehouseRestock }) => (
-    <View style={styles.listItem}>
-      <View style={styles.itemHeader}>
-        <Text style={styles.itemName}>{item.productName}</Text>
-        <Text style={styles.itemQuantityPositive}>+{item.quantity}</Text>
+  const renderRestockItem = ({ item }: { item: WarehouseRestock }) => {
+    // Format date and time
+    const formatDateTime = (dateString: string) => {
+      if (!dateString) return 'N/A';
+      
+      try {
+        const date = new Date(dateString);
+        const dateStr = date.toLocaleDateString('en-US', { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: 'numeric' 
+        });
+        const timeStr = date.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        return `${dateStr} at ${timeStr}`;
+      } catch (error) {
+        return dateString;
+      }
+    };
+
+    // Get transaction type icon
+    const getTransactionIcon = (type: string) => {
+      switch (type?.toUpperCase()) {
+        case 'RECEIPT': return '📦';
+        case 'TRANSFER_IN': return '🚚';
+        case 'ADJUSTMENT_IN': return '🔄';
+        case 'RETURN': return '↩️';
+        default: return '📥';
+      }
+    };
+
+    return (
+      <View style={styles.restockItem}>
+        {/* Product Name Header */}
+        <View style={styles.itemHeader}>
+          <Text style={styles.itemProductName}>
+            {item.productName || 'Unknown Product'}
+          </Text>
+          <Text style={styles.itemQuantityPositive}>
+            +{item.quantity}
+          </Text>
+        </View>
+
+        {/* Transaction Type */}
+        <View style={styles.itemDetails}>
+          <Text style={styles.itemTransactionType}>
+            {getTransactionIcon((item as any).transactionType)} {(item as any).transactionType || 'RECEIPT'}
+          </Text>
+        </View>
+
+        {/* Date and Time */}
+        <View style={styles.itemFooter}>
+          <Text style={styles.itemDateTime}>
+            🕒 {formatDateTime(item.createdAt || item.restockDate || '')}
+          </Text>
+        </View>
+
+        {/* Added By */}
+        {(item as any).createdBy && (
+          <Text style={styles.itemCreatedBy}>
+            👤 By: {(item as any).createdBy}
+          </Text>
+        )}
+
+        {/* Notes */}
+        {item.notes && (
+          <Text style={styles.itemNotes}>
+            📝 {item.notes}
+          </Text>
+        )}
       </View>
-      {item.sku && <Text style={styles.itemSku}>SKU: {item.sku}</Text>}
-      <Text style={styles.itemDate}>
-        {new Date(item.restockDate || item.createdAt || '').toLocaleDateString()}
-      </Text>
-      {item.notes && <Text style={styles.itemNotes}>📝 {item.notes}</Text>}
-    </View>
-  );
+    );
+  };
 
   // Render sale item
-  const renderSaleItem = ({ item }: { item: WarehouseSale }) => (
-    <View style={styles.listItem}>
-      <View style={styles.itemHeader}>
-        <Text style={styles.itemName}>
-          {item.receiptNumber || `Sale #${item.id}`}
-        </Text>
-        <Text style={styles.itemTotal}>${(item.totalAmount || 0).toFixed(2)}</Text>
+  const renderSaleItem = ({ item }: { item: WarehouseSale }) => {
+    // Format date and time
+    const formatDateTime = (dateString: string) => {
+      if (!dateString) return 'N/A';
+      
+      try {
+        const date = new Date(dateString);
+        const dateStr = date.toLocaleDateString('en-US', { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: 'numeric' 
+        });
+        const timeStr = date.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        return `${dateStr} at ${timeStr}`;
+      } catch (error) {
+        return dateString;
+      }
+    };
+
+    // Get transaction type icon
+    const getWithdrawalIcon = (type: string) => {
+      switch (type?.toUpperCase()) {
+        case 'SALE': return '💰';
+        case 'TRANSFER_OUT': return '🚚';
+        case 'ADJUSTMENT_OUT': return '🔄';
+        case 'DAMAGE': return '💥';
+        case 'LOSS': return '❌';
+        default: return '📤';
+      }
+    };
+
+    return (
+      <View style={styles.saleItem}>
+        {/* Product Name Header */}
+        <View style={styles.itemHeader}>
+          <Text style={styles.itemProductName}>
+            {(item as any).productName || 'Unknown Product'}
+          </Text>
+          <Text style={styles.itemQuantityNegative}>
+            -{(item as any).quantity || 0}
+          </Text>
+        </View>
+
+        {/* Transaction Type */}
+        <View style={styles.itemDetails}>
+          <Text style={styles.itemTransactionType}>
+            {getWithdrawalIcon((item as any).transactionType)} {(item as any).transactionType || 'SALE'}
+          </Text>
+        </View>
+
+        {/* Date and Time */}
+        <View style={styles.itemFooter}>
+          <Text style={styles.itemDateTime}>
+            🕒 {formatDateTime(item.createdAt || item.saleDate || (item as any).withdrawalDate || '')}
+          </Text>
+        </View>
+
+        {/* Withdrawn By */}
+        {(item as any).createdBy && (
+          <Text style={styles.itemCreatedBy}>
+            👤 By: {(item as any).createdBy}
+          </Text>
+        )}
+
+        {/* Notes */}
+        {(item as any).notes && (
+          <Text style={styles.itemNotes}>
+            📝 {(item as any).notes}
+          </Text>
+        )}
       </View>
-      <Text style={styles.itemDate}>
-        {new Date(item.saleDate || item.createdAt || '').toLocaleDateString()}
-      </Text>
-      {item.customerName && (
-        <Text style={styles.itemCustomer}>👤 {item.customerName}</Text>
-      )}
-    </View>
-  );
+    );
+  };
 
   // Render authentication states
   if (isAuthenticating) {
@@ -642,16 +828,24 @@ export default function WarehouseScreen() {
         <View style={styles.listWrapper}>
           {activeTab === 'inventory' && (
             <>
-              <WarehouseInventoryList inventory={filteredInventory} />
               {canAdd && selectedWarehouse && (
-                <TouchableOpacity
-                  style={styles.addInventoryButton}
-                  onPress={() => setShowAddInventoryModal(true)}
-                >
-                  <Ionicons name="add-circle" size={20} color="#fff" />
-                  <Text style={styles.addInventoryButtonText}>Add Inventory</Text>
-                </TouchableOpacity>
+                <View style={styles.actionButtonsContainer}>
+                  <TouchableOpacity
+                    style={styles.addInventoryButton}
+                    onPress={() => setShowAddInventoryModal(true)}
+                  >
+                    <Text style={styles.actionButtonText}>➕ Add Inventory</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.withdrawInventoryButton}
+                    onPress={() => setShowWithdrawInventoryModal(true)}
+                  >
+                    <Text style={styles.actionButtonText}>➖ Withdraw</Text>
+                  </TouchableOpacity>
+                </View>
               )}
+              <WarehouseInventoryList inventory={filteredInventory} />
             </>
           )}
           {activeTab === 'restocks' && (
@@ -937,6 +1131,135 @@ export default function WarehouseScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Withdraw Inventory Modal */}
+      <Modal
+        visible={showWithdrawInventoryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowWithdrawInventoryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>➖ Withdraw Inventory</Text>
+              <TouchableOpacity onPress={() => setShowWithdrawInventoryModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.modalSubtitle}>
+                Warehouse: {selectedWarehouse?.name}
+              </Text>
+
+              {/* Product Dropdown */}
+              <Text style={styles.inputLabel}>Product *</Text>
+              {loadingProducts ? (
+                <ActivityIndicator size="small" color="#6366F1" />
+              ) : (
+                <View style={styles.pickerContainer}>
+                  <ScrollView style={styles.productPicker} nestedScrollEnabled>
+                    {products.map((product) => (
+                      <TouchableOpacity
+                        key={product.id}
+                        style={[
+                          styles.productOption,
+                          withdrawInventoryItem.productId === product.id.toString() && styles.productOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setWithdrawInventoryItem({
+                            ...withdrawInventoryItem,
+                            productId: product.id.toString(),
+                            productName: product.name,
+                          });
+                        }}
+                      >
+                        <Text style={[
+                          styles.productOptionText,
+                          withdrawInventoryItem.productId === product.id.toString() && styles.productOptionTextSelected,
+                        ]}>
+                          {product.name} {product.sku ? `(${product.sku})` : ''}
+                        </Text>
+                        {withdrawInventoryItem.productId === product.id.toString() && (
+                          <Ionicons name="checkmark-circle" size={20} color="#6366F1" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              <Text style={styles.inputLabel}>Quantity *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter quantity"
+                value={withdrawInventoryItem.quantity}
+                onChangeText={(text) => {
+                  setWithdrawInventoryItem({ ...withdrawInventoryItem, quantity: text });
+                }}
+                keyboardType="numeric"
+              />
+
+              {/* Transaction Type Picker */}
+              <Text style={styles.inputLabel}>Transaction Type *</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={withdrawInventoryItem.transactionType}
+                  onValueChange={(value) =>
+                    setWithdrawInventoryItem({ ...withdrawInventoryItem, transactionType: value })
+                  }
+                  style={styles.picker}
+                >
+                  <Picker.Item label="💰 Sale (Sold to Customer)" value="SALE" />
+                  <Picker.Item label="🚚 Transfer Out (To Another Warehouse)" value="TRANSFER_OUT" />
+                  <Picker.Item label="🔄 Adjustment Out (Inventory Correction)" value="ADJUSTMENT_OUT" />
+                  <Picker.Item label="💥 Damage (Damaged Goods)" value="DAMAGE" />
+                  <Picker.Item label="❌ Loss (Lost/Stolen)" value="LOSS" />
+                </Picker>
+              </View>
+
+              <Text style={styles.inputLabel}>Notes (optional)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Add notes about this inventory withdrawal"
+                value={withdrawInventoryItem.notes}
+                onChangeText={(text) => {
+                  setWithdrawInventoryItem({ ...withdrawInventoryItem, notes: text });
+                }}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setShowWithdrawInventoryModal(false);
+                    setWithdrawInventoryItem({
+                      productId: '',
+                      productName: '',
+                      quantity: '',
+                      transactionType: 'SALE',
+                      notes: '',
+                    });
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleWithdrawInventory}
+                >
+                  <Text style={styles.saveButtonText}>Withdraw</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1145,6 +1468,35 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // Item cards
+  restockItem: {
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    marginHorizontal: 15,
+    marginVertical: 8,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  saleItem: {
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    marginHorizontal: 15,
+    marginVertical: 8,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1157,10 +1509,44 @@ const styles = StyleSheet.create({
     color: Colors.text,
     flex: 1,
   },
+  itemProductName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    flex: 1,
+  },
   itemQuantityPositive: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#10B981',
+  },
+  itemQuantityNegative: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
+  itemDetails: {
+    marginBottom: 8,
+  },
+  itemTransactionType: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  itemFooter: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  itemDateTime: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  itemCreatedBy: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 4,
   },
   itemTotal: {
     fontSize: 16,
@@ -1179,8 +1565,9 @@ const styles = StyleSheet.create({
   },
   itemNotes: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: '#6B7280',
     marginTop: 4,
+    fontStyle: 'italic',
   },
   itemCustomer: {
     fontSize: 12,
@@ -1205,28 +1592,32 @@ const styles = StyleSheet.create({
     color: '#92400E',
     marginBottom: 4,
   },
+  // Action buttons container
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 15,
+    gap: 10,
+  },
   // Add Inventory Button
   addInventoryButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    flexDirection: 'row',
+    flex: 1,
+    backgroundColor: '#10B981',
+    padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    gap: 8,
   },
-  addInventoryButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  withdrawInventoryButton: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
     fontWeight: '600',
+    fontSize: 16,
   },
   // Modal Form Styles
   modalForm: {
@@ -1345,5 +1736,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  picker: {
+    height: 50,
   },
 });
