@@ -258,7 +258,7 @@ export default function WarehouseScreen() {
       console.log('✅ Debounce complete, loading tab data');
       loadTabData(true, forceRefresh);
     }, 300); // Wait 300ms for user to stop clicking
-  }, [loadTabData]); // clearTabSwitchTimer has no dependencies, no need to include
+  }, [loadTabData, clearTabSwitchTimer]);
 
   // Refresh handler with force refresh
   const handleRefresh = useCallback(async () => {
@@ -287,7 +287,7 @@ export default function WarehouseScreen() {
 
     // Cleanup timer on unmount or before next effect
     return () => clearTabSwitchTimer();
-  }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData]); // clearTabSwitchTimer stable, no need in deps
+  }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData, clearTabSwitchTimer]);
 
   // Load products when Add Inventory modal opens
   useEffect(() => {
