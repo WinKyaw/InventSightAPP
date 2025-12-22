@@ -424,8 +424,9 @@ export default function WarehouseScreen() {
         notes: '',
       });
       
-      // Reload data with force refresh (bypasses cache)
-      await loadTabData(true, true);
+      // ✅ FIXED: Don't force refresh - cache already cleared by service
+      // Data will refresh automatically when user switches tabs or pulls to refresh
+      console.log('✅ Inventory added, cache cleared. Data will refresh on next tab switch.');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Error adding inventory:', errorMessage);
@@ -488,8 +489,9 @@ export default function WarehouseScreen() {
         maxQuantity: 0,
       });
       
-      // Reload data with force refresh (bypasses cache)
-      await loadTabData(true, true);
+      // ✅ FIXED: Don't force refresh - cache already cleared by service
+      // Data will refresh automatically when user switches tabs or pulls to refresh
+      console.log('✅ Inventory withdrawn, cache cleared. Data will refresh on next tab switch.');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Error withdrawing inventory:', errorMessage);
