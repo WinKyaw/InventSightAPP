@@ -110,8 +110,8 @@ export default function WarehouseScreen() {
     productId: '',
     productName: '',
     quantity: '',
-    transactionType: WarehouseAdditionTransactionType.RECEIPT, // ✅ Default to RECEIPT
     notes: '',
+    // ❌ REMOVED: transactionType - will be set automatically to 'RECEIPT'
   });
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -123,16 +123,15 @@ export default function WarehouseScreen() {
     productId: string;
     productName: string;
     quantity: string;
-    transactionType: WarehouseWithdrawalTransactionType;
     notes: string;
     maxQuantity: number;
   }>({
     productId: '',
     productName: '',
     quantity: '',
-    transactionType: WarehouseWithdrawalTransactionType.ISSUE, // ✅ Default to ISSUE (valid enum)
     notes: '',
     maxQuantity: 0,
+    // ❌ REMOVED: transactionType - will be set automatically to 'ISSUE'
   });
 
   // Filter inventory based on search query
@@ -385,7 +384,7 @@ export default function WarehouseScreen() {
     console.log('🔍 Add inventory form data:');
     console.log('  Product:', newInventoryItem.productName);
     console.log('  Quantity:', newInventoryItem.quantity);
-    console.log('  Transaction Type:', newInventoryItem.transactionType);
+    console.log('  Transaction Type: RECEIPT (auto-set)');  // ✅ Always RECEIPT
 
     if (!selectedWarehouse) {
       Alert.alert('Error', 'Please select a warehouse first');
@@ -410,7 +409,7 @@ export default function WarehouseScreen() {
         warehouseId: selectedWarehouse.id,
         productId: newInventoryItem.productId,
         quantity: quantity,
-        transactionType: newInventoryItem.transactionType, // ✅ Pass transaction type
+        transactionType: 'RECEIPT',  // ✅ FIXED: Always use RECEIPT
         notes: newInventoryItem.notes || undefined,
       });
 
@@ -420,13 +419,11 @@ export default function WarehouseScreen() {
         productId: '',
         productName: '',
         quantity: '',
-        transactionType: WarehouseAdditionTransactionType.RECEIPT, // Reset to default
         notes: '',
       });
       
-      // ✅ FIXED: Don't force refresh - cache already cleared by service
-      // Data will refresh automatically when user switches tabs or pulls to refresh
       console.log('✅ Inventory added, cache cleared. Data will refresh on next tab switch.');
+      
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Error adding inventory:', errorMessage);
@@ -439,7 +436,7 @@ export default function WarehouseScreen() {
     console.log('🔍 Withdraw inventory form data:');
     console.log('  Product:', withdrawInventoryItem.productName);
     console.log('  Quantity:', withdrawInventoryItem.quantity);
-    console.log('  Transaction Type:', withdrawInventoryItem.transactionType);
+    console.log('  Transaction Type: ISSUE (auto-set)');  // ✅ Always ISSUE
     console.log('  Max Available:', withdrawInventoryItem.maxQuantity);
 
     if (!selectedWarehouse) {
@@ -474,7 +471,7 @@ export default function WarehouseScreen() {
         warehouseId: selectedWarehouse.id,
         productId: withdrawInventoryItem.productId,
         quantity: quantity,
-        transactionType: withdrawInventoryItem.transactionType,
+        transactionType: 'ISSUE',  // ✅ FIXED: Always use ISSUE
         notes: withdrawInventoryItem.notes || undefined,
       });
 
@@ -484,14 +481,12 @@ export default function WarehouseScreen() {
         productId: '',
         productName: '',
         quantity: '',
-        transactionType: WarehouseWithdrawalTransactionType.ISSUE,
         notes: '',
         maxQuantity: 0,
       });
       
-      // ✅ FIXED: Don't force refresh - cache already cleared by service
-      // Data will refresh automatically when user switches tabs or pulls to refresh
       console.log('✅ Inventory withdrawn, cache cleared. Data will refresh on next tab switch.');
+      
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Error withdrawing inventory:', errorMessage);
@@ -547,17 +542,32 @@ export default function WarehouseScreen() {
     }
   }, []);
 
-  // Shared utility function to extract product name from various data structures
-  const extractProductName = useCallback((item: WarehouseRestock | WarehouseSale): string => {
-    // Backend may return product data in different structures:
-    // 1. Nested product object: item.product.name
-    // 2. Direct field: item.productName
-    const itemWithProduct = item as any;
-    return itemWithProduct.product?.name || item.productName || 'Unknown Product';
-  }, []);
-
   // Render restock item
   const renderRestockItem = ({ item }: { item: WarehouseRestock }) => {
+    // ✅ FIXED: Extract product name from backend response
+    const getProductName = () => {
+      // Try multiple possible paths
+      if ((item as any).product?.name) {
+        return (item as any).product.name;
+      }
+      
+      if (item.productName) {
+        return item.productName;
+      }
+      
+      // Check if product is just an ID, then look it up
+      if (item.productId && products.length > 0) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          return product.name;
+        }
+      }
+      
+      return 'Unknown Product';
+    };
+
+    const productName = getProductName();
+    
     // Get transaction type icon
     const getTransactionIcon = (type: string) => {
       switch (type?.toUpperCase()) {
@@ -574,7 +584,7 @@ export default function WarehouseScreen() {
         {/* Product Name Header */}
         <View style={styles.itemHeader}>
           <Text style={styles.itemProductName}>
-            {extractProductName(item)}
+            {productName}
           </Text>
           <Text style={styles.itemQuantityPositive}>
             +{item.quantity}
@@ -614,10 +624,34 @@ export default function WarehouseScreen() {
 
   // Render sale item
   const renderSaleItem = ({ item }: { item: WarehouseSale }) => {
+    // ✅ FIXED: Extract product name from backend response
+    const getProductName = () => {
+      // Try multiple possible paths
+      if ((item as any).product?.name) {
+        return (item as any).product.name;
+      }
+      
+      if (item.productName) {
+        return item.productName;
+      }
+      
+      // Check if product is just an ID, then look it up
+      if (item.productId && warehouseProducts.length > 0) {
+        const product = warehouseProducts.find(p => p.id === item.productId);
+        if (product) {
+          return product.name;
+        }
+      }
+      
+      return 'Unknown Product';
+    };
+
+    const productName = getProductName();
+    
     // Get transaction type icon
     const getWithdrawalIcon = (type: string) => {
       switch (type?.toUpperCase()) {
-        case 'ISSUE': return '📤';
+        case 'ISSUE': return '🚛';
         case 'TRANSFER_OUT': return '🚚';
         case 'ADJUSTMENT_OUT': return '🔄';
         case 'DAMAGE': return '💥';
@@ -632,7 +666,7 @@ export default function WarehouseScreen() {
         {/* Product Name Header */}
         <View style={styles.itemHeader}>
           <Text style={styles.itemProductName}>
-            {extractProductName(item)}
+            {productName}
           </Text>
           <Text style={styles.itemQuantityNegative}>
             -{item.quantity || 0}
@@ -1075,22 +1109,7 @@ export default function WarehouseScreen() {
                 keyboardType="numeric"
               />
 
-              {/* ✅ FIXED: Transaction Type Dropdown (Not Button Selection) */}
-              <Text style={styles.inputLabel}>Transaction Type *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={newInventoryItem.transactionType}
-                  onValueChange={(value) =>
-                    setNewInventoryItem({ ...newInventoryItem, transactionType: value })
-                  }
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Receipt (New Purchase)" value={WarehouseAdditionTransactionType.RECEIPT} />
-                  <Picker.Item label="Transfer In" value={WarehouseAdditionTransactionType.TRANSFER_IN} />
-                  <Picker.Item label="Adjustment In" value={WarehouseAdditionTransactionType.ADJUSTMENT_IN} />
-                  <Picker.Item label="Return" value={WarehouseAdditionTransactionType.RETURN} />
-                </Picker>
-              </View>
+              {/* ❌ REMOVED: Transaction Type Field */}
 
               <Text style={styles.inputLabel}>Notes (optional)</Text>
               <TextInput
@@ -1114,7 +1133,6 @@ export default function WarehouseScreen() {
                       productId: '',
                       productName: '',
                       quantity: '',
-                      transactionType: WarehouseAdditionTransactionType.RECEIPT, // Reset to default
                       notes: '',
                     });
                   }}
@@ -1217,24 +1235,7 @@ export default function WarehouseScreen() {
                 keyboardType="numeric"
               />
 
-              {/* ✅ Transaction Type Picker - Valid Backend Enums */}
-              <Text style={styles.inputLabel}>Transaction Type *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={withdrawInventoryItem.transactionType}
-                  onValueChange={(value) =>
-                    setWithdrawInventoryItem({ ...withdrawInventoryItem, transactionType: value })
-                  }
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Issue (Sold)" value={WarehouseWithdrawalTransactionType.ISSUE} />
-                  <Picker.Item label="Transfer Out" value={WarehouseWithdrawalTransactionType.TRANSFER_OUT} />
-                  <Picker.Item label="Adjustment Out" value={WarehouseWithdrawalTransactionType.ADJUSTMENT_OUT} />
-                  <Picker.Item label="Damage" value={WarehouseWithdrawalTransactionType.DAMAGE} />
-                  <Picker.Item label="Theft" value={WarehouseWithdrawalTransactionType.THEFT} />
-                  <Picker.Item label="Expired" value={WarehouseWithdrawalTransactionType.EXPIRED} />
-                </Picker>
-              </View>
+              {/* ❌ REMOVED: Transaction Type Field */}
 
               <Text style={styles.inputLabel}>Notes (optional)</Text>
               <TextInput
@@ -1258,7 +1259,6 @@ export default function WarehouseScreen() {
                       productId: '',
                       productName: '',
                       quantity: '',
-                      transactionType: WarehouseWithdrawalTransactionType.ISSUE,
                       notes: '',
                       maxQuantity: 0,
                     });
