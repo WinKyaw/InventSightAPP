@@ -562,70 +562,89 @@ export default function WarehouseScreen() {
     }
   }, []);
 
+  // Shared utility function to extract product name from item
+  const getProductName = useCallback((item: any, context: 'restock' | 'sale') => {
+    // Debug: Log the entire item to see structure
+    console.log(`🔍 Full ${context} item:`, JSON.stringify(item, null, 2));
+    
+    // Debug: Log just the product field
+    console.log('🔍 Product field type:', typeof item.product);
+    console.log('🔍 Product field value:', item.product);
+    
+    // Try to access product.name from nested object
+    if (item.product && typeof item.product === 'object') {
+      console.log('🔍 Product is an object');
+      console.log('🔍 Product.name:', item.product.name);
+      console.log('🔍 Product.id:', item.product.id);
+      
+      if (item.product.name) {
+        console.log('✅ Found product name in nested object:', item.product.name);
+        return item.product.name;
+      }
+    }
+    
+    // Try direct productName property
+    if (item.productName) {
+      console.log('✅ Found product name in direct property:', item.productName);
+      return item.productName;
+    }
+    
+    // Try to look up by productId if we have it
+    if (item.productId) {
+      console.log('🔍 Trying to look up product by ID:', item.productId);
+      
+      // For sales, try warehouseProducts first
+      if (context === 'sale' && warehouseProducts && warehouseProducts.length > 0) {
+        const product = warehouseProducts.find((p: any) => p.id === item.productId);
+        if (product) {
+          console.log('✅ Found product by ID lookup in warehouseProducts:', product.name);
+          return product.name;
+        }
+      }
+      
+      // Try from allProducts
+      if (allProducts && allProducts.length > 0) {
+        const product = allProducts.find((p: any) => p.id === item.productId);
+        if (product) {
+          console.log('✅ Found product by ID lookup in allProducts:', product.name);
+          return product.name;
+        }
+      }
+    }
+    
+    // If product field exists but has an id, try to extract from product.id
+    if (item.product && item.product.id) {
+      console.log('🔍 Product object has ID, trying lookup:', item.product.id);
+      
+      // For sales, try warehouseProducts first
+      if (context === 'sale' && warehouseProducts && warehouseProducts.length > 0) {
+        const product = warehouseProducts.find((p: any) => p.id === item.product.id);
+        if (product) {
+          console.log('✅ Found product by product.id lookup in warehouseProducts:', product.name);
+          return product.name;
+        }
+      }
+      
+      // Try from allProducts
+      if (allProducts && allProducts.length > 0) {
+        const product = allProducts.find((p: any) => p.id === item.product.id);
+        if (product) {
+          console.log('✅ Found product by product.id lookup in allProducts:', product.name);
+          return product.name;
+        }
+      }
+    }
+    
+    console.warn('⚠️ Could not find product name anywhere, using fallback');
+    console.warn('⚠️ Item keys:', Object.keys(item));
+    console.warn('⚠️ Product keys:', item.product ? Object.keys(item.product) : 'product is null/undefined');
+    
+    return 'Unknown Product';
+  }, [allProducts, warehouseProducts]);
+
   // Render restock item
   const renderRestockItem = ({ item }: { item: WarehouseRestock }) => {
-    // ✅ FIXED: Properly extract product name with detailed logging
-    const getProductName = () => {
-      // Debug: Log the entire item to see structure
-      console.log('🔍 Full restock item:', JSON.stringify(item, null, 2));
-      
-      // Debug: Log just the product field
-      console.log('🔍 Product field type:', typeof (item as any).product);
-      console.log('🔍 Product field value:', (item as any).product);
-      
-      // Try to access product.name from nested object
-      if ((item as any).product && typeof (item as any).product === 'object') {
-        console.log('🔍 Product is an object');
-        console.log('🔍 Product.name:', (item as any).product.name);
-        console.log('🔍 Product.id:', (item as any).product.id);
-        
-        if ((item as any).product.name) {
-          console.log('✅ Found product name in nested object:', (item as any).product.name);
-          return (item as any).product.name;
-        }
-      }
-      
-      // Try direct productName property
-      if (item.productName) {
-        console.log('✅ Found product name in direct property:', item.productName);
-        return item.productName;
-      }
-      
-      // Try to look up by productId if we have it
-      if (item.productId) {
-        console.log('🔍 Trying to look up product by ID:', item.productId);
-        
-        // Try from allProducts (for restocks)
-        if (allProducts && allProducts.length > 0) {
-          const product = allProducts.find((p: any) => p.id === item.productId);
-          if (product) {
-            console.log('✅ Found product by ID lookup in allProducts:', product.name);
-            return product.name;
-          }
-        }
-      }
-      
-      // If product field exists but has an id, try to extract from product.id
-      if ((item as any).product && (item as any).product.id) {
-        console.log('🔍 Product object has ID, trying lookup:', (item as any).product.id);
-        
-        if (allProducts && allProducts.length > 0) {
-          const product = allProducts.find((p: any) => p.id === (item as any).product.id);
-          if (product) {
-            console.log('✅ Found product by product.id lookup:', product.name);
-            return product.name;
-          }
-        }
-      }
-      
-      console.warn('⚠️ Could not find product name anywhere, using fallback');
-      console.warn('⚠️ Item keys:', Object.keys(item));
-      console.warn('⚠️ Product keys:', (item as any).product ? Object.keys((item as any).product) : 'product is null/undefined');
-      
-      return 'Unknown Product';
-    };
-
-    const productName = getProductName();
+    const productName = getProductName(item, 'restock');
     
     // Get transaction type icon
     const getTransactionIcon = (type: string) => {
@@ -683,85 +702,7 @@ export default function WarehouseScreen() {
 
   // Render sale item
   const renderSaleItem = ({ item }: { item: WarehouseSale }) => {
-    // ✅ FIXED: Properly extract product name with detailed logging
-    const getProductName = () => {
-      // Debug: Log the entire item to see structure
-      console.log('🔍 Full sale item:', JSON.stringify(item, null, 2));
-      
-      // Debug: Log just the product field
-      console.log('🔍 Product field type:', typeof (item as any).product);
-      console.log('🔍 Product field value:', (item as any).product);
-      
-      // Try to access product.name from nested object
-      if ((item as any).product && typeof (item as any).product === 'object') {
-        console.log('🔍 Product is an object');
-        console.log('🔍 Product.name:', (item as any).product.name);
-        console.log('🔍 Product.id:', (item as any).product.id);
-        
-        if ((item as any).product.name) {
-          console.log('✅ Found product name in nested object:', (item as any).product.name);
-          return (item as any).product.name;
-        }
-      }
-      
-      // Try direct productName property
-      if (item.productName) {
-        console.log('✅ Found product name in direct property:', item.productName);
-        return item.productName;
-      }
-      
-      // Try to look up by productId if we have it
-      if (item.productId) {
-        console.log('🔍 Trying to look up product by ID:', item.productId);
-        
-        // Try from warehouseProducts (for sales)
-        if (warehouseProducts && warehouseProducts.length > 0) {
-          const product = warehouseProducts.find((p: any) => p.id === item.productId);
-          if (product) {
-            console.log('✅ Found product by ID lookup in warehouseProducts:', product.name);
-            return product.name;
-          }
-        }
-        
-        // Fallback to allProducts
-        if (allProducts && allProducts.length > 0) {
-          const product = allProducts.find((p: any) => p.id === item.productId);
-          if (product) {
-            console.log('✅ Found product by ID lookup in allProducts:', product.name);
-            return product.name;
-          }
-        }
-      }
-      
-      // If product field exists but has an id, try to extract from product.id
-      if ((item as any).product && (item as any).product.id) {
-        console.log('🔍 Product object has ID, trying lookup:', (item as any).product.id);
-        
-        if (warehouseProducts && warehouseProducts.length > 0) {
-          const product = warehouseProducts.find((p: any) => p.id === (item as any).product.id);
-          if (product) {
-            console.log('✅ Found product by product.id lookup in warehouseProducts:', product.name);
-            return product.name;
-          }
-        }
-        
-        if (allProducts && allProducts.length > 0) {
-          const product = allProducts.find((p: any) => p.id === (item as any).product.id);
-          if (product) {
-            console.log('✅ Found product by product.id lookup in allProducts:', product.name);
-            return product.name;
-          }
-        }
-      }
-      
-      console.warn('⚠️ Could not find product name anywhere, using fallback');
-      console.warn('⚠️ Item keys:', Object.keys(item));
-      console.warn('⚠️ Product keys:', (item as any).product ? Object.keys((item as any).product) : 'product is null/undefined');
-      
-      return 'Unknown Product';
-    };
-
-    const productName = getProductName();
+    const productName = getProductName(item, 'sale');
     
     // Get transaction type icon
     const getWithdrawalIcon = (type: string) => {
