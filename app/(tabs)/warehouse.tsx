@@ -1085,10 +1085,10 @@ export default function WarehouseScreen() {
                   }
                   style={styles.picker}
                 >
-                  <Picker.Item label="📦 Receipt (New Purchase)" value={WarehouseAdditionTransactionType.RECEIPT} />
-                  <Picker.Item label="🚚 Transfer In (From Another Warehouse)" value={WarehouseAdditionTransactionType.TRANSFER_IN} />
-                  <Picker.Item label="🔄 Adjustment In (Inventory Correction)" value={WarehouseAdditionTransactionType.ADJUSTMENT_IN} />
-                  <Picker.Item label="↩️ Return (Customer Return)" value={WarehouseAdditionTransactionType.RETURN} />
+                  <Picker.Item label="Receipt (New Purchase)" value={WarehouseAdditionTransactionType.RECEIPT} />
+                  <Picker.Item label="Transfer In" value={WarehouseAdditionTransactionType.TRANSFER_IN} />
+                  <Picker.Item label="Adjustment In" value={WarehouseAdditionTransactionType.ADJUSTMENT_IN} />
+                  <Picker.Item label="Return" value={WarehouseAdditionTransactionType.RETURN} />
                 </Picker>
               </View>
 
@@ -1227,12 +1227,12 @@ export default function WarehouseScreen() {
                   }
                   style={styles.picker}
                 >
-                  <Picker.Item label="📤 Issue (Sold/Issued to Customer)" value={WarehouseWithdrawalTransactionType.ISSUE} />
-                  <Picker.Item label="🚚 Transfer Out (To Another Warehouse)" value={WarehouseWithdrawalTransactionType.TRANSFER_OUT} />
-                  <Picker.Item label="🔄 Adjustment Out (Inventory Correction)" value={WarehouseWithdrawalTransactionType.ADJUSTMENT_OUT} />
-                  <Picker.Item label="💥 Damage (Damaged Goods)" value={WarehouseWithdrawalTransactionType.DAMAGE} />
-                  <Picker.Item label="🚨 Theft (Stolen/Lost)" value={WarehouseWithdrawalTransactionType.THEFT} />
-                  <Picker.Item label="⏰ Expired (Expired Goods)" value={WarehouseWithdrawalTransactionType.EXPIRED} />
+                  <Picker.Item label="Issue (Sold)" value={WarehouseWithdrawalTransactionType.ISSUE} />
+                  <Picker.Item label="Transfer Out" value={WarehouseWithdrawalTransactionType.TRANSFER_OUT} />
+                  <Picker.Item label="Adjustment Out" value={WarehouseWithdrawalTransactionType.ADJUSTMENT_OUT} />
+                  <Picker.Item label="Damage" value={WarehouseWithdrawalTransactionType.DAMAGE} />
+                  <Picker.Item label="Theft" value={WarehouseWithdrawalTransactionType.THEFT} />
+                  <Picker.Item label="Expired" value={WarehouseWithdrawalTransactionType.EXPIRED} />
                 </Picker>
               </View>
 
