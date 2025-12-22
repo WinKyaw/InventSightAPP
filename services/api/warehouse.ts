@@ -16,11 +16,12 @@ export enum WarehouseAdditionTransactionType {
 }
 
 export enum WarehouseWithdrawalTransactionType {
-  SALE = 'SALE',
+  ISSUE = 'ISSUE',
   TRANSFER_OUT = 'TRANSFER_OUT',
   ADJUSTMENT_OUT = 'ADJUSTMENT_OUT',
   DAMAGE = 'DAMAGE',
-  LOSS = 'LOSS',
+  THEFT = 'THEFT',
+  EXPIRED = 'EXPIRED',
 }
 
 // ✅ Cache with 1-minute expiration
@@ -367,7 +368,7 @@ class WarehouseServiceClass {
 
   /**
    * Withdraw inventory from warehouse (clears cache after success)
-   * ✅ FIXED: Uses SALE instead of MANUAL_WITHDRAWAL
+   * ✅ FIXED: Uses ISSUE instead of SALE (valid backend enum)
    */
   async withdrawInventory(request: {
     warehouseId: string;
@@ -383,7 +384,7 @@ class WarehouseServiceClass {
         warehouseId: request.warehouseId,
         productId: request.productId,
         quantity: request.quantity,
-        transactionType: request.transactionType || WarehouseWithdrawalTransactionType.SALE,
+        transactionType: request.transactionType || WarehouseWithdrawalTransactionType.ISSUE,
         notes: request.notes,
       });
 
