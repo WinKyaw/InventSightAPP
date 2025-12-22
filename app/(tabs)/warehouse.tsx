@@ -545,6 +545,15 @@ export default function WarehouseScreen() {
     }
   }, []);
 
+  // Shared utility function to extract product name from various data structures
+  const extractProductName = useCallback((item: WarehouseRestock | WarehouseSale): string => {
+    // Backend may return product data in different structures:
+    // 1. Nested product object: item.product.name
+    // 2. Direct field: item.productName
+    const itemWithProduct = item as any;
+    return itemWithProduct.product?.name || item.productName || 'Unknown Product';
+  }, []);
+
   // Render restock item
   const renderRestockItem = ({ item }: { item: WarehouseRestock }) => {
     // Get transaction type icon
@@ -563,7 +572,7 @@ export default function WarehouseScreen() {
         {/* Product Name Header */}
         <View style={styles.itemHeader}>
           <Text style={styles.itemProductName}>
-            {item.productName || 'Unknown Product'}
+            {extractProductName(item)}
           </Text>
           <Text style={styles.itemQuantityPositive}>
             +{item.quantity}
@@ -621,7 +630,7 @@ export default function WarehouseScreen() {
         {/* Product Name Header */}
         <View style={styles.itemHeader}>
           <Text style={styles.itemProductName}>
-            {item.productName || 'Unknown Product'}
+            {extractProductName(item)}
           </Text>
           <Text style={styles.itemQuantityNegative}>
             -{item.quantity || 0}
@@ -1064,68 +1073,21 @@ export default function WarehouseScreen() {
                 keyboardType="numeric"
               />
 
-              {/* ✅ NEW: Transaction Type Picker */}
+              {/* ✅ FIXED: Transaction Type Dropdown (Not Button Selection) */}
               <Text style={styles.inputLabel}>Transaction Type *</Text>
-              <View style={styles.transactionTypeContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.transactionTypeButton,
-                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.RECEIPT && styles.transactionTypeButtonSelected,
-                  ]}
-                  onPress={() => setNewInventoryItem({ ...newInventoryItem, transactionType: WarehouseAdditionTransactionType.RECEIPT })}
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={newInventoryItem.transactionType}
+                  onValueChange={(value) =>
+                    setNewInventoryItem({ ...newInventoryItem, transactionType: value })
+                  }
+                  style={styles.picker}
                 >
-                  <Text style={[
-                    styles.transactionTypeButtonText,
-                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.RECEIPT && styles.transactionTypeButtonTextSelected,
-                  ]}>
-                    📦 Receipt
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.transactionTypeButton,
-                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.TRANSFER_IN && styles.transactionTypeButtonSelected,
-                  ]}
-                  onPress={() => setNewInventoryItem({ ...newInventoryItem, transactionType: WarehouseAdditionTransactionType.TRANSFER_IN })}
-                >
-                  <Text style={[
-                    styles.transactionTypeButtonText,
-                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.TRANSFER_IN && styles.transactionTypeButtonTextSelected,
-                  ]}>
-                    🚚 Transfer In
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.transactionTypeButton,
-                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.ADJUSTMENT_IN && styles.transactionTypeButtonSelected,
-                  ]}
-                  onPress={() => setNewInventoryItem({ ...newInventoryItem, transactionType: WarehouseAdditionTransactionType.ADJUSTMENT_IN })}
-                >
-                  <Text style={[
-                    styles.transactionTypeButtonText,
-                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.ADJUSTMENT_IN && styles.transactionTypeButtonTextSelected,
-                  ]}>
-                    🔄 Adjustment In
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.transactionTypeButton,
-                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.RETURN && styles.transactionTypeButtonSelected,
-                  ]}
-                  onPress={() => setNewInventoryItem({ ...newInventoryItem, transactionType: WarehouseAdditionTransactionType.RETURN })}
-                >
-                  <Text style={[
-                    styles.transactionTypeButtonText,
-                    newInventoryItem.transactionType === WarehouseAdditionTransactionType.RETURN && styles.transactionTypeButtonTextSelected,
-                  ]}>
-                    ↩️ Return
-                  </Text>
-                </TouchableOpacity>
+                  <Picker.Item label="📦 Receipt (New Purchase)" value={WarehouseAdditionTransactionType.RECEIPT} />
+                  <Picker.Item label="🚚 Transfer In (From Another Warehouse)" value={WarehouseAdditionTransactionType.TRANSFER_IN} />
+                  <Picker.Item label="🔄 Adjustment In (Inventory Correction)" value={WarehouseAdditionTransactionType.ADJUSTMENT_IN} />
+                  <Picker.Item label="↩️ Return (Customer Return)" value={WarehouseAdditionTransactionType.RETURN} />
+                </Picker>
               </View>
 
               <Text style={styles.inputLabel}>Notes (optional)</Text>
