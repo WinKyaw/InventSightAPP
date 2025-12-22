@@ -325,7 +325,9 @@ export default function WarehouseScreen() {
     const loadAllProducts = async () => {
       try {
         console.log('📦 Loading all products for product name lookups...');
-        const response = await ProductService.getAllProducts(1, 100);
+        // Load first 500 products (large enough for most use cases)
+        // TODO: Implement pagination if product catalog grows beyond 500 items
+        const response = await ProductService.getAllProducts(1, 500);
         console.log(`✅ Loaded ${response.products?.length || 0} products for lookups`);
         setAllProducts(response.products || []);
       } catch (error) {
