@@ -545,6 +545,15 @@ export default function WarehouseScreen() {
     }
   }, []);
 
+  // Shared utility function to extract product name from various data structures
+  const extractProductName = useCallback((item: WarehouseRestock | WarehouseSale): string => {
+    // Backend may return product data in different structures:
+    // 1. Nested product object: item.product.name
+    // 2. Direct field: item.productName
+    const itemWithProduct = item as any;
+    return itemWithProduct.product?.name || item.productName || 'Unknown Product';
+  }, []);
+
   // Render restock item
   const renderRestockItem = ({ item }: { item: WarehouseRestock }) => {
     // Get transaction type icon
@@ -558,15 +567,12 @@ export default function WarehouseScreen() {
       }
     };
 
-    // ✅ Get product name from item.product.name or item.productName
-    const productName = (item as any).product?.name || item.productName || 'Unknown Product';
-
     return (
       <View style={styles.restockItem}>
         {/* Product Name Header */}
         <View style={styles.itemHeader}>
           <Text style={styles.itemProductName}>
-            {productName}
+            {extractProductName(item)}
           </Text>
           <Text style={styles.itemQuantityPositive}>
             +{item.quantity}
@@ -619,15 +625,12 @@ export default function WarehouseScreen() {
       }
     };
 
-    // ✅ Get product name from item.product.name or item.productName
-    const productName = (item as any).product?.name || item.productName || 'Unknown Product';
-
     return (
       <View style={styles.saleItem}>
         {/* Product Name Header */}
         <View style={styles.itemHeader}>
           <Text style={styles.itemProductName}>
-            {productName}
+            {extractProductName(item)}
           </Text>
           <Text style={styles.itemQuantityNegative}>
             -{item.quantity || 0}
