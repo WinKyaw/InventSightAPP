@@ -30,6 +30,11 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
+interface CachedData {
+  data: any;
+  timestamp: number;
+}
+
 const CACHE_DURATION = 60 * 1000; // 1 minute in milliseconds
 
 /**
@@ -97,11 +102,10 @@ function parseWarehouseInventoryResponse<T>(response: unknown, fieldName: string
 }
 
 class WarehouseServiceClass {
-  // Cache storage
-  private inventoryCache = new Map<string, CacheEntry<WarehouseInventoryRow[]>>();
-  private additionsCache = new Map<string, CacheEntry<WarehouseRestock[]>>();
-  private withdrawalsCache = new Map<string, CacheEntry<WarehouseSale[]>>();
+  // Cache storage - unified cache for all paginated data
+  private cache = new Map<string, CachedData>();
   private warehousesCache: CacheEntry<WarehouseSummary[]> | null = null;
+  private readonly CACHE_TTL = 60000; // 1 minute
 
   /**
    * Check if cache is still valid (within 1 minute)
@@ -126,9 +130,7 @@ class WarehouseServiceClass {
    */
   clearCache() {
     console.log('🗑️ Clearing all warehouse caches');
-    this.inventoryCache.clear();
-    this.additionsCache.clear();
-    this.withdrawalsCache.clear();
+    this.cache.clear();
     this.warehousesCache = null;
   }
 
@@ -137,9 +139,17 @@ class WarehouseServiceClass {
    */
   clearWarehouseCache(warehouseId: string) {
     console.log(`🗑️ Clearing cache for warehouse: ${warehouseId}`);
-    this.inventoryCache.delete(warehouseId);
-    this.additionsCache.delete(warehouseId);
-    this.withdrawalsCache.delete(warehouseId);
+    
+    // Clear all cache entries for this warehouse
+    const keysToDelete: string[] = [];
+    this.cache.forEach((_, key) => {
+      if (key.includes(warehouseId)) {
+        keysToDelete.push(key);
+      }
+    });
+    
+    keysToDelete.forEach(key => this.cache.delete(key));
+    console.log(`✅ Cleared ${keysToDelete.length} cache entries`);
   }
 
   /**
@@ -182,25 +192,31 @@ class WarehouseServiceClass {
   }
 
   /**
-   * Get warehouse inventory (with 1-minute cache)
+   * Get warehouse inventory (with 1-minute cache and pagination)
    */
   async getWarehouseInventory(
     warehouseId: string, 
-    forceRefresh: boolean = false
-  ): Promise<WarehouseInventoryRow[]> {
+    forceRefresh: boolean = false,
+    page: number = 0,
+    size: number = 20
+  ): Promise<any> {
+    const cacheKey = `inventory:${warehouseId}:${page}:${size}`;
+
     try {
-      // Check cache first
-      const cached = this.inventoryCache.get(warehouseId);
-      if (!forceRefresh && this.isCacheValid(cached)) {
-        console.log(`📦 Returning cached inventory for warehouse: ${warehouseId}`);
-        return cached!.data;
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cached = this.cache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+          console.log(`📦 Returning cached inventory (page ${page}/${size} items)`);
+          return cached.data;
+        }
       }
 
-      console.log('📦 Fetching inventory from API for warehouse:', warehouseId);
-      console.log(`📦 API endpoint: /api/warehouse-inventory/warehouse/${warehouseId}`);
+      console.log(`📦 Fetching inventory from API (page ${page}, size ${size})`);
+      console.log(`📦 API endpoint: /api/warehouse-inventory/warehouse/${warehouseId}?page=${page}&size=${size}`);
       
       const response = await apiClient.get<any>(
-        `/api/warehouse-inventory/warehouse/${warehouseId}`
+        `/api/warehouse-inventory/warehouse/${warehouseId}?page=${page}&size=${size}`
       );
       
       console.log('📦 Inventory response:', response);
@@ -210,20 +226,31 @@ class WarehouseServiceClass {
         'inventory', 
         'Inventory API'
       );
-      console.log('✅ Loaded', inventoryList.length, 'inventory items');
+      console.log(`✅ Loaded ${inventoryList.length} inventory items (page ${page})`);
 
-      // Update cache
-      this.inventoryCache.set(warehouseId, {
-        data: inventoryList,
+      // Build response with pagination metadata
+      const result = {
+        inventory: inventoryList,
+        hasMore: response?.hasMore ?? (inventoryList.length >= size),
+        currentPage: response?.currentPage ?? page,
+        totalPages: response?.totalPages ?? Math.ceil((response?.totalItems ?? 0) / size),
+        totalItems: response?.totalItems ?? inventoryList.length,
+      };
+
+      // Cache the response
+      this.cache.set(cacheKey, {
+        data: result,
         timestamp: Date.now(),
       });
 
       console.log(`✅ Inventory cached for 1 minute (${inventoryList.length} items)`);
-      return inventoryList;
+      console.log(`📊 Inventory stats: page ${result.currentPage + 1}/${result.totalPages}, total: ${result.totalItems}, hasMore: ${result.hasMore}`);
+
+      return result;
     } catch (error) {
       console.error('❌ WarehouseService: Error fetching inventory:', error);
       console.error(`   Failed endpoint: /api/warehouse-inventory/warehouse/${warehouseId}`);
-      return []; // Return empty array on error instead of throwing
+      return { inventory: [], hasMore: false, currentPage: page, totalPages: 0, totalItems: 0 };
     }
   }
 
@@ -243,25 +270,31 @@ class WarehouseServiceClass {
   }
 
   /**
-   * Get warehouse restocks/additions (with 1-minute cache)
+   * Get warehouse restocks/additions (with 1-minute cache and pagination)
    */
   async getWarehouseRestocks(
     warehouseId: string,
-    forceRefresh: boolean = false
-  ): Promise<WarehouseRestock[]> {
+    forceRefresh: boolean = false,
+    page: number = 0,
+    size: number = 20
+  ): Promise<any> {
+    const cacheKey = `restocks:${warehouseId}:${page}:${size}`;
+
     try {
       // Check cache first
-      const cached = this.additionsCache.get(warehouseId);
-      if (!forceRefresh && this.isCacheValid(cached)) {
-        console.log(`📥 Returning cached restocks for warehouse: ${warehouseId}`);
-        return cached!.data;
+      if (!forceRefresh) {
+        const cached = this.cache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+          console.log(`📥 Returning cached restocks (page ${page}/${size} items)`);
+          return cached.data;
+        }
       }
 
-      console.log('📥 Fetching restocks from API for warehouse:', warehouseId);
-      console.log(`📥 API endpoint: /api/warehouse-inventory/warehouse/${warehouseId}/additions`);
+      console.log(`📥 Fetching restocks from API (page ${page}, size ${size})`);
+      console.log(`📥 API endpoint: /api/warehouse-inventory/warehouse/${warehouseId}/additions?page=${page}&size=${size}`);
       
       const response = await apiClient.get<any>(
-        `/api/warehouse-inventory/warehouse/${warehouseId}/additions`
+        `/api/warehouse-inventory/warehouse/${warehouseId}/additions?page=${page}&size=${size}`
       );
       
       console.log('📥 Restocks response:', response);
@@ -271,43 +304,60 @@ class WarehouseServiceClass {
         'additions',
         'Restocks API'
       );
-      console.log('✅ Loaded', restocksList.length, 'restocks');
+      console.log(`✅ Loaded ${restocksList.length} restocks (page ${page})`);
 
-      // Update cache
-      this.additionsCache.set(warehouseId, {
-        data: restocksList,
+      // Build response with pagination metadata
+      const result = {
+        additions: restocksList,
+        hasMore: response?.hasMore ?? (restocksList.length >= size),
+        currentPage: response?.currentPage ?? page,
+        totalPages: response?.totalPages ?? Math.ceil((response?.totalItems ?? 0) / size),
+        totalItems: response?.totalItems ?? restocksList.length,
+      };
+
+      // Cache the response
+      this.cache.set(cacheKey, {
+        data: result,
         timestamp: Date.now(),
       });
 
       console.log(`✅ Restocks cached for 1 minute (${restocksList.length} items)`);
-      return restocksList;
+      console.log(`📊 Restocks stats: page ${result.currentPage + 1}/${result.totalPages}, total: ${result.totalItems}, hasMore: ${result.hasMore}`);
+
+      return result;
     } catch (error) {
       console.error('❌ WarehouseService: Error fetching restocks:', error);
       console.error(`   Failed endpoint: /api/warehouse-inventory/warehouse/${warehouseId}/additions`);
-      return []; // Return empty array on error instead of throwing
+      return { additions: [], hasMore: false, currentPage: page, totalPages: 0, totalItems: 0 };
     }
   }
 
   /**
-   * Get warehouse sales/withdrawals (with 1-minute cache)
+   * Get warehouse sales/withdrawals (with 1-minute cache and pagination)
    */
   async getWarehouseSales(
     warehouseId: string,
-    forceRefresh: boolean = false
-  ): Promise<WarehouseSale[]> {
+    forceRefresh: boolean = false,
+    page: number = 0,
+    size: number = 20
+  ): Promise<any> {
+    const cacheKey = `sales:${warehouseId}:${page}:${size}`;
+
     try {
       // Check cache first
-      const cached = this.withdrawalsCache.get(warehouseId);
-      if (!forceRefresh && this.isCacheValid(cached)) {
-        console.log(`💰 Returning cached sales for warehouse: ${warehouseId}`);
-        return cached!.data;
+      if (!forceRefresh) {
+        const cached = this.cache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+          console.log(`💰 Returning cached sales (page ${page}/${size} items)`);
+          return cached.data;
+        }
       }
 
-      console.log('💰 Fetching sales from API for warehouse:', warehouseId);
-      console.log(`💰 API endpoint: /api/warehouse-inventory/warehouse/${warehouseId}/withdrawals`);
+      console.log(`💰 Fetching sales from API (page ${page}, size ${size})`);
+      console.log(`💰 API endpoint: /api/warehouse-inventory/warehouse/${warehouseId}/withdrawals?page=${page}&size=${size}`);
       
       const response = await apiClient.get<any>(
-        `/api/warehouse-inventory/warehouse/${warehouseId}/withdrawals`
+        `/api/warehouse-inventory/warehouse/${warehouseId}/withdrawals?page=${page}&size=${size}`
       );
       
       console.log('💰 Sales response:', response);
@@ -317,20 +367,31 @@ class WarehouseServiceClass {
         'withdrawals',
         'Sales API'
       );
-      console.log('✅ Loaded', salesList.length, 'sales');
+      console.log(`✅ Loaded ${salesList.length} sales (page ${page})`);
 
-      // Update cache
-      this.withdrawalsCache.set(warehouseId, {
-        data: salesList,
+      // Build response with pagination metadata
+      const result = {
+        withdrawals: salesList,
+        hasMore: response?.hasMore ?? (salesList.length >= size),
+        currentPage: response?.currentPage ?? page,
+        totalPages: response?.totalPages ?? Math.ceil((response?.totalItems ?? 0) / size),
+        totalItems: response?.totalItems ?? salesList.length,
+      };
+
+      // Cache the response
+      this.cache.set(cacheKey, {
+        data: result,
         timestamp: Date.now(),
       });
 
       console.log(`✅ Sales cached for 1 minute (${salesList.length} items)`);
-      return salesList;
+      console.log(`📊 Sales stats: page ${result.currentPage + 1}/${result.totalPages}, total: ${result.totalItems}, hasMore: ${result.hasMore}`);
+
+      return result;
     } catch (error) {
       console.error('❌ WarehouseService: Error fetching sales:', error);
       console.error(`   Failed endpoint: /api/warehouse-inventory/warehouse/${warehouseId}/withdrawals`);
-      return []; // Return empty array on error instead of throwing
+      return { withdrawals: [], hasMore: false, currentPage: page, totalPages: 0, totalItems: 0 };
     }
   }
 
@@ -465,13 +526,13 @@ const WarehouseService = new WarehouseServiceClass();
 
 // Export legacy functions for backward compatibility
 export const getWarehouses = (forceRefresh?: boolean) => WarehouseService.getWarehouses(forceRefresh);
-export const getWarehouseInventory = (warehouseId: string, forceRefresh?: boolean) => 
-  WarehouseService.getWarehouseInventory(warehouseId, forceRefresh);
+export const getWarehouseInventory = (warehouseId: string, forceRefresh?: boolean, page?: number, size?: number) => 
+  WarehouseService.getWarehouseInventory(warehouseId, forceRefresh, page, size);
 export const getProductAvailability = (productId: string) => WarehouseService.getProductAvailability(productId);
-export const getWarehouseRestocks = (warehouseId: string, forceRefresh?: boolean) => 
-  WarehouseService.getWarehouseRestocks(warehouseId, forceRefresh);
-export const getWarehouseSales = (warehouseId: string, forceRefresh?: boolean) => 
-  WarehouseService.getWarehouseSales(warehouseId, forceRefresh);
+export const getWarehouseRestocks = (warehouseId: string, forceRefresh?: boolean, page?: number, size?: number) => 
+  WarehouseService.getWarehouseRestocks(warehouseId, forceRefresh, page, size);
+export const getWarehouseSales = (warehouseId: string, forceRefresh?: boolean, page?: number, size?: number) => 
+  WarehouseService.getWarehouseSales(warehouseId, forceRefresh, page, size);
 
 export { WarehouseService };
 export default WarehouseService;
