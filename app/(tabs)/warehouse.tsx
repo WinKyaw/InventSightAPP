@@ -104,6 +104,21 @@ export default function WarehouseScreen() {
   const [showWarehousePicker, setShowWarehousePicker] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   
+  // Pagination state for each tab
+  const [inventoryPage, setInventoryPage] = useState(0);
+  const [restocksPage, setRestocksPage] = useState(0);
+  const [salesPage, setSalesPage] = useState(0);
+  
+  const [inventoryHasMore, setInventoryHasMore] = useState(true);
+  const [restocksHasMore, setRestocksHasMore] = useState(true);
+  const [salesHasMore, setSalesHasMore] = useState(true);
+  
+  const [inventoryTotalItems, setInventoryTotalItems] = useState(0);
+  const [restocksTotalItems, setRestocksTotalItems] = useState(0);
+  const [salesTotalItems, setSalesTotalItems] = useState(0);
+  
+  const [loadingMore, setLoadingMore] = useState(false);
+  
   // Add Inventory modal state
   const [showAddInventoryModal, setShowAddInventoryModal] = useState(false);
   const [newInventoryItem, setNewInventoryItem] = useState({
@@ -206,6 +221,243 @@ export default function WarehouseScreen() {
     }
   }, [isReady, selectedWarehouse]);
 
+  // Load inventory with pagination
+  const loadInventory = useCallback(async (page = 0, append = false) => {
+    if (!selectedWarehouse) {
+      console.log('⚠️ No warehouse selected');
+      return;
+    }
+
+    try {
+      console.log(`📦 Loading inventory page ${page} (append: ${append})`);
+      
+      if (!append) {
+        setTabLoading(true);
+      }
+
+      const response = await WarehouseService.getWarehouseInventory(
+        selectedWarehouse.id,
+        false, // forceRefresh
+        page,
+        20 // page size
+      );
+
+      const newItems = response.inventory || [];
+      
+      if (append) {
+        // Append to existing items
+        setInventory(prev => [...prev, ...newItems]);
+        console.log(`✅ Appended ${newItems.length} items (total: ${inventory.length + newItems.length})`);
+      } else {
+        // Replace existing items
+        setInventory(newItems);
+        console.log(`✅ Loaded ${newItems.length} items`);
+      }
+
+      setInventoryHasMore(response.hasMore || false);
+      setInventoryTotalItems(response.totalItems || 0);
+      setInventoryPage(page);
+
+      console.log(`📊 Inventory stats: page ${response.currentPage + 1}/${response.totalPages}, total: ${response.totalItems}, hasMore: ${response.hasMore}`);
+
+    } catch (error) {
+      console.error('❌ Error loading inventory:', error);
+      setInventory([]);
+    } finally {
+      setTabLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, [selectedWarehouse, inventory.length]);
+
+  // Load restocks with pagination
+  const loadRestocks = useCallback(async (page = 0, append = false) => {
+    if (!selectedWarehouse) {
+      console.log('⚠️ No warehouse selected');
+      return;
+    }
+
+    try {
+      console.log(`📥 Loading restocks page ${page} (append: ${append})`);
+      
+      if (!append) {
+        setTabLoading(true);
+      }
+
+      const response = await WarehouseService.getWarehouseRestocks(
+        selectedWarehouse.id,
+        false,
+        page,
+        20
+      );
+
+      const newItems = response.additions || [];
+      
+      if (append) {
+        setRestocks(prev => [...prev, ...newItems]);
+        console.log(`✅ Appended ${newItems.length} restocks (total: ${restocks.length + newItems.length})`);
+      } else {
+        setRestocks(newItems);
+        console.log(`✅ Loaded ${newItems.length} restocks`);
+      }
+
+      setRestocksHasMore(response.hasMore || false);
+      setRestocksTotalItems(response.totalItems || 0);
+      setRestocksPage(page);
+
+      console.log(`📊 Restocks stats: page ${response.currentPage + 1}/${response.totalPages}, total: ${response.totalItems}, hasMore: ${response.hasMore}`);
+
+    } catch (error) {
+      console.error('❌ Error loading restocks:', error);
+      setRestocks([]);
+    } finally {
+      setTabLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, [selectedWarehouse, restocks.length]);
+
+  // Load sales with pagination
+  const loadSales = useCallback(async (page = 0, append = false) => {
+    if (!selectedWarehouse) {
+      console.log('⚠️ No warehouse selected');
+      return;
+    }
+
+    try {
+      console.log(`💰 Loading sales page ${page} (append: ${append})`);
+      
+      if (!append) {
+        setTabLoading(true);
+      }
+
+      const response = await WarehouseService.getWarehouseSales(
+        selectedWarehouse.id,
+        false,
+        page,
+        20
+      );
+
+      const newItems = response.withdrawals || [];
+      
+      if (append) {
+        setSales(prev => [...prev, ...newItems]);
+        console.log(`✅ Appended ${newItems.length} sales (total: ${sales.length + newItems.length})`);
+      } else {
+        setSales(newItems);
+        console.log(`✅ Loaded ${newItems.length} sales`);
+      }
+
+      setSalesHasMore(response.hasMore || false);
+      setSalesTotalItems(response.totalItems || 0);
+      setSalesPage(page);
+
+      console.log(`📊 Sales stats: page ${response.currentPage + 1}/${response.totalPages}, total: ${response.totalItems}, hasMore: ${response.hasMore}`);
+
+    } catch (error) {
+      console.error('❌ Error loading sales:', error);
+      setSales([]);
+    } finally {
+      setTabLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, [selectedWarehouse, sales.length]);
+
+  // Handle "Load More" button press
+  const handleLoadMoreInventory = useCallback(() => {
+    if (!loadingMore && inventoryHasMore && !tabLoading) {
+      console.log(`📄 Loading more inventory (page ${inventoryPage + 1})`);
+      setLoadingMore(true);
+      loadInventory(inventoryPage + 1, true); // append = true
+    }
+  }, [loadingMore, inventoryHasMore, tabLoading, inventoryPage, loadInventory]);
+
+  const handleLoadMoreRestocks = useCallback(() => {
+    if (!loadingMore && restocksHasMore && !tabLoading) {
+      console.log(`📄 Loading more restocks (page ${restocksPage + 1})`);
+      setLoadingMore(true);
+      loadRestocks(restocksPage + 1, true);
+    }
+  }, [loadingMore, restocksHasMore, tabLoading, restocksPage, loadRestocks]);
+
+  const handleLoadMoreSales = useCallback(() => {
+    if (!loadingMore && salesHasMore && !tabLoading) {
+      console.log(`📄 Loading more sales (page ${salesPage + 1})`);
+      setLoadingMore(true);
+      loadSales(salesPage + 1, true);
+    }
+  }, [loadingMore, salesHasMore, tabLoading, salesPage, loadSales]);
+
+  // Handle pull-to-refresh
+  const handleRefreshInventory = useCallback(() => {
+    console.log('🔄 Refreshing inventory...');
+    setRefreshing(true);
+    setInventoryPage(0);
+    loadInventory(0, false);
+  }, [loadInventory]);
+
+  const handleRefreshRestocks = useCallback(() => {
+    console.log('🔄 Refreshing restocks...');
+    setRefreshing(true);
+    setRestocksPage(0);
+    loadRestocks(0, false);
+  }, [loadRestocks]);
+
+  const handleRefreshSales = useCallback(() => {
+    console.log('🔄 Refreshing sales...');
+    setRefreshing(true);
+    setSalesPage(0);
+    loadSales(0, false);
+  }, [loadSales]);
+
+  // Render list footer with "Load More" button or loading spinner
+  const renderListFooter = useCallback((
+    hasMore: boolean,
+    onLoadMore: () => void,
+    currentCount: number,
+    totalCount: number
+  ) => {
+    if (tabLoading && currentCount === 0) {
+      // Initial loading
+      return null;
+    }
+
+    if (!hasMore && currentCount > 0) {
+      return (
+        <View style={styles.listFooter}>
+          <Text style={styles.endOfListText}>
+            End of list ({currentCount} of {totalCount} items)
+          </Text>
+        </View>
+      );
+    }
+
+    if (hasMore) {
+      return (
+        <View style={styles.listFooter}>
+          {loadingMore ? (
+            <View style={styles.loadingMoreContainer}>
+              <ActivityIndicator size="small" color="#6366F1" />
+              <Text style={styles.loadingMoreText}>Loading more...</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={onLoadMore}
+            >
+              <Text style={styles.loadMoreText}>
+                Load More ({currentCount} of {totalCount})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+
+    return null;
+  }, [tabLoading, loadingMore]);
+
   // Load data based on active tab with debouncing support
   const loadTabData = useCallback(async (showLoadingState = true, forceRefresh = false) => {
     if (!isReady || !selectedWarehouse) {
@@ -221,39 +473,28 @@ export default function WarehouseScreen() {
 
     try {
       isLoadingRef.current = true;
-      if (showLoadingState) {
-        setTabLoading(true);
-      }
       setError(null);
       
       console.log(`📦 Loading ${activeTab} for warehouse: ${selectedWarehouse.id} (forceRefresh: ${forceRefresh})`);
 
+      // Reset pagination when force refreshing
+      if (forceRefresh) {
+        setInventoryPage(0);
+        setRestocksPage(0);
+        setSalesPage(0);
+      }
+
       switch (activeTab) {
         case 'inventory':
-          const inventory = await WarehouseService.getWarehouseInventory(
-            selectedWarehouse.id,
-            forceRefresh
-          );
-          console.log(`✅ Loaded ${inventory.length} inventory items`);
-          setInventory(inventory);
+          await loadInventory(forceRefresh ? 0 : inventoryPage, false);
           break;
 
         case 'restocks':
-          const restocks = await WarehouseService.getWarehouseRestocks(
-            selectedWarehouse.id,
-            forceRefresh
-          );
-          console.log(`✅ Loaded ${restocks.length} restocks`);
-          setRestocks(restocks);
+          await loadRestocks(forceRefresh ? 0 : restocksPage, false);
           break;
 
         case 'sales':
-          const sales = await WarehouseService.getWarehouseSales(
-            selectedWarehouse.id,
-            forceRefresh
-          );
-          console.log(`✅ Loaded ${sales.length} sales`);
-          setSales(sales);
+          await loadSales(forceRefresh ? 0 : salesPage, false);
           break;
       }
     } catch (error: unknown) {
@@ -265,11 +506,9 @@ export default function WarehouseScreen() {
         setError(errorMessage);
       }
     } finally {
-      setTabLoading(false);
-      setRefreshing(false);
       isLoadingRef.current = false;
     }
-  }, [isReady, selectedWarehouse, activeTab]);
+  }, [isReady, selectedWarehouse, activeTab, inventoryPage, restocksPage, salesPage, loadInventory, loadRestocks, loadSales]);
 
   // Debounced version - waits 300ms before executing
   const debouncedLoadTabData = useCallback((forceRefresh: boolean = false) => {
@@ -527,6 +766,14 @@ export default function WarehouseScreen() {
     setSelectedWarehouse(warehouse);
     setShowWarehousePicker(false);
     setSearchQuery(''); // Clear search when switching warehouses
+    
+    // Reset pagination state when switching warehouses
+    setInventoryPage(0);
+    setRestocksPage(0);
+    setSalesPage(0);
+    setInventory([]);
+    setRestocks([]);
+    setSales([]);
   };
 
   // Helper function to check if current tab data is empty
@@ -986,7 +1233,16 @@ export default function WarehouseScreen() {
                   </TouchableOpacity>
                 </View>
               )}
-              <WarehouseInventoryList inventory={filteredInventory} />
+              <WarehouseInventoryList 
+                inventory={filteredInventory}
+                hasMore={inventoryHasMore}
+                onLoadMore={handleLoadMoreInventory}
+                loadingMore={loadingMore}
+                totalItems={inventoryTotalItems}
+                loading={tabLoading}
+                refreshing={refreshing}
+                onRefresh={handleRefreshInventory}
+              />
             </>
           )}
           {activeTab === 'restocks' && (
@@ -995,14 +1251,36 @@ export default function WarehouseScreen() {
               renderItem={renderRestockItem}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.flatListContent}
+              ListFooterComponent={() =>
+                renderListFooter(
+                  restocksHasMore,
+                  handleLoadMoreRestocks,
+                  restocks.length,
+                  restocksTotalItems
+                )
+              }
               ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="arrow-down-circle-outline" size={64} color={Colors.lightGray} />
-                  <Text style={styles.emptyTitle}>No Restocks Found</Text>
-                  <Text style={styles.emptySubtext}>
-                    No restock records available for this warehouse.
-                  </Text>
-                </View>
+                tabLoading ? (
+                  <View style={styles.centerContainer}>
+                    <ActivityIndicator size="large" color="#6366F1" />
+                    <Text style={styles.statusText}>Loading restocks...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name="arrow-down-circle-outline" size={64} color={Colors.lightGray} />
+                    <Text style={styles.emptyTitle}>No Restocks Found</Text>
+                    <Text style={styles.emptySubtext}>
+                      No restock records available for this warehouse.
+                    </Text>
+                  </View>
+                )
+              }
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefreshRestocks}
+                  colors={['#6366F1']}
+                />
               }
             />
           )}
@@ -1012,14 +1290,36 @@ export default function WarehouseScreen() {
               renderItem={renderSaleItem}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.flatListContent}
+              ListFooterComponent={() =>
+                renderListFooter(
+                  salesHasMore,
+                  handleLoadMoreSales,
+                  sales.length,
+                  salesTotalItems
+                )
+              }
               ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="cash-outline" size={64} color={Colors.lightGray} />
-                  <Text style={styles.emptyTitle}>No Sales Found</Text>
-                  <Text style={styles.emptySubtext}>
-                    No sales records available for this warehouse.
-                  </Text>
-                </View>
+                tabLoading ? (
+                  <View style={styles.centerContainer}>
+                    <ActivityIndicator size="large" color="#6366F1" />
+                    <Text style={styles.statusText}>Loading sales...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name="cash-outline" size={64} color={Colors.lightGray} />
+                    <Text style={styles.emptyTitle}>No Sales Found</Text>
+                    <Text style={styles.emptySubtext}>
+                      No sales records available for this warehouse.
+                    </Text>
+                  </View>
+                )
+              }
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefreshSales}
+                  colors={['#6366F1']}
+                />
               }
             />
           )}
@@ -1830,6 +2130,43 @@ const styles = StyleSheet.create({
   emptyPickerText: {
     fontSize: 14,
     color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  // Pagination styles
+  listFooter: {
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+  },
+  loadMoreButton: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  loadMoreText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingMoreText: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  endOfListText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontStyle: 'italic',
     textAlign: 'center',
   },
 });
