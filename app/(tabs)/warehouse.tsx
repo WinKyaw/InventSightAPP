@@ -766,6 +766,14 @@ export default function WarehouseScreen() {
     setSelectedWarehouse(warehouse);
     setShowWarehousePicker(false);
     setSearchQuery(''); // Clear search when switching warehouses
+    
+    // Reset pagination state when switching warehouses
+    setInventoryPage(0);
+    setRestocksPage(0);
+    setSalesPage(0);
+    setInventory([]);
+    setRestocks([]);
+    setSales([]);
   };
 
   // Helper function to check if current tab data is empty
