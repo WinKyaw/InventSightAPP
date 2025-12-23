@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { apiClient } from './apiClient';
-import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, WarehouseRestock, WarehouseSale, WarehouseAssignment } from '../../types/warehouse';
+import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, WarehouseRestock, WarehouseSale, WarehouseAssignment, WarehousePermissionResponse, WarehouseUser } from '../../types/warehouse';
 
 /**
  * Warehouse API Service
@@ -516,6 +516,112 @@ class WarehouseServiceClass {
       console.log('✅ Warehouse assignment removed successfully');
     } catch (error: any) {
       console.error('❌ Error removing warehouse assignment:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Check warehouse permissions for current user
+   */
+  async checkWarehousePermissions(warehouseId: string): Promise<WarehousePermissionResponse> {
+    try {
+      console.log(`🔐 Checking permissions for warehouse: ${warehouseId}`);
+      
+      const response = await apiClient.get<WarehousePermissionResponse>(
+        `/api/warehouse-inventory/warehouse/${warehouseId}/permissions`
+      );
+      
+      console.log('🔐 Permissions response:', response);
+      
+      // Handle different response formats
+      const permissionsData = (response as any)?.data || response;
+      
+      console.log('✅ User permissions:', permissionsData.permissions || permissionsData);
+      
+      return permissionsData;
+    } catch (error) {
+      console.error('❌ Error checking permissions:', error);
+      return {
+        success: false,
+        permissions: {
+          canRead: false,
+          canWrite: false,
+          canAddInventory: false,
+          canWithdrawInventory: false,
+          isGMPlus: false,
+        },
+      };
+    }
+  }
+
+  /**
+   * Grant warehouse permission to user (GM+ only)
+   */
+  async grantWarehousePermission(
+    warehouseId: string,
+    userId: string,
+    permissionType: 'READ' | 'READ_WRITE'
+  ): Promise<any> {
+    try {
+      console.log(`🔐 Granting ${permissionType} permission to user ${userId} on warehouse ${warehouseId}`);
+      
+      const response = await apiClient.post(
+        `/api/warehouse-inventory/warehouse/${warehouseId}/permissions`,
+        {
+          userId,
+          permissionType,
+        }
+      );
+      
+      console.log('✅ Permission granted:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Error granting permission:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * List users with access to warehouse (GM+ only)
+   */
+  async listWarehouseUsers(warehouseId: string): Promise<any> {
+    try {
+      console.log(`👥 Fetching users with access to warehouse: ${warehouseId}`);
+      
+      const response = await apiClient.get(
+        `/api/warehouse-inventory/warehouse/${warehouseId}/users`
+      );
+      
+      // Handle different response formats
+      const responseData = (response as any)?.data || response;
+      const users = responseData?.users || [];
+      
+      console.log(`✅ Found ${users.length} users with access`);
+      return { success: true, users };
+    } catch (error) {
+      console.error('❌ Error fetching warehouse users:', error);
+      return { success: false, users: [] };
+    }
+  }
+
+  /**
+   * Revoke warehouse permission (GM+ only)
+   */
+  async revokeWarehousePermission(
+    warehouseId: string,
+    userId: string
+  ): Promise<any> {
+    try {
+      console.log(`🔐 Revoking permission for user ${userId} on warehouse ${warehouseId}`);
+      
+      const response = await apiClient.delete(
+        `/api/warehouse-inventory/warehouse/${warehouseId}/permissions/${userId}`
+      );
+      
+      console.log('✅ Permission revoked:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Error revoking permission:', error);
       throw error;
     }
   }

@@ -95,3 +95,32 @@ export interface WarehouseAssignment {
   createdAt?: string;
   createdBy?: string;
 }
+
+/**
+ * Warehouse permissions for a user
+ */
+export interface WarehousePermissions {
+  canRead: boolean;
+  canWrite: boolean;
+  canAddInventory: boolean;
+  canWithdrawInventory: boolean;
+  isGMPlus: boolean;
+}
+
+/**
+ * Warehouse permission response
+ */
+export interface WarehousePermissionResponse {
+  success: boolean;
+  permissions: WarehousePermissions;
+}
+
+/**
+ * Warehouse user with permission
+ */
+export interface WarehouseUser {
+  userId: string;
+  username: string;
+  email?: string;
+  permission: 'READ' | 'READ_WRITE';
+}

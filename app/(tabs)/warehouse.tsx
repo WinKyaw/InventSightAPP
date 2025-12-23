@@ -150,6 +150,22 @@ export default function WarehouseScreen() {
     // ❌ REMOVED: transactionType - will be set automatically to 'ISSUE'
   });
 
+  // Permission state
+  const [warehousePermissions, setWarehousePermissions] = useState({
+    canRead: false,
+    canWrite: false,
+    canAddInventory: false,
+    canWithdrawInventory: false,
+    isGMPlus: false,
+  });
+
+  // Permission management state (GM+ only)
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [warehouseUsers, setWarehouseUsers] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [selectedPermission, setSelectedPermission] = useState<'READ' | 'READ_WRITE'>('READ');
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+
   // Filter inventory based on search query
   const filteredInventory = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -629,6 +645,142 @@ export default function WarehouseScreen() {
       setWarehouseProducts([]);
     }
   }, [selectedWarehouse]);
+
+  // Load permissions when warehouse changes
+  useEffect(() => {
+    const loadWarehousePermissions = async () => {
+      if (!selectedWarehouse) {
+        setWarehousePermissions({
+          canRead: false,
+          canWrite: false,
+          canAddInventory: false,
+          canWithdrawInventory: false,
+          isGMPlus: false,
+        });
+        return;
+      }
+
+      try {
+        console.log('🔐 Loading permissions for warehouse:', selectedWarehouse.name);
+        
+        const response = await WarehouseService.checkWarehousePermissions(selectedWarehouse.id);
+        
+        if (response.success) {
+          setWarehousePermissions(response.permissions);
+          console.log('✅ Permissions loaded:', response.permissions);
+          
+          // Show permission summary
+          if (response.permissions.canWrite) {
+            console.log('✅ User has WRITE access - can add/withdraw inventory');
+          } else if (response.permissions.canRead) {
+            console.log('⚠️ User has READ-ONLY access - cannot modify inventory');
+          } else {
+            console.log('❌ User has NO access to this warehouse');
+          }
+        } else {
+          console.error('❌ Failed to load permissions');
+          setWarehousePermissions({
+            canRead: false,
+            canWrite: false,
+            canAddInventory: false,
+            canWithdrawInventory: false,
+            isGMPlus: false,
+          });
+        }
+      } catch (error) {
+        console.error('❌ Error loading permissions:', error);
+        setWarehousePermissions({
+          canRead: false,
+          canWrite: false,
+          canAddInventory: false,
+          canWithdrawInventory: false,
+          isGMPlus: false,
+        });
+      }
+    };
+
+    loadWarehousePermissions();
+  }, [selectedWarehouse]);
+
+  // Load warehouse users (GM+ only)
+  const loadWarehouseUsers = async () => {
+    if (!selectedWarehouse || !warehousePermissions.isGMPlus) return;
+
+    try {
+      setLoadingPermissions(true);
+      const response = await WarehouseService.listWarehouseUsers(selectedWarehouse.id);
+      
+      if (response.success) {
+        setWarehouseUsers(response.users || []);
+        console.log(`✅ Loaded ${response.users?.length || 0} users`);
+      }
+    } catch (error) {
+      console.error('❌ Error loading warehouse users:', error);
+      setWarehouseUsers([]);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
+  // Grant permission to user (GM+ only)
+  const handleGrantPermission = async () => {
+    if (!selectedWarehouse || !selectedUser) {
+      Alert.alert('Error', 'Please select a user');
+      return;
+    }
+
+    try {
+      console.log(`🔐 Granting ${selectedPermission} permission to user ${selectedUser}`);
+      
+      await WarehouseService.grantWarehousePermission(
+        selectedWarehouse.id,
+        selectedUser,
+        selectedPermission
+      );
+
+      Alert.alert('Success', 'Permission granted successfully');
+      
+      // Reload users
+      await loadWarehouseUsers();
+      
+      // Reset form
+      setSelectedUser('');
+      setSelectedPermission('READ');
+      
+    } catch (error) {
+      console.error('❌ Error granting permission:', error);
+      Alert.alert('Error', 'Failed to grant permission');
+    }
+  };
+
+  // Revoke permission (GM+ only)
+  const handleRevokePermission = async (userId: string, username: string) => {
+    Alert.alert(
+      'Revoke Permission',
+      `Are you sure you want to revoke access for ${username}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await WarehouseService.revokeWarehousePermission(
+                selectedWarehouse!.id,
+                userId
+              );
+              
+              Alert.alert('Success', 'Permission revoked');
+              await loadWarehouseUsers();
+            } catch (error) {
+              console.error('❌ Error revoking permission:', error);
+              Alert.alert('Error', 'Failed to revoke permission');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // Handle tab switch with debouncing
   const handleTabSwitch = useCallback((tab: 'inventory' | 'restocks' | 'sales') => {
@@ -1216,21 +1368,59 @@ export default function WarehouseScreen() {
         <View style={styles.listWrapper}>
           {activeTab === 'inventory' && (
             <>
-              {canAdd && selectedWarehouse && (
+              {selectedWarehouse && (
                 <View style={styles.actionButtonsContainer}>
-                  <TouchableOpacity
-                    style={styles.addInventoryButton}
-                    onPress={() => setShowAddInventoryModal(true)}
-                  >
-                    <Text style={styles.actionButtonText}>➕ Add Inventory</Text>
-                  </TouchableOpacity>
+                  {/* Add Inventory Button - Only if user has WRITE permission */}
+                  {warehousePermissions.canAddInventory && (
+                    <TouchableOpacity
+                      style={styles.addInventoryButton}
+                      onPress={() => setShowAddInventoryModal(true)}
+                    >
+                      <Text style={styles.actionButtonText}>➕ Add Inventory</Text>
+                    </TouchableOpacity>
+                  )}
 
-                  <TouchableOpacity
-                    style={styles.withdrawInventoryButton}
-                    onPress={handleOpenWithdrawModal}
-                  >
-                    <Text style={styles.actionButtonText}>➖ Withdraw</Text>
-                  </TouchableOpacity>
+                  {/* Withdraw Button - Only if user has WRITE permission */}
+                  {warehousePermissions.canWithdrawInventory && (
+                    <TouchableOpacity
+                      style={styles.withdrawInventoryButton}
+                      onPress={handleOpenWithdrawModal}
+                    >
+                      <Text style={styles.actionButtonText}>➖ Withdraw</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Manage Permissions Button - Only for GM+ users */}
+                  {warehousePermissions.isGMPlus && (
+                    <TouchableOpacity
+                      style={styles.permissionsButton}
+                      onPress={() => {
+                        console.log('👥 Opening Permissions modal');
+                        setShowPermissionsModal(true);
+                        loadWarehouseUsers();
+                      }}
+                    >
+                      <Text style={styles.permissionsButtonText}>👥 Permissions</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Read-Only Message - If user only has READ permission */}
+                  {warehousePermissions.canRead && !warehousePermissions.canWrite && (
+                    <View style={styles.noPermissionContainer}>
+                      <Text style={styles.noPermissionText}>
+                        🔒 You have read-only access to this warehouse
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* No Access Message - If user has no access */}
+                  {!warehousePermissions.canRead && !warehousePermissions.canWrite && (
+                    <View style={styles.noAccessContainer}>
+                      <Text style={styles.noAccessText}>
+                        ⛔ You don't have access to this warehouse
+                      </Text>
+                    </View>
+                  )}
                 </View>
               )}
               <WarehouseInventoryList 
@@ -1632,6 +1822,118 @@ export default function WarehouseScreen() {
                   <Text style={styles.saveButtonText}>Withdraw</Text>
                 </TouchableOpacity>
               </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Permissions Management Modal (GM+ only) */}
+      <Modal
+        visible={showPermissionsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPermissionsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.permissionsModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>👥 Manage Warehouse Permissions</Text>
+              <TouchableOpacity onPress={() => setShowPermissionsModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.modalSubtitle}>
+                Warehouse: {selectedWarehouse?.name}
+              </Text>
+
+              {/* Grant Permission Form */}
+              <View style={styles.grantPermissionSection}>
+                <Text style={styles.sectionTitle}>Grant New Permission</Text>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.inputLabel}>User *</Text>
+                  <View style={styles.pickerWrapper}>
+                    <Picker
+                      selectedValue={selectedUser}
+                      onValueChange={(value) => setSelectedUser(value)}
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Select User" value="" />
+                      {/* TODO: Load available users from API */}
+                      <Picker.Item label="Alice (Employee)" value="user-1" />
+                      <Picker.Item label="Bob (Manager)" value="user-2" />
+                    </Picker>
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.inputLabel}>Permission Type *</Text>
+                  <View style={styles.pickerWrapper}>
+                    <Picker
+                      selectedValue={selectedPermission}
+                      onValueChange={(value: 'READ' | 'READ_WRITE') => setSelectedPermission(value)}
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Read-Only (View Only)" value="READ" />
+                      <Picker.Item label="Read/Write (Add & Withdraw)" value="READ_WRITE" />
+                    </Picker>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.grantButton}
+                  onPress={handleGrantPermission}
+                >
+                  <Text style={styles.grantButtonText}>Grant Access</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Current Permissions List */}
+              <View style={styles.currentPermissionsSection}>
+                <Text style={styles.sectionTitle}>Current Permissions</Text>
+
+                {loadingPermissions ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#6366F1" />
+                    <Text style={styles.loadingText}>Loading users...</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={warehouseUsers}
+                    keyExtractor={(item) => item.userId}
+                    renderItem={({ item }) => (
+                      <View style={styles.userPermissionItem}>
+                        <View style={styles.userInfo}>
+                          <Text style={styles.userName}>{item.username}</Text>
+                          <Text style={styles.userRole}>
+                            {item.permission === 'READ_WRITE' ? '✏️ Read/Write' : '👁️ Read-Only'}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.revokeButton}
+                          onPress={() => handleRevokePermission(item.userId, item.username)}
+                        >
+                          <Text style={styles.revokeButtonText}>Revoke</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    ListEmptyComponent={() => (
+                      <Text style={styles.emptyText}>No custom permissions set</Text>
+                    )}
+                    scrollEnabled={false}
+                    nestedScrollEnabled={false}
+                  />
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={styles.closePermissionsButton}
+                onPress={() => setShowPermissionsModal(false)}
+              >
+                <Text style={styles.closePermissionsButtonText}>Close</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -2168,5 +2470,166 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  // Permission-based UI styles
+  permissionsButton: {
+    flex: 1,
+    minWidth: 120,
+    backgroundColor: '#6366F1',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  permissionsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  noPermissionContainer: {
+    flex: 1,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  noPermissionText: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  noAccessContainer: {
+    flex: 1,
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  noAccessText: {
+    color: '#991B1B',
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  permissionsModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '90%',
+  },
+  grantPermissionSection: {
+    marginBottom: 30,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  currentPermissionsSection: {
+    marginBottom: 20,
+    maxHeight: 300,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 15,
+  },
+  formGroup: {
+    marginBottom: 15,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    backgroundColor: Colors.white,
+  },
+  grantButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  grantButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  userPermissionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  userRole: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  revokeButton: {
+    backgroundColor: '#EF4444',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 6,
+  },
+  revokeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  closePermissionsButton: {
+    backgroundColor: '#6B7280',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  closePermissionsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontStyle: 'italic',
+    paddingVertical: 20,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 20,
+  },
+  loadingText: {
+    color: '#6B7280',
+    fontSize: 14,
   },
 });
