@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WarehouseInventoryRow } from '../../types/warehouse';
 import { Colors } from '../../constants/Colors';
@@ -7,9 +7,28 @@ import { Colors } from '../../constants/Colors';
 interface WarehouseInventoryListProps {
   inventory: WarehouseInventoryRow[];
   onItemPress?: (item: WarehouseInventoryRow) => void;
+  // Pagination props
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
+  totalItems?: number;
+  loading?: boolean;
+  // Refresh props
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
-export function WarehouseInventoryList({ inventory, onItemPress }: WarehouseInventoryListProps) {
+export function WarehouseInventoryList({ 
+  inventory, 
+  onItemPress,
+  hasMore = false,
+  onLoadMore,
+  loadingMore = false,
+  totalItems = 0,
+  loading = false,
+  refreshing = false,
+  onRefresh,
+}: WarehouseInventoryListProps) {
   const renderItem = ({ item }: { item: WarehouseInventoryRow }) => {
     const isLowStock = item.lowStockThreshold 
       ? item.availableQuantity <= item.lowStockThreshold 
@@ -69,14 +88,72 @@ export function WarehouseInventoryList({ inventory, onItemPress }: WarehouseInve
     </View>
   );
 
+  const renderListFooter = () => {
+    if (loading && inventory.length === 0) {
+      // Initial loading
+      return null;
+    }
+
+    if (!hasMore && inventory.length > 0) {
+      return (
+        <View style={styles.listFooter}>
+          <Text style={styles.endOfListText}>
+            End of list ({inventory.length} of {totalItems} items)
+          </Text>
+        </View>
+      );
+    }
+
+    if (hasMore && onLoadMore) {
+      return (
+        <View style={styles.listFooter}>
+          {loadingMore ? (
+            <View style={styles.loadingMoreContainer}>
+              <ActivityIndicator size="small" color="#6366F1" />
+              <Text style={styles.loadingMoreText}>Loading more...</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={onLoadMore}
+            >
+              <Text style={styles.loadMoreText}>
+                Load More ({inventory.length} of {totalItems})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <FlatList
       data={inventory}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContainer}
-      ListEmptyComponent={renderEmptyState}
+      ListEmptyComponent={
+        loading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.loadingText}>Loading inventory...</Text>
+          </View>
+        ) : renderEmptyState()
+      }
+      ListFooterComponent={renderListFooter}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#6366F1']}
+          />
+        ) : undefined
+      }
     />
   );
 }
@@ -177,5 +254,46 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 32,
+  },
+  listFooter: {
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+  },
+  loadMoreButton: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  loadMoreText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingMoreText: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  endOfListText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#6B7280',
+    fontSize: 14,
   },
 });
