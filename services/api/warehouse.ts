@@ -467,6 +467,7 @@ class WarehouseServiceClass {
     userId: string;
     warehouseId: string;
     permissionType?: 'READ' | 'READ_WRITE';
+    // Legacy parameters kept for backward compatibility but not used
     isPermanent?: boolean;
     expiresAt?: string;
     notes?: string;
