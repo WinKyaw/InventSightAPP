@@ -488,16 +488,47 @@ class WarehouseServiceClass {
   }
 
   /**
-   * Get employee warehouse assignments
+   * Get employee's warehouse assignments with permissions
+   * ✅ FIXED: Use correct endpoint from backend
    */
   async getEmployeeWarehouses(userId: string): Promise<WarehouseAssignment[]> {
     try {
-      console.log('👤 Fetching warehouse assignments for user:', userId);
-      
-      const response = await apiClient.get(`/api/warehouse-assignments/user/${userId}`);
-      
-      const assignments = response?.assignments || response?.data || [];
-      return Array.isArray(assignments) ? assignments : [];
+      console.log(`🏢 Fetching warehouse assignments for user: ${userId}`);
+
+      // ✅ FIXED: Changed from /warehouse-assignments/user/{id}
+      //           to /warehouse-inventory/user/{id}/warehouses
+      const response = await apiClient.get(
+        `/api/warehouse-inventory/user/${userId}/warehouses`
+      );
+
+      console.log('🏢 Warehouse assignments response:', response);
+
+      // Handle the API response format
+      const responseData = (response as any);
+      if (responseData.success) {
+        const assignments = responseData.warehouses || [];
+        console.log(`✅ Loaded ${assignments.length} warehouse assignments`);
+        
+        // Map to expected format for UI
+        return assignments.map((assignment: any) => ({
+          id: assignment.id,
+          userId: userId,
+          warehouseId: assignment.warehouseId || assignment.warehouse?.id,
+          warehouseName: assignment.warehouseName || assignment.warehouse?.name,
+          warehouseLocation: assignment.warehouseLocation || assignment.warehouse?.location,
+          permissionType: assignment.permissionType,
+          isPermanent: assignment.isPermanent !== undefined ? assignment.isPermanent : true, // Use API value or default
+          grantedBy: assignment.grantedBy,
+          grantedAt: assignment.grantedAt,
+          createdAt: assignment.grantedAt,
+          createdBy: assignment.grantedBy,
+          isActive: assignment.isActive,
+          warehouse: assignment.warehouse,
+        }));
+      } else {
+        console.warn('⚠️ API returned success: false');
+        return [];
+      }
     } catch (error: any) {
       console.error('❌ Error fetching employee warehouses:', error.message);
       return [];
