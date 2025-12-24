@@ -180,7 +180,7 @@ export default function EmployeesScreen() {
 
     // ✅ FIXED: Check if we have the user ID
     if (!selectedEmployeeUserId) {
-      Alert.alert('Error', 'Employee user account not found. Please try reopening this window.');
+      Alert.alert('Error', 'Could not find employee user account. Please close and reopen the employee details to reload.');
       return;
     }
 
