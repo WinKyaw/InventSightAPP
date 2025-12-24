@@ -1928,6 +1928,13 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: '#F59E0B',
   },
+  // ✅ NEW: Permission type display in assignment list
+  assignmentPermission: {
+    fontSize: 12,
+    color: '#10B981',
+    fontWeight: '500',
+    marginTop: 4,
+  },
   removeButton: {
     padding: 8,
   },
@@ -2006,6 +2013,16 @@ export const styles = StyleSheet.create({
   },
   typeButtonTextActive: {
     color: '#fff',
+  },
+  // ✅ NEW: Permission description styles
+  permissionDescription: {
+    fontSize: 11,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  permissionDescriptionActive: {
+    color: '#E0E7FF',
   },
   modalButtons: {
     flexDirection: 'row',

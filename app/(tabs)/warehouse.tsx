@@ -14,7 +14,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+// ✅ REMOVED: Picker import - No longer needed (permissions modal moved to Team Management)
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/shared/Header';
@@ -159,12 +159,8 @@ export default function WarehouseScreen() {
     isGMPlus: false,
   });
 
-  // Permission management state (GM+ only)
-  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
-  const [warehouseUsers, setWarehouseUsers] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState('');
-  const [selectedPermission, setSelectedPermission] = useState<'READ' | 'READ_WRITE'>('READ');
-  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  // ✅ REMOVED: Permission management state - Moved to Team Management
+  // (showPermissionsModal, warehouseUsers, selectedUser, selectedPermission, loadingPermissions)
 
   // Filter inventory based on search query
   const filteredInventory = useMemo(() => {
@@ -702,85 +698,8 @@ export default function WarehouseScreen() {
     loadWarehousePermissions();
   }, [selectedWarehouse]);
 
-  // Load warehouse users (GM+ only)
-  const loadWarehouseUsers = async () => {
-    if (!selectedWarehouse || !warehousePermissions.isGMPlus) return;
-
-    try {
-      setLoadingPermissions(true);
-      const response = await WarehouseService.listWarehouseUsers(selectedWarehouse.id);
-      
-      if (response.success) {
-        setWarehouseUsers(response.users || []);
-        console.log(`✅ Loaded ${response.users?.length || 0} users`);
-      }
-    } catch (error) {
-      console.error('❌ Error loading warehouse users:', error);
-      setWarehouseUsers([]);
-    } finally {
-      setLoadingPermissions(false);
-    }
-  };
-
-  // Grant permission to user (GM+ only)
-  const handleGrantPermission = async () => {
-    if (!selectedWarehouse || !selectedUser) {
-      Alert.alert('Error', 'Please select a user');
-      return;
-    }
-
-    try {
-      console.log(`🔐 Granting ${selectedPermission} permission to user ${selectedUser}`);
-      
-      await WarehouseService.grantWarehousePermission(
-        selectedWarehouse.id,
-        selectedUser,
-        selectedPermission
-      );
-
-      Alert.alert('Success', 'Permission granted successfully');
-      
-      // Reload users
-      await loadWarehouseUsers();
-      
-      // Reset form
-      setSelectedUser('');
-      setSelectedPermission('READ');
-      
-    } catch (error) {
-      console.error('❌ Error granting permission:', error);
-      Alert.alert('Error', 'Failed to grant permission');
-    }
-  };
-
-  // Revoke permission (GM+ only)
-  const handleRevokePermission = async (userId: string, username: string) => {
-    Alert.alert(
-      'Revoke Permission',
-      `Are you sure you want to revoke access for ${username}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Revoke',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await WarehouseService.revokeWarehousePermission(
-                selectedWarehouse!.id,
-                userId
-              );
-              
-              Alert.alert('Success', 'Permission revoked');
-              await loadWarehouseUsers();
-            } catch (error) {
-              console.error('❌ Error revoking permission:', error);
-              Alert.alert('Error', 'Failed to revoke permission');
-            }
-          },
-        },
-      ]
-    );
-  };
+  // ✅ REMOVED: Permission management functions - Moved to Team Management
+  // (loadWarehouseUsers, handleGrantPermission, handleRevokePermission)
 
   // Handle tab switch with debouncing
   const handleTabSwitch = useCallback((tab: 'inventory' | 'restocks' | 'sales') => {
@@ -1390,19 +1309,7 @@ export default function WarehouseScreen() {
                     </TouchableOpacity>
                   )}
 
-                  {/* Manage Permissions Button - Only for GM+ users */}
-                  {warehousePermissions.isGMPlus && (
-                    <TouchableOpacity
-                      style={styles.permissionsButton}
-                      onPress={() => {
-                        console.log('👥 Opening Permissions modal');
-                        setShowPermissionsModal(true);
-                        loadWarehouseUsers();
-                      }}
-                    >
-                      <Text style={styles.permissionsButtonText}>👥 Permissions</Text>
-                    </TouchableOpacity>
-                  )}
+                  {/* ✅ REMOVED: Manage Permissions Button - Moved to Team Management */}
 
                   {/* Read-Only Message - If user only has READ permission */}
                   {warehousePermissions.canRead && !warehousePermissions.canWrite && (
@@ -1827,117 +1734,7 @@ export default function WarehouseScreen() {
         </View>
       </Modal>
 
-      {/* Permissions Management Modal (GM+ only) */}
-      <Modal
-        visible={showPermissionsModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowPermissionsModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.permissionsModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>👥 Manage Warehouse Permissions</Text>
-              <TouchableOpacity onPress={() => setShowPermissionsModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalForm}>
-              <Text style={styles.modalSubtitle}>
-                Warehouse: {selectedWarehouse?.name}
-              </Text>
-
-              {/* Grant Permission Form */}
-              <View style={styles.grantPermissionSection}>
-                <Text style={styles.sectionTitle}>Grant New Permission</Text>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>User *</Text>
-                  <View style={styles.pickerWrapper}>
-                    <Picker
-                      selectedValue={selectedUser}
-                      onValueChange={(value) => setSelectedUser(value)}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Select User" value="" />
-                      {/* TODO: Load available users from API */}
-                      <Picker.Item label="Alice (Employee)" value="user-1" />
-                      <Picker.Item label="Bob (Manager)" value="user-2" />
-                    </Picker>
-                  </View>
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>Permission Type *</Text>
-                  <View style={styles.pickerWrapper}>
-                    <Picker
-                      selectedValue={selectedPermission}
-                      onValueChange={(value: 'READ' | 'READ_WRITE') => setSelectedPermission(value)}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Read-Only (View Only)" value="READ" />
-                      <Picker.Item label="Read/Write (Add & Withdraw)" value="READ_WRITE" />
-                    </Picker>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.grantButton}
-                  onPress={handleGrantPermission}
-                >
-                  <Text style={styles.grantButtonText}>Grant Access</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Current Permissions List */}
-              <View style={styles.currentPermissionsSection}>
-                <Text style={styles.sectionTitle}>Current Permissions</Text>
-
-                {loadingPermissions ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="#6366F1" />
-                    <Text style={styles.loadingText}>Loading users...</Text>
-                  </View>
-                ) : (
-                  <FlatList
-                    data={warehouseUsers}
-                    keyExtractor={(item) => item.userId}
-                    renderItem={({ item }) => (
-                      <View style={styles.userPermissionItem}>
-                        <View style={styles.userInfo}>
-                          <Text style={styles.userName}>{item.username}</Text>
-                          <Text style={styles.userRole}>
-                            {item.permission === 'READ_WRITE' ? '✏️ Read/Write' : '👁️ Read-Only'}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.revokeButton}
-                          onPress={() => handleRevokePermission(item.userId, item.username)}
-                        >
-                          <Text style={styles.revokeButtonText}>Revoke</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    ListEmptyComponent={() => (
-                      <Text style={styles.emptyText}>No custom permissions set</Text>
-                    )}
-                    scrollEnabled={false}
-                    nestedScrollEnabled={false}
-                  />
-                )}
-              </View>
-
-              <TouchableOpacity
-                style={styles.closePermissionsButton}
-                onPress={() => setShowPermissionsModal(false)}
-              >
-                <Text style={styles.closePermissionsButtonText}>Close</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* ✅ REMOVED: Permissions Management Modal - Moved to Team Management */}
     </SafeAreaView>
   );
 }

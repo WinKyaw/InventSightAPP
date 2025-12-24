@@ -64,6 +64,7 @@ export default function EmployeesScreen() {
     isPermanent: true,
     expiresAt: '',
     notes: '',
+    permissionType: 'READ' as 'READ' | 'READ_WRITE', // ✅ NEW: Permission type for warehouse access
   });
 
   // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
@@ -175,8 +176,14 @@ export default function EmployeesScreen() {
     }
 
     try {
-      console.log('👤 Assigning warehouse to employee:', selectedEmployee.id);
+      console.log('🏢 Assigning warehouse to employee:');
+      console.log('  Employee:', selectedEmployee.firstName, selectedEmployee.lastName);
+      console.log('  Warehouse ID:', newAssignment.warehouseId);
+      console.log('  Assignment Type:', newAssignment.isPermanent ? 'PERMANENT' : 'TEMPORARY');
+      console.log('  Permission Type:', newAssignment.permissionType);
+      console.log('  Notes:', newAssignment.notes);
       
+      // Step 1: Assign warehouse (permanent/temporary)
       await WarehouseService.assignWarehouseToEmployee({
         userId: selectedEmployee.id.toString(),
         warehouseId: newAssignment.warehouseId,
@@ -185,8 +192,25 @@ export default function EmployeesScreen() {
         notes: newAssignment.notes,
       });
 
-      Alert.alert('Success', 'Warehouse assigned successfully');
-      setNewAssignment({ warehouseId: '', isPermanent: true, expiresAt: '', notes: '' });
+      console.log('✅ Warehouse assigned, now granting permission...');
+
+      // Step 2: Grant warehouse permission (READ or READ_WRITE)
+      await WarehouseService.grantWarehousePermission(
+        newAssignment.warehouseId,
+        selectedEmployee.id.toString(),
+        newAssignment.permissionType
+      );
+
+      console.log('✅ Permission granted successfully');
+
+      Alert.alert('Success', 'Warehouse assigned and permissions granted successfully');
+      setNewAssignment({ 
+        warehouseId: '', 
+        isPermanent: true, 
+        expiresAt: '', 
+        notes: '',
+        permissionType: 'READ', // ✅ Reset to default
+      });
       
       // Reload employee warehouses
       await loadEmployeeWarehouses(selectedEmployee.id);
@@ -552,6 +576,12 @@ export default function EmployeesScreen() {
                             Expires: {new Date(assignment.expiresAt).toLocaleDateString()}
                           </Text>
                         )}
+                        {/* ✅ NEW: Show permission type if available */}
+                        {assignment.permissionType && (
+                          <Text style={styles.assignmentPermission}>
+                            {assignment.permissionType === 'READ_WRITE' ? '✏️ Read/Write' : '📖 Read-Only'}
+                          </Text>
+                        )}
                       </View>
                       <TouchableOpacity
                         style={styles.removeButton}
@@ -640,6 +670,65 @@ export default function EmployeesScreen() {
                   </TouchableOpacity>
                 </View>
 
+                {/* ✅ NEW: Permission Type (Read-Only/Read-Write) */}
+                <Text style={styles.inputLabel}>Permission Type *</Text>
+                <View style={styles.assignmentTypeContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeButton,
+                      newAssignment.permissionType === 'READ' && styles.typeButtonActive,
+                    ]}
+                    onPress={() => setNewAssignment({ ...newAssignment, permissionType: 'READ' })}
+                  >
+                    <Ionicons 
+                      name="eye" 
+                      size={20} 
+                      color={newAssignment.permissionType === 'READ' ? '#fff' : '#10B981'} 
+                    />
+                    <View>
+                      <Text style={[
+                        styles.typeButtonText,
+                        newAssignment.permissionType === 'READ' && styles.typeButtonTextActive,
+                      ]}>
+                        📖 Read-Only
+                      </Text>
+                      <Text style={[
+                        styles.permissionDescription,
+                        newAssignment.permissionType === 'READ' && styles.permissionDescriptionActive,
+                      ]}>
+                        View inventory only
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeButton,
+                      newAssignment.permissionType === 'READ_WRITE' && styles.typeButtonActive,
+                    ]}
+                    onPress={() => setNewAssignment({ ...newAssignment, permissionType: 'READ_WRITE' })}
+                  >
+                    <Ionicons 
+                      name="create" 
+                      size={20} 
+                      color={newAssignment.permissionType === 'READ_WRITE' ? '#fff' : '#10B981'} 
+                    />
+                    <View>
+                      <Text style={[
+                        styles.typeButtonText,
+                        newAssignment.permissionType === 'READ_WRITE' && styles.typeButtonTextActive,
+                      ]}>
+                        ✏️ Read/Write
+                      </Text>
+                      <Text style={[
+                        styles.permissionDescription,
+                        newAssignment.permissionType === 'READ_WRITE' && styles.permissionDescriptionActive,
+                      ]}>
+                        Add & withdraw inventory
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
                 {/* Expiration Date (if temporary) */}
                 {!newAssignment.isPermanent && (
                   <>
@@ -674,7 +763,13 @@ export default function EmployeesScreen() {
                     style={styles.cancelButton}
                     onPress={() => {
                       setShowWarehouseModal(false);
-                      setNewAssignment({ warehouseId: '', isPermanent: true, expiresAt: '', notes: '' });
+                      setNewAssignment({ 
+                        warehouseId: '', 
+                        isPermanent: true, 
+                        expiresAt: '', 
+                        notes: '',
+                        permissionType: 'READ', // ✅ Reset permission type
+                      });
                     }}
                   >
                     <Text style={styles.cancelButtonText}>Close</Text>

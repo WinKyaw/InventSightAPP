@@ -94,6 +94,7 @@ export interface WarehouseAssignment {
   notes?: string;
   createdAt?: string;
   createdBy?: string;
+  permissionType?: 'READ' | 'READ_WRITE'; // ✅ NEW: Permission level for the warehouse
 }
 
 /**
