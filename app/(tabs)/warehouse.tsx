@@ -618,19 +618,22 @@ export default function WarehouseScreen() {
       console.log('📦 Loading products for warehouse:', selectedWarehouse.id);
       
       // Get inventory items for this warehouse
-      const inventoryItems = await WarehouseService.getWarehouseInventory(
+      const response = await WarehouseService.getWarehouseInventory(
         selectedWarehouse.id,
         false // Use cache
       );
       
+      // ✅ FIXED: Extract the inventory array from the response
+      const inventoryItems = response.inventory || [];
+      
       // Extract unique products with available quantity
       const productsInWarehouse = inventoryItems
-        .filter(item => (item.availableQuantity || item.quantity) > 0)
+        .filter(item => (item.availableQuantity || item.quantity || 0) > 0)
         .map(item => ({
           id: item.productId,
           name: item.productName,
-          availableQuantity: item.availableQuantity || item.quantity,
-          sku: item.sku,
+          availableQuantity: item.availableQuantity || item.quantity || 0,
+          sku: item.sku || item.productSku,
         }));
       
       console.log(`✅ Found ${productsInWarehouse.length} products in warehouse`);
