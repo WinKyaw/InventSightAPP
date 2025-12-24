@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { apiClient } from './apiClient';
-import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, WarehouseRestock, WarehouseSale, WarehouseAssignment, WarehousePermissionResponse, WarehouseUser } from '../../types/warehouse';
+import { WarehouseSummary, WarehouseInventoryRow, ProductAvailability, WarehouseRestock, WarehouseSale, WarehouseAssignment, WarehousePermissionResponse, WarehouseUser, EmployeeWarehouseResponse } from '../../types/warehouse';
 
 /**
  * Warehouse API Service
@@ -497,7 +497,7 @@ class WarehouseServiceClass {
    * Get employee's warehouse assignments with permissions
    * ✅ FIXED: Return full response including userId
    */
-  async getEmployeeWarehouses(employeeId: string): Promise<any> {
+  async getEmployeeWarehouses(employeeId: string): Promise<EmployeeWarehouseResponse> {
     try {
       console.log(`🏢 Fetching warehouse assignments for employee: ${employeeId}`);
 
