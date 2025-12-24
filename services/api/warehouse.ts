@@ -495,9 +495,9 @@ class WarehouseServiceClass {
 
   /**
    * Get employee's warehouse assignments with permissions
-   * ✅ FIXED: Use correct endpoint that accepts employee ID
+   * ✅ FIXED: Return full response including userId
    */
-  async getEmployeeWarehouses(employeeId: string): Promise<WarehouseAssignment[]> {
+  async getEmployeeWarehouses(employeeId: string): Promise<any> {
     try {
       console.log(`🏢 Fetching warehouse assignments for employee: ${employeeId}`);
 
@@ -515,30 +515,37 @@ class WarehouseServiceClass {
         const assignments = responseData.warehouses || [];
         console.log(`✅ Loaded ${assignments.length} warehouse assignments for ${responseData.employeeName || 'employee'}`);
         
-        // Map to expected format for UI
-        return assignments.map((assignment: any) => ({
-          id: assignment.id,
-          userId: responseData.userId, // ✅ Get actual user ID from response
-          employeeId: responseData.employeeId, // ✅ Include employee ID
-          warehouseId: assignment.warehouseId || assignment.warehouse?.id,
-          warehouseName: assignment.warehouseName || assignment.warehouse?.name,
-          warehouseLocation: assignment.warehouseLocation || assignment.warehouse?.location,
-          permissionType: assignment.permissionType,
-          isPermanent: assignment.isPermanent !== undefined ? assignment.isPermanent : true, // Use API value or default
-          grantedBy: assignment.grantedBy,
-          grantedAt: assignment.grantedAt,
-          createdAt: assignment.grantedAt,
-          createdBy: assignment.grantedBy,
-          isActive: assignment.isActive,
-          warehouse: assignment.warehouse,
-        }));
+        // ✅ FIXED: Return full response with userId, employeeId, and warehouses
+        return {
+          userId: responseData.userId,
+          employeeId: responseData.employeeId,
+          employeeName: responseData.employeeName,
+          username: responseData.username,
+          warehouses: assignments.map((assignment: any) => ({
+            id: assignment.id,
+            userId: responseData.userId, // ✅ Include userId in each assignment
+            employeeId: responseData.employeeId,
+            warehouseId: assignment.warehouseId || assignment.warehouse?.id,
+            warehouseName: assignment.warehouseName || assignment.warehouse?.name,
+            warehouseLocation: assignment.warehouseLocation || assignment.warehouse?.location,
+            permissionType: assignment.permissionType,
+            isPermanent: assignment.isPermanent !== undefined ? assignment.isPermanent : true,
+            grantedBy: assignment.grantedBy,
+            grantedAt: assignment.grantedAt,
+            createdAt: assignment.grantedAt,
+            createdBy: assignment.grantedBy,
+            isActive: assignment.isActive,
+            warehouse: assignment.warehouse,
+          })),
+          count: assignments.length,
+        };
       } else {
         console.warn('⚠️ API returned success: false');
-        return [];
+        return { userId: null, employeeId, warehouses: [], count: 0 };
       }
     } catch (error: any) {
       console.error('❌ Error fetching employee warehouses:', error.message);
-      return [];
+      return { userId: null, employeeId, warehouses: [], count: 0 };
     }
   }
 
