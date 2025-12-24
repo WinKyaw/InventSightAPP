@@ -461,26 +461,31 @@ class WarehouseServiceClass {
 
   /**
    * Assign warehouse to employee
+   * ✅ FIXED: Use correct warehouse-inventory endpoint
    */
   async assignWarehouseToEmployee(request: {
     userId: string;
     warehouseId: string;
-    isPermanent: boolean;
-    expiresAt?: string; // ISO date string for temporary assignments
+    permissionType?: 'READ' | 'READ_WRITE';
+    isPermanent?: boolean;
+    expiresAt?: string;
     notes?: string;
   }): Promise<void> {
     try {
       console.log('👤 Assigning warehouse to employee:', request);
       
-      await apiClient.post('/api/warehouse-assignments', {
-        userId: request.userId,
-        warehouseId: request.warehouseId,
-        isPermanent: request.isPermanent,
-        expiresAt: request.expiresAt,
-        notes: request.notes,
-      });
+      // ✅ FIXED: Use correct endpoint
+      // Changed from: POST /api/warehouse-assignments
+      // To: POST /api/warehouse-inventory/warehouse/{warehouseId}/permissions
+      const response = await apiClient.post(
+        `/api/warehouse-inventory/warehouse/${request.warehouseId}/permissions`,
+        {
+          userId: request.userId,
+          permissionType: request.permissionType || 'READ_WRITE', // Default to READ_WRITE
+        }
+      );
       
-      console.log('✅ Warehouse assigned to employee successfully');
+      console.log('✅ Warehouse assigned to employee successfully:', response);
     } catch (error: any) {
       console.error('❌ Error assigning warehouse:', error.message);
       throw error;

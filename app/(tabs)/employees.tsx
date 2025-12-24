@@ -170,40 +170,23 @@ export default function EmployeesScreen() {
       return;
     }
 
-    if (!newAssignment.isPermanent && !newAssignment.expiresAt) {
-      Alert.alert('Error', 'Please select expiration date for temporary assignment');
-      return;
-    }
-
     try {
       console.log('🏢 Assigning warehouse to employee:');
       console.log('  Employee:', selectedEmployee.firstName, selectedEmployee.lastName);
+      console.log('  Employee ID:', selectedEmployee.id);
       console.log('  Warehouse ID:', newAssignment.warehouseId);
-      console.log('  Assignment Type:', newAssignment.isPermanent ? 'PERMANENT' : 'TEMPORARY');
       console.log('  Permission Type:', newAssignment.permissionType);
-      console.log('  Notes:', newAssignment.notes);
       
-      // Step 1: Assign warehouse (permanent/temporary)
+      // ✅ FIXED: Use corrected assignWarehouseToEmployee method with proper endpoint
       await WarehouseService.assignWarehouseToEmployee({
         userId: selectedEmployee.id.toString(),
         warehouseId: newAssignment.warehouseId,
-        isPermanent: newAssignment.isPermanent,
-        expiresAt: newAssignment.isPermanent ? undefined : newAssignment.expiresAt,
-        notes: newAssignment.notes,
+        permissionType: newAssignment.permissionType,
       });
 
-      console.log('✅ Warehouse assigned, now granting permission...');
+      console.log('✅ Warehouse assigned successfully');
 
-      // Step 2: Grant warehouse permission (READ or READ_WRITE)
-      await WarehouseService.grantWarehousePermission(
-        newAssignment.warehouseId,
-        selectedEmployee.id.toString(),
-        newAssignment.permissionType
-      );
-
-      console.log('✅ Permission granted successfully');
-
-      Alert.alert('Success', 'Warehouse assigned and permissions granted successfully');
+      Alert.alert('Success', 'Warehouse assigned successfully');
       setNewAssignment({ 
         warehouseId: '', 
         isPermanent: true, 
