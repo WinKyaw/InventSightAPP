@@ -517,7 +517,7 @@ class WarehouseServiceClass {
           warehouseName: assignment.warehouseName || assignment.warehouse?.name,
           warehouseLocation: assignment.warehouseLocation || assignment.warehouse?.location,
           permissionType: assignment.permissionType,
-          isPermanent: true, // Default to permanent
+          isPermanent: assignment.isPermanent !== undefined ? assignment.isPermanent : true, // Use API value or default
           grantedBy: assignment.grantedBy,
           grantedAt: assignment.grantedAt,
           createdAt: assignment.grantedAt,
