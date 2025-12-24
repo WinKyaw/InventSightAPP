@@ -489,16 +489,16 @@ class WarehouseServiceClass {
 
   /**
    * Get employee's warehouse assignments with permissions
-   * ✅ FIXED: Use correct endpoint from backend
+   * ✅ FIXED: Use correct endpoint that accepts employee ID
    */
-  async getEmployeeWarehouses(userId: string): Promise<WarehouseAssignment[]> {
+  async getEmployeeWarehouses(employeeId: string): Promise<WarehouseAssignment[]> {
     try {
-      console.log(`🏢 Fetching warehouse assignments for user: ${userId}`);
+      console.log(`🏢 Fetching warehouse assignments for employee: ${employeeId}`);
 
-      // ✅ FIXED: Changed from /warehouse-assignments/user/{id}
-      //           to /warehouse-inventory/user/{id}/warehouses
+      // ✅ FIXED: Changed from /warehouse-inventory/user/{id}/warehouses
+      //           to /warehouse-inventory/employee/{id}/warehouses
       const response = await apiClient.get(
-        `/api/warehouse-inventory/user/${userId}/warehouses`
+        `/api/warehouse-inventory/employee/${employeeId}/warehouses`
       );
 
       console.log('🏢 Warehouse assignments response:', response);
@@ -507,12 +507,13 @@ class WarehouseServiceClass {
       const responseData = (response as any);
       if (responseData.success) {
         const assignments = responseData.warehouses || [];
-        console.log(`✅ Loaded ${assignments.length} warehouse assignments`);
+        console.log(`✅ Loaded ${assignments.length} warehouse assignments for ${responseData.employeeName || 'employee'}`);
         
         // Map to expected format for UI
         return assignments.map((assignment: any) => ({
           id: assignment.id,
-          userId: userId,
+          userId: responseData.userId, // ✅ Get actual user ID from response
+          employeeId: responseData.employeeId, // ✅ Include employee ID
           warehouseId: assignment.warehouseId || assignment.warehouse?.id,
           warehouseName: assignment.warehouseName || assignment.warehouse?.name,
           warehouseLocation: assignment.warehouseLocation || assignment.warehouse?.location,

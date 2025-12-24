@@ -87,6 +87,7 @@ export interface WarehouseSale {
 export interface WarehouseAssignment {
   id: string;
   userId: string;
+  employeeId?: string; // ✅ Employee ID from the new endpoint
   warehouseId: string;
   warehouseName?: string;
   isPermanent: boolean;
