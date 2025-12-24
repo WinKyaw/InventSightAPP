@@ -59,6 +59,7 @@ export default function EmployeesScreen() {
   const [employeeWarehouses, setEmployeeWarehouses] = useState<WarehouseAssignment[]>([]);
   const [availableWarehouses, setAvailableWarehouses] = useState<any[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [selectedEmployeeUserId, setSelectedEmployeeUserId] = useState<string | null>(null); // ✅ Store user ID
   const [newAssignment, setNewAssignment] = useState({
     warehouseId: '',
     isPermanent: true,
@@ -139,12 +140,19 @@ export default function EmployeesScreen() {
     try {
       setLoadingWarehouses(true);
       console.log('👤 Loading warehouse assignments for employee:', userId);
-      const assignments = await WarehouseService.getEmployeeWarehouses(userId.toString());
-      setEmployeeWarehouses(assignments);
-      console.log(`✅ Loaded ${assignments.length} warehouse assignments`);
+      
+      const response = await WarehouseService.getEmployeeWarehouses(userId.toString());
+      
+      // ✅ FIXED: Extract userId and warehouses from response
+      setSelectedEmployeeUserId(response.userId);
+      setEmployeeWarehouses(response.warehouses || []);
+      
+      console.log(`✅ Loaded ${response.warehouses?.length || 0} warehouse assignments`);
+      console.log(`✅ Employee user ID: ${response.userId}`);
     } catch (error: any) {
       console.error('❌ Error loading employee warehouses:', error.message);
       setEmployeeWarehouses([]);
+      setSelectedEmployeeUserId(null);
     } finally {
       setLoadingWarehouses(false);
     }
@@ -170,16 +178,23 @@ export default function EmployeesScreen() {
       return;
     }
 
+    // ✅ FIXED: Check if we have the user ID
+    if (!selectedEmployeeUserId) {
+      Alert.alert('Error', 'Could not find employee user account. Please close and reopen the employee details to reload.');
+      return;
+    }
+
     try {
       console.log('🏢 Assigning warehouse to employee:');
       console.log('  Employee:', selectedEmployee.firstName, selectedEmployee.lastName);
       console.log('  Employee ID:', selectedEmployee.id);
+      console.log('  User ID:', selectedEmployeeUserId); // ✅ Log the correct user ID
       console.log('  Warehouse ID:', newAssignment.warehouseId);
       console.log('  Permission Type:', newAssignment.permissionType);
       
-      // ✅ FIXED: Use corrected assignWarehouseToEmployee method with proper endpoint
+      // ✅ FIXED: Use the stored user ID instead of employee ID
       await WarehouseService.assignWarehouseToEmployee({
-        userId: selectedEmployee.id.toString(),
+        userId: selectedEmployeeUserId, // ✅ CORRECT! Use user ID
         warehouseId: newAssignment.warehouseId,
         permissionType: newAssignment.permissionType,
       });

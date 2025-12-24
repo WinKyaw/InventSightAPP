@@ -99,6 +99,19 @@ export interface WarehouseAssignment {
 }
 
 /**
+ * Employee warehouse response from API
+ * ✅ NEW: Response structure from getEmployeeWarehouses endpoint
+ */
+export interface EmployeeWarehouseResponse {
+  userId: string | null;
+  employeeId: string;
+  employeeName?: string;
+  username?: string;
+  warehouses: WarehouseAssignment[];
+  count: number;
+}
+
+/**
  * Warehouse permissions for a user
  */
 export interface WarehousePermissions {
