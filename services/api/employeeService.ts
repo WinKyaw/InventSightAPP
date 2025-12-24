@@ -19,7 +19,7 @@ export class EmployeeService {
   static async getAllEmployees(): Promise<Employee[]> {
     const cacheKey = 'employees:all';
     
-    // Check cache first
+    // Check cache first 
     const cached = responseCache.get<Employee[]>(cacheKey);
     if (cached !== null) {
       return cached;
