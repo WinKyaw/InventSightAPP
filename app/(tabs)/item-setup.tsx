@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { jwtDecode } from 'jwt-decode';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PermissionService } from '../../services/api/permissionService';
 import { canManageSupply } from '../../utils/permissions';
+import { tokenManager } from '../../utils/tokenManager';
 import { Header } from '../../components/shared/Header';
 import { Colors } from '../../constants/Colors';
 import { PredefinedItemsService } from '../../services/api/predefinedItemsService';
@@ -81,8 +83,6 @@ export default function ItemSetupScreen() {
       if (!companyId) {
         // Try to get tenant_id from the JWT token
         try {
-          const { jwtDecode } = await import('jwt-decode');
-          const { tokenManager } = await import('../../utils/tokenManager');
           const token = await tokenManager.getAccessToken();
           
           if (token) {
