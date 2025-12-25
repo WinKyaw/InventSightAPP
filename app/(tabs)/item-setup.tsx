@@ -1,18 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PermissionService } from '../../services/api/permissionService';
 import { canManageSupply } from '../../utils/permissions';
 import { Header } from '../../components/shared/Header';
 import { Colors } from '../../constants/Colors';
+import { PredefinedItemsService } from '../../services/api/predefinedItemsService';
+import { PredefinedItemRequest } from '../../types/predefinedItems';
+import { AddPredefinedItemOptionsModal } from '../../components/modals/AddPredefinedItemOptionsModal';
+import { AddSinglePredefinedItemModal } from '../../components/modals/AddSinglePredefinedItemModal';
+import { BulkAddPredefinedItemsModal } from '../../components/modals/BulkAddPredefinedItemsModal';
 
 export default function ItemSetupScreen() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const [canAccess, setCanAccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [showAddOptionsModal, setShowAddOptionsModal] = useState(false);
+  const [showSingleItemModal, setShowSingleItemModal] = useState(false);
+  const [showBulkAddModal, setShowBulkAddModal] = useState(false);
 
   useEffect(() => {
     checkAccess();
@@ -49,6 +60,30 @@ export default function ItemSetupScreen() {
     }
   };
 
+  const handleSaveSingleItem = async (item: PredefinedItemRequest) => {
+    try {
+      await PredefinedItemsService.createItem(item);
+      Alert.alert('Success', 'Item added successfully');
+      setShowSingleItemModal(false);
+      // TODO: Refresh items list
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item');
+      console.error('Error adding item:', error);
+    }
+  };
+
+  const handleSaveBulkItems = async (items: PredefinedItemRequest[]) => {
+    try {
+      const result = await PredefinedItemsService.bulkCreateItems(items);
+      Alert.alert('Success', `Added ${result.created} items successfully`);
+      setShowBulkAddModal(false);
+      // TODO: Refresh items list
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add items');
+      console.error('Error adding bulk items:', error);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -73,6 +108,15 @@ export default function ItemSetupScreen() {
         title="New Item Setup"
         subtitle="Manage Predefined Items"
         backgroundColor="#F59E0B"
+        rightComponent={
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddOptionsModal(true)}
+          >
+            <Ionicons name="add-circle" size={28} color="white" />
+            <Text style={styles.addButtonText}>Add Item</Text>
+          </TouchableOpacity>
+        }
       />
       <View style={styles.centerContainer}>
         <Text style={styles.placeholderText}>
@@ -86,6 +130,34 @@ export default function ItemSetupScreen() {
           Full implementation coming soon.
         </Text>
       </View>
+
+      {/* Add Options Modal */}
+      <AddPredefinedItemOptionsModal
+        visible={showAddOptionsModal}
+        onClose={() => setShowAddOptionsModal(false)}
+        onSelectSingle={() => {
+          setShowAddOptionsModal(false);
+          setShowSingleItemModal(true);
+        }}
+        onSelectBulk={() => {
+          setShowAddOptionsModal(false);
+          setShowBulkAddModal(true);
+        }}
+      />
+
+      {/* Single Item Modal */}
+      <AddSinglePredefinedItemModal
+        visible={showSingleItemModal}
+        onClose={() => setShowSingleItemModal(false)}
+        onSave={(item) => handleSaveSingleItem(item)}
+      />
+
+      {/* Bulk Add Modal */}
+      <BulkAddPredefinedItemsModal
+        visible={showBulkAddModal}
+        onClose={() => setShowBulkAddModal(false)}
+        onSave={(items) => handleSaveBulkItems(items)}
+      />
     </SafeAreaView>
   );
 }
@@ -119,5 +191,15 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
