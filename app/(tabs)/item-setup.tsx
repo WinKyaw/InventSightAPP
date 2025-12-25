@@ -100,8 +100,6 @@ export default function ItemSetupScreen() {
         return;
       }
       
-      console.log('Using company ID for bulk items');
-      
       const result = await PredefinedItemsService.bulkCreateItems(
         items,
         companyId
