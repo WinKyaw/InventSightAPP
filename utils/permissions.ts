@@ -41,3 +41,7 @@ export function canManageEmployees(userRole?: string): boolean {
 export function canManageWarehouses(userRole?: string): boolean {
   return hasMinimumRole(userRole, UserRole.GENERAL_MANAGER);
 }
+
+export function canManageSupply(userRole?: string): boolean {
+  return hasMinimumRole(userRole, UserRole.GENERAL_MANAGER);
+}
