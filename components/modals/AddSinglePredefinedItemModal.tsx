@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { Colors } from '../../constants/Colors';
@@ -64,164 +65,178 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
   return (
     <Modal
       visible={visible}
-      transparent
       animationType="slide"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Add Single Item</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={Colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-            {/* Item Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Item Name <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g., Apples, Milk, Coffee"
-                placeholderTextColor={Colors.textSecondary}
-              />
-            </View>
-
-            {/* Category */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Category <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={category}
-                  onValueChange={setCategory}
-                  style={styles.picker}
-                >
-                  {CATEGORIES.map((cat) => (
-                    <Picker.Item key={cat} label={cat} value={cat} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            {/* Unit Type */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Unit Type <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={unitType}
-                  onValueChange={setUnitType}
-                  style={styles.picker}
-                >
-                  {UNIT_TYPES.map((unit) => (
-                    <Picker.Item key={unit} label={unit} value={unit} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            {/* SKU (Optional) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>SKU (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                value={sku}
-                onChangeText={setSku}
-                placeholder="e.g., APL-001"
-                placeholderTextColor={Colors.textSecondary}
-              />
-            </View>
-
-            {/* Default Price (Optional) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Default Price (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                value={defaultPrice}
-                onChangeText={setDefaultPrice}
-                placeholder="e.g., 2.99"
-                keyboardType="decimal-pad"
-                placeholderTextColor={Colors.textSecondary}
-              />
-            </View>
-
-            {/* Description (Optional) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Description (Optional)</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Add notes or description"
-                placeholderTextColor={Colors.textSecondary}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-          </ScrollView>
-
-          {/* Action Buttons */}
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Save Item</Text>
-            </TouchableOpacity>
-          </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Add Single Item</Text>
+          <View style={{ width: 24 }} /> {/* Spacer */}
         </View>
-      </View>
+
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}
+        >
+          {/* Item Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Item Name <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g., Apples, Milk, Coffee"
+              placeholderTextColor={Colors.textSecondary}
+            />
+          </View>
+
+          {/* Category */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Category <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={category}
+                onValueChange={setCategory}
+                style={styles.picker}
+              >
+                {CATEGORIES.map((cat) => (
+                  <Picker.Item key={cat} label={cat} value={cat} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          {/* Unit Type */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Unit Type <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={unitType}
+                onValueChange={setUnitType}
+                style={styles.picker}
+              >
+                {UNIT_TYPES.map((unit) => (
+                  <Picker.Item key={unit} label={unit} value={unit} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          {/* SKU (Optional) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>SKU (Optional)</Text>
+            <TextInput
+              style={styles.input}
+              value={sku}
+              onChangeText={setSku}
+              placeholder="e.g., APL-001"
+              placeholderTextColor={Colors.textSecondary}
+            />
+          </View>
+
+          {/* Default Price (Optional) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Default Price (Optional)</Text>
+            <TextInput
+              style={styles.input}
+              value={defaultPrice}
+              onChangeText={setDefaultPrice}
+              placeholder="e.g., 2.99"
+              keyboardType="decimal-pad"
+              placeholderTextColor={Colors.textSecondary}
+            />
+          </View>
+
+          {/* Description (Optional) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Description (Optional)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Add notes or description"
+              placeholderTextColor={Colors.textSecondary}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+        </ScrollView>
+
+        {/* Fixed bottom buttons */}
+        <View style={styles.bottomActions}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveButtonText}>Save Item</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  // Full-screen container
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: Colors.background,
   },
-  modalContainer: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '90%',
-    padding: 20,
-  },
+  
+  // Header with back button
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
+  
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text,
   },
-  form: {
-    marginBottom: 20,
+  
+  // Scrollable content area
+  content: {
+    flex: 1,
   },
+  
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 20,
+  },
+  
   inputGroup: {
     marginBottom: 16,
   },
+  
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
     marginBottom: 8,
   },
+  
   required: {
     color: Colors.error,
   },
+  
   input: {
     borderWidth: 1,
     borderColor: Colors.border,
@@ -229,25 +244,35 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: Colors.text,
-    backgroundColor: Colors.background,
+    backgroundColor: 'white',
   },
+  
   textArea: {
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  
   pickerContainer: {
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 8,
-    backgroundColor: Colors.background,
+    backgroundColor: 'white',
   },
+  
   picker: {
     height: 50,
   },
-  actions: {
+  
+  // Fixed bottom action buttons
+  bottomActions: {
     flexDirection: 'row',
     gap: 12,
+    padding: 16,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
+  
   cancelButton: {
     flex: 1,
     padding: 16,
@@ -255,12 +280,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
+    backgroundColor: 'white',
   },
+  
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
   },
+  
   saveButton: {
     flex: 1,
     padding: 16,
@@ -268,6 +296,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
   },
+  
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',

@@ -21,6 +21,7 @@ export interface AuthUser {
   role?: string;
   profilePicture?: string;
   verified?: boolean;
+  companyId?: string;  // Company ID for multi-tenant operations
   activeStoreId?: string;  // Active store ID for receipt creation
   activeStoreName?: string;  // Active store name for display
 }

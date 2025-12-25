@@ -74,8 +74,17 @@ export default function ItemSetupScreen() {
 
   const handleSaveBulkItems = async (items: PredefinedItemRequest[]) => {
     try {
-      const result = await PredefinedItemsService.bulkCreateItems(items);
-      Alert.alert('Success', `Added ${result.created} items successfully`);
+      if (!user?.companyId) {
+        Alert.alert('Error', 'Company ID not found');
+        return;
+      }
+      
+      const result = await PredefinedItemsService.bulkCreateItems(
+        items,
+        user.companyId
+      );
+      
+      Alert.alert('Success', `Added ${result.created || items.length} items successfully`);
       setShowBulkAddModal(false);
       // TODO: Refresh items list
     } catch (error) {
