@@ -259,7 +259,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: 8,
     backgroundColor: 'white',
-    overflow: 'hidden',
   },
   
   // For Android
@@ -278,7 +277,6 @@ const styles = StyleSheet.create({
   pickerItem: {
     fontSize: 16,
     color: Colors.text,
-    height: 150,
   },
   
   // Fixed bottom action buttons

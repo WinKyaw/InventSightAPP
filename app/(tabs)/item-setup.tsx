@@ -96,11 +96,11 @@ export default function ItemSetupScreen() {
       
       if (!companyId) {
         Alert.alert('Error', 'Company ID not found. Please log in again.');
-        console.error('User object:', user);
+        console.error('Company ID not found');
         return;
       }
       
-      console.log('🏢 Using company ID:', companyId);
+      console.log('Using company ID for bulk items');
       
       const result = await PredefinedItemsService.bulkCreateItems(
         items,
