@@ -317,7 +317,8 @@ export default function PredefinedItemsScreen() {
       const csvContent = await PredefinedItemsService.exportCSV();
 
       const filename = `predefined-items-${new Date().toISOString().split('T')[0]}.csv`;
-      const fileUri = FileSystem.documentDirectory + filename;
+      // @ts-ignore - documentDirectory exists in expo-file-system
+      const fileUri = (FileSystem.documentDirectory || '') + filename;
 
       await FileSystem.writeAsStringAsync(fileUri, csvContent);
 
@@ -341,7 +342,8 @@ export default function PredefinedItemsScreen() {
       'Milk,MLK-001,Dairy,gal,4.99,Whole milk';
 
     const filename = 'predefined-items-template.csv';
-    const fileUri = FileSystem.documentDirectory + filename;
+    // @ts-ignore - documentDirectory exists in expo-file-system
+    const fileUri = (FileSystem.documentDirectory || '') + filename;
 
     try {
       await FileSystem.writeAsStringAsync(fileUri, template);
@@ -380,7 +382,6 @@ export default function PredefinedItemsScreen() {
       <StatusBar barStyle="dark-content" />
       <Header
         title="Items Library"
-        showBackButton={false}
         rightComponent={
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -390,13 +391,13 @@ export default function PredefinedItemsScreen() {
                 setShowAddModal(true);
               }}
             >
-              <Ionicons name="add-circle-outline" size={24} color={Colors.primary} />
+              <Ionicons name="add-circle-outline" size={24} color="white" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.menuButton}
               onPress={() => setShowActionMenu(true)}
             >
-              <Ionicons name="ellipsis-vertical" size={24} color={Colors.primary} />
+              <Ionicons name="ellipsis-vertical" size={24} color="white" />
             </TouchableOpacity>
           </View>
         }
@@ -453,7 +454,7 @@ export default function PredefinedItemsScreen() {
                   <Ionicons name="pencil" size={20} color={Colors.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDeleteItem(item)} style={styles.deleteButton}>
-                  <Ionicons name="trash" size={20} color={Colors.error} />
+                  <Ionicons name="trash" size={20} color={Colors.danger} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -983,7 +984,7 @@ const ImportResultModal: React.FC<{
             </View>
 
             <View style={styles.resultRow}>
-              <Ionicons name="close-circle" size={24} color={Colors.error} />
+              <Ionicons name="close-circle" size={24} color={Colors.danger} />
               <Text style={styles.resultText}>Errors: {result.errors.length} items</Text>
             </View>
 
@@ -1320,7 +1321,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: Colors.error,
+    color: Colors.danger,
     marginBottom: 8,
   },
 });
