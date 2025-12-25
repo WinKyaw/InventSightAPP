@@ -103,13 +103,14 @@ export class PredefinedItemsService {
   /**
    * Bulk create multiple items at once
    * @param items Array of items to create
+   * @param companyId Company ID (required)
    * @returns Promise<BulkCreateResponse>
    */
-  static async bulkCreateItems(items: PredefinedItemRequest[]): Promise<BulkCreateResponse> {
+  static async bulkCreateItems(items: PredefinedItemRequest[], companyId: string): Promise<BulkCreateResponse> {
     try {
       const response = await apiClient.post<BulkCreateResponse>(
-        `${this.BASE_URL}/bulk`,
-        { items }
+        `${this.BASE_URL}/bulk-create?companyId=${companyId}`,
+        items
       );
       return response;
     } catch (error) {
