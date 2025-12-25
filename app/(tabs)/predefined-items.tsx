@@ -317,8 +317,12 @@ export default function PredefinedItemsScreen() {
       const csvContent = await PredefinedItemsService.exportCSV();
 
       const filename = `predefined-items-${new Date().toISOString().split('T')[0]}.csv`;
-      // @ts-ignore - documentDirectory exists in expo-file-system
-      const fileUri = (FileSystem.documentDirectory || '') + filename;
+      const baseDir = (FileSystem as any).documentDirectory;
+      if (!baseDir) {
+        Alert.alert('Error', 'File system not available');
+        return;
+      }
+      const fileUri = baseDir + filename;
 
       await FileSystem.writeAsStringAsync(fileUri, csvContent);
 
@@ -342,8 +346,12 @@ export default function PredefinedItemsScreen() {
       'Milk,MLK-001,Dairy,gal,4.99,Whole milk';
 
     const filename = 'predefined-items-template.csv';
-    // @ts-ignore - documentDirectory exists in expo-file-system
-    const fileUri = (FileSystem.documentDirectory || '') + filename;
+    const baseDir = (FileSystem as any).documentDirectory;
+    if (!baseDir) {
+      Alert.alert('Error', 'File system not available');
+      return;
+    }
+    const fileUri = baseDir + filename;
 
     try {
       await FileSystem.writeAsStringAsync(fileUri, template);
@@ -837,7 +845,7 @@ const BulkAddModal: React.FC<{
             style={[styles.input, styles.bulkTextArea]}
             value={itemsText}
             onChangeText={setItemsText}
-            placeholder="Apples, Fruits, lb, 2.99&#10;Bananas, Fruits, lb, 1.49&#10;Milk, Dairy, gal, 4.99"
+            placeholder={`Apples, Fruits, lb, 2.99\nBananas, Fruits, lb, 1.49\nMilk, Dairy, gal, 4.99`}
             multiline
             numberOfLines={10}
           />
@@ -1191,7 +1199,6 @@ const styles = StyleSheet.create({
   bulkTextArea: {
     height: 200,
     textAlignVertical: 'top',
-    fontFamily: 'monospace',
   },
   selectChip: {
     paddingHorizontal: 16,
