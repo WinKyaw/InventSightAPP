@@ -16,6 +16,13 @@ import { AddPredefinedItemOptionsModal } from '../../components/modals/AddPredef
 import { AddSinglePredefinedItemModal } from '../../components/modals/AddSinglePredefinedItemModal';
 import { BulkAddPredefinedItemsModal } from '../../components/modals/BulkAddPredefinedItemsModal';
 
+interface JWTPayload {
+  tenant_id?: string;
+  sub?: string;
+  userId?: string;
+  [key: string]: any;
+}
+
 export default function ItemSetupScreen() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -86,7 +93,7 @@ export default function ItemSetupScreen() {
           const token = await tokenManager.getAccessToken();
           
           if (token) {
-            const decoded: any = jwtDecode(token);
+            const decoded = jwtDecode<JWTPayload>(token);
             companyId = decoded.tenant_id;
           }
         } catch (tokenError) {
