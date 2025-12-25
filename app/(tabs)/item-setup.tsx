@@ -23,7 +23,7 @@ export default function ItemSetupScreen() {
       // Check if user is GM+ using the utility function
       const isGMPlus = canManageSupply(user?.role);
 
-      // Check supply management permission from API
+      // Check MANAGE_SUPPLY permission from API
       const hasSupplyPermission = await PermissionService.canManageSupply();
 
       const hasAccess = isGMPlus || hasSupplyPermission;
@@ -32,7 +32,7 @@ export default function ItemSetupScreen() {
       if (!hasAccess) {
         Alert.alert(
           'Access Denied',
-          'You do not have permission to access New Item Setup. Requires GM+ or Supply Management Specialist role.',
+          'You do not have permission to access New Item Setup. Access is granted through either GM+ role or special supply management permissions.',
           [
             {
               text: 'OK',
