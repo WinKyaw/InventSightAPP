@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PermissionService } from '../../services/api/permissionService';
+import { canManageSupply } from '../../utils/permissions';
 import { Header } from '../../components/shared/Header';
 import { Colors } from '../../constants/Colors';
 
@@ -19,12 +20,10 @@ export default function ItemSetupScreen() {
 
   const checkAccess = async () => {
     try {
-      // Check if user is GM+
-      const isGMPlus = ['OWNER', 'GENERAL_MANAGER', 'CEO', 'FOUNDER', 'ADMIN'].includes(
-        user?.role?.toUpperCase() || ''
-      );
+      // Check if user is GM+ using the utility function
+      const isGMPlus = canManageSupply(user?.role);
 
-      // Check supply management permission
+      // Check supply management permission from API
       const hasSupplyPermission = await PermissionService.canManageSupply();
 
       const hasAccess = isGMPlus || hasSupplyPermission;
@@ -84,8 +83,7 @@ export default function ItemSetupScreen() {
           import/export CSV, and perform bulk operations.
         </Text>
         <Text style={styles.infoText}>
-          Implementation coming in PR: {'\n'}
-          github.com/copilot/tasks/pull/PR_kwDOPlDLhM66i2kb
+          Full implementation coming soon.
         </Text>
       </View>
     </SafeAreaView>
