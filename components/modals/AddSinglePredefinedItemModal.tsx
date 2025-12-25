@@ -28,12 +28,23 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
       return;
     }
 
+    // Validate price if provided
+    let price: number | undefined = undefined;
+    if (defaultPrice) {
+      const parsedPrice = parseFloat(defaultPrice);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        Alert.alert('Error', 'Please enter a valid price (must be a positive number)');
+        return;
+      }
+      price = parsedPrice;
+    }
+
     const item: PredefinedItemRequest = {
       name: name.trim(),
       category,
       unitType,
       sku: sku.trim() || undefined,
-      defaultPrice: defaultPrice ? parseFloat(defaultPrice) : undefined,
+      defaultPrice: price,
       description: description.trim() || undefined,
     };
 

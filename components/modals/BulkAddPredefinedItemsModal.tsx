@@ -27,21 +27,39 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
 
     const lines = bulkText.split('\n').filter(line => line.trim());
     const items: PredefinedItemRequest[] = [];
+    const errors: string[] = [];
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const parts = line.split(',').map(p => p.trim());
       
       if (parts.length === 0 || !parts[0]) continue;
+
+      // Validate price if provided
+      let price: number | undefined = undefined;
+      if (parts[4]) {
+        const parsedPrice = parseFloat(parts[4]);
+        if (isNaN(parsedPrice)) {
+          errors.push(`Line ${i + 1}: Invalid price "${parts[4]}"`);
+          continue;
+        }
+        price = parsedPrice;
+      }
 
       const item: PredefinedItemRequest = {
         name: parts[0],
         category: parts[1] || defaultCategory,
         unitType: parts[2] || defaultUnitType,
         sku: parts[3] || undefined,
-        defaultPrice: parts[4] ? parseFloat(parts[4]) : undefined,
+        defaultPrice: price,
       };
 
       items.push(item);
+    }
+
+    if (errors.length > 0) {
+      Alert.alert('Validation Errors', errors.join('\n'));
+      return;
     }
 
     if (items.length === 0) {
@@ -86,7 +104,7 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
               style={styles.textArea}
               value={bulkText}
               onChangeText={setBulkText}
-              placeholder="Apples, Food, lb, APL-001, 2.99&#10;Bananas, Food, lb, BAN-001, 1.49&#10;Milk, Beverages, gal, MLK-001, 4.99"
+              placeholder={'Apples, Food, lb, APL-001, 2.99\nBananas, Food, lb, BAN-001, 1.49\nMilk, Beverages, gal, MLK-001, 4.99'}
               placeholderTextColor={Colors.textSecondary}
               multiline
               numberOfLines={8}
