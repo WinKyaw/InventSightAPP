@@ -71,10 +71,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       color: '#6366F1'
     },
     {
-      key: 'predefined-items',
-      title: 'Items Library',
+      key: 'item-setup',
+      title: 'New Item Setup',
       icon: 'library',
-      screen: '/(tabs)/predefined-items',
+      screen: '/(tabs)/item-setup',
       color: '#F59E0B'
     },
     {

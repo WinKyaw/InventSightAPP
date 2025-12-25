@@ -151,6 +151,7 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={true}
                 bounces={true}
+                nestedScrollEnabled={true}
               >
                 {/* Profile Section */}
                 <View style={styles.profileSection}>
@@ -332,7 +333,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 100,
+    flexGrow: 1,
   },
   
   profileSection: {
