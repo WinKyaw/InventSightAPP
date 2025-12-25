@@ -155,4 +155,12 @@ export class PermissionService {
   static async canDeleteItem(): Promise<boolean> {
     return this.checkPermission('DELETE_ITEM');
   }
+
+  /**
+   * Check if user can manage supply/predefined items
+   * @returns Promise<boolean>
+   */
+  static async canManageSupply(): Promise<boolean> {
+    return this.checkPermission('MANAGE_SUPPLY');
+  }
 }

@@ -71,6 +71,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       color: '#6366F1'
     },
     {
+      key: 'predefined-items',
+      title: 'Items Library',
+      icon: 'library',
+      screen: '/(tabs)/predefined-items',
+      color: '#F59E0B'
+    },
+    {
       key: 'setting',
       title: 'Settings',
       icon: 'settings',
