@@ -26,11 +26,11 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
       return;
     }
 
-    const lines = bulkText.split('\n').filter(line => line.trim());
+    const lines = bulkText.split('\n').filter((line: string) => line.trim());
     
     // Backend expects array of objects with string values
-    const items = lines.map(line => {
-      const parts = line.split(',').map(p => p.trim());
+    const items = lines.map((line: string) => {
+      const parts = line.split(',').map((p: string) => p.trim());
       
       const item: any = {
         name: parts[0] || '',
@@ -44,7 +44,7 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
       if (parts[5]) item.description = parts[5];
       
       return item;
-    }).filter(item => item.name); // Remove empty items
+    }).filter((item: any) => item.name); // Remove empty items
 
     if (items.length === 0) {
       Alert.alert('Error', 'No valid items found');
