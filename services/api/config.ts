@@ -108,6 +108,11 @@ export const API_ENDPOINTS = {
   USER: {
     NAVIGATION_PREFERENCES: '/api/user/navigation-preferences',
   },
+  // Supply Management endpoints
+  SUPPLY_MANAGEMENT: {
+    CHECK: '/api/supply-management/check',
+    PERMISSIONS: '/api/supply-management/permissions',
+  },
 };
 
 // Session Information
