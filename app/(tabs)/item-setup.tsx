@@ -66,29 +66,53 @@ export default function ItemSetupScreen() {
       Alert.alert('Success', 'Item added successfully');
       setShowSingleItemModal(false);
       // TODO: Refresh items list
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add item');
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add item';
+      Alert.alert('Error', errorMessage);
       console.error('Error adding item:', error);
     }
   };
 
   const handleSaveBulkItems = async (items: PredefinedItemRequest[]) => {
     try {
-      if (!user?.companyId) {
-        Alert.alert('Error', 'Company ID not found');
+      // Get company ID from user's companyId or extract from token
+      let companyId = user?.companyId;
+      
+      if (!companyId) {
+        // Try to get tenant_id from the JWT token
+        try {
+          const { jwtDecode } = await import('jwt-decode');
+          const { tokenManager } = await import('../../utils/tokenManager');
+          const token = await tokenManager.getAccessToken();
+          
+          if (token) {
+            const decoded: any = jwtDecode(token);
+            companyId = decoded.tenant_id;
+          }
+        } catch (tokenError) {
+          console.error('Error decoding token:', tokenError);
+        }
+      }
+      
+      if (!companyId) {
+        Alert.alert('Error', 'Company ID not found. Please log in again.');
+        console.error('User object:', user);
         return;
       }
       
+      console.log('🏢 Using company ID:', companyId);
+      
       const result = await PredefinedItemsService.bulkCreateItems(
         items,
-        user.companyId
+        companyId
       );
       
       Alert.alert('Success', `Added ${result.created || items.length} items successfully`);
       setShowBulkAddModal(false);
       // TODO: Refresh items list
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add items');
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add items';
+      Alert.alert('Error', errorMessage);
       console.error('Error adding bulk items:', error);
     }
   };

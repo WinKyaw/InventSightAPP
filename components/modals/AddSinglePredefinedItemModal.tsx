@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -107,7 +107,8 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
               <Picker
                 selectedValue={category}
                 onValueChange={setCategory}
-                style={styles.picker}
+                style={Platform.OS === 'ios' ? styles.pickerIOS : styles.pickerAndroid}
+                itemStyle={styles.pickerItem}
               >
                 {CATEGORIES.map((cat) => (
                   <Picker.Item key={cat} label={cat} value={cat} />
@@ -125,7 +126,8 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
               <Picker
                 selectedValue={unitType}
                 onValueChange={setUnitType}
-                style={styles.picker}
+                style={Platform.OS === 'ios' ? styles.pickerIOS : styles.pickerAndroid}
+                itemStyle={styles.pickerItem}
               >
                 {UNIT_TYPES.map((unit) => (
                   <Picker.Item key={unit} label={unit} value={unit} />
@@ -257,10 +259,26 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: 8,
     backgroundColor: 'white',
+    overflow: 'hidden',
   },
   
-  picker: {
+  // For Android
+  pickerAndroid: {
     height: 50,
+    width: '100%',
+    color: Colors.text,
+  },
+  
+  // For iOS
+  pickerIOS: {
+    height: 150,
+    width: '100%',
+  },
+  
+  pickerItem: {
+    fontSize: 16,
+    color: Colors.text,
+    height: 150,
   },
   
   // Fixed bottom action buttons

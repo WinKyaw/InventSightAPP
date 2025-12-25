@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -105,30 +105,36 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
             Used for items without category/unit specified
           </Text>
 
-          <Text style={styles.label}>Default Category</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={defaultCategory}
-              onValueChange={setDefaultCategory}
-              style={styles.picker}
-            >
-              {CATEGORIES.map((cat) => (
-                <Picker.Item key={cat} label={cat} value={cat} />
-              ))}
-            </Picker>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Default Category</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={defaultCategory}
+                onValueChange={setDefaultCategory}
+                style={Platform.OS === 'ios' ? styles.pickerIOS : styles.pickerAndroid}
+                itemStyle={styles.pickerItem}
+              >
+                {CATEGORIES.map((cat) => (
+                  <Picker.Item key={cat} label={cat} value={cat} />
+                ))}
+              </Picker>
+            </View>
           </View>
 
-          <Text style={styles.label}>Default Unit Type</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={defaultUnitType}
-              onValueChange={setDefaultUnitType}
-              style={styles.picker}
-            >
-              {UNIT_TYPES.map((unit) => (
-                <Picker.Item key={unit} label={unit} value={unit} />
-              ))}
-            </Picker>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Default Unit Type</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={defaultUnitType}
+                onValueChange={setDefaultUnitType}
+                style={Platform.OS === 'ios' ? styles.pickerIOS : styles.pickerAndroid}
+                itemStyle={styles.pickerItem}
+              >
+                {UNIT_TYPES.map((unit) => (
+                  <Picker.Item key={unit} label={unit} value={unit} />
+                ))}
+              </Picker>
+            </View>
           </View>
         </ScrollView>
 
@@ -234,16 +240,36 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   
+  inputGroup: {
+    marginBottom: 16,
+  },
+  
   pickerContainer: {
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 8,
     backgroundColor: 'white',
-    marginTop: 8,
+    overflow: 'hidden',
+    marginTop: 4,
   },
   
-  picker: {
+  // For Android
+  pickerAndroid: {
     height: 50,
+    width: '100%',
+    color: Colors.text,
+  },
+  
+  // For iOS
+  pickerIOS: {
+    height: 150,
+    width: '100%',
+  },
+  
+  pickerItem: {
+    fontSize: 16,
+    color: Colors.text,
+    height: 150,
   },
   
   // Fixed bottom action buttons
