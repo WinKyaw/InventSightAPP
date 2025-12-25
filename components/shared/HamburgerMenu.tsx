@@ -8,6 +8,7 @@ import { useNavigation } from '../../context/NavigationContext';
 import { NavigationSettingsModal } from '../modals/NavigationSettingsModal';
 import { Colors } from '../../constants/Colors';
 import { navigationService } from '../../services/api/navigationService';
+import { canManageSupply } from '../../utils/permissions';
 
 interface HamburgerMenuProps {
   visible: boolean;
@@ -234,8 +235,8 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
                   
                   {/* ✅ New Item Setup - Only in Hamburger Menu (Permission-gated) */}
                   {(() => {
-                    // Check if user has permission (GM+ or Supply Management Specialist)
-                    const isGMPlus = user?.role && ['OWNER', 'GENERAL_MANAGER', 'CEO', 'FOUNDER', 'ADMIN'].includes(user.role.toUpperCase());
+                    // Check if user has GM+ permission
+                    const isGMPlus = canManageSupply(user?.role);
                     
                     // Only show to authorized users
                     if (!isGMPlus) {
