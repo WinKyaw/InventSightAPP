@@ -8,6 +8,7 @@ import { useNavigation } from '../../context/NavigationContext';
 import { NavigationSettingsModal } from '../modals/NavigationSettingsModal';
 import { Colors } from '../../constants/Colors';
 import { navigationService } from '../../services/api/navigationService';
+import { canManageSupply } from '../../utils/permissions';
 
 interface HamburgerMenuProps {
   visible: boolean;
@@ -231,6 +232,28 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
                       <Ionicons name="chevron-forward" size={16} color={Colors.lightGray} />
                     </TouchableOpacity>
                   ))}
+                  
+                  {/* ✅ New Item Setup - Only in Hamburger Menu (Permission-gated) */}
+                  {(() => {
+                    // Check if user has GM+ permission
+                    const isGMPlus = canManageSupply(user?.role);
+                    
+                    // Only show to authorized users
+                    if (!isGMPlus) {
+                      return null;
+                    }
+                    
+                    return (
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => navigateToScreen('/(tabs)/item-setup')}
+                      >
+                        <Ionicons name="library-outline" size={20} color="#F59E0B" />
+                        <Text style={styles.menuItemText}>New Item Setup</Text>
+                        <Ionicons name="chevron-forward" size={16} color={Colors.lightGray} />
+                      </TouchableOpacity>
+                    );
+                  })()}
                 </View>
 
                 <View style={styles.divider} />

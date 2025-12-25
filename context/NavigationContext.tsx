@@ -27,6 +27,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   
   // ✅ All possible navigation options (no role filtering - trust backend)
+  // ❌ "item-setup" is NOT included here - it's only accessible via hamburger menu
   const allOptions: NavigationOption[] = [
     {
       key: 'items',
@@ -69,13 +70,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       icon: 'cube',
       screen: '/(tabs)/warehouse',
       color: '#6366F1'
-    },
-    {
-      key: 'item-setup',
-      title: 'New Item Setup',
-      icon: 'library',
-      screen: '/(tabs)/item-setup',
-      color: '#F59E0B'
     },
     {
       key: 'setting',
