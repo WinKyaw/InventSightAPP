@@ -15,7 +15,7 @@ export function AddPredefinedItemOptionsModal({ visible, onClose, onSelectSingle
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
@@ -66,21 +66,23 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
+  
   modalContainer: {
-    width: '90%',
-    maxWidth: 400,
+    height: '98%',
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
   },
+  
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    paddingTop: 8,
   },
   title: {
     fontSize: 20,

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { jwtDecode } from 'jwt-decode';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PermissionService } from '../../services/api/permissionService';
 import { canManageSupply } from '../../utils/permissions';
+import { tokenManager } from '../../utils/tokenManager';
 import { Header } from '../../components/shared/Header';
 import { Colors } from '../../constants/Colors';
 import { PredefinedItemsService } from '../../services/api/predefinedItemsService';
@@ -13,6 +15,13 @@ import { PredefinedItemRequest } from '../../types/predefinedItems';
 import { AddPredefinedItemOptionsModal } from '../../components/modals/AddPredefinedItemOptionsModal';
 import { AddSinglePredefinedItemModal } from '../../components/modals/AddSinglePredefinedItemModal';
 import { BulkAddPredefinedItemsModal } from '../../components/modals/BulkAddPredefinedItemsModal';
+
+interface JWTPayload {
+  tenant_id?: string;
+  sub?: string;
+  userId?: string;
+  [key: string]: any;
+}
 
 export default function ItemSetupScreen() {
   const { user, isAuthenticated } = useAuth();
@@ -66,29 +75,49 @@ export default function ItemSetupScreen() {
       Alert.alert('Success', 'Item added successfully');
       setShowSingleItemModal(false);
       // TODO: Refresh items list
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add item');
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add item';
+      Alert.alert('Error', errorMessage);
       console.error('Error adding item:', error);
     }
   };
 
   const handleSaveBulkItems = async (items: PredefinedItemRequest[]) => {
     try {
-      if (!user?.companyId) {
-        Alert.alert('Error', 'Company ID not found');
+      // Get company ID from user's companyId or extract from token
+      let companyId = user?.companyId;
+      
+      if (!companyId) {
+        // Try to get tenant_id from the JWT token
+        try {
+          const token = await tokenManager.getAccessToken();
+          
+          if (token) {
+            const decoded = jwtDecode<JWTPayload>(token);
+            companyId = decoded.tenant_id;
+          }
+        } catch (tokenError) {
+          console.error('Error decoding token:', tokenError);
+        }
+      }
+      
+      if (!companyId) {
+        Alert.alert('Error', 'Company ID not found. Please log in again.');
+        console.error('Company ID not found');
         return;
       }
       
       const result = await PredefinedItemsService.bulkCreateItems(
         items,
-        user.companyId
+        companyId
       );
       
       Alert.alert('Success', `Added ${result.created || items.length} items successfully`);
       setShowBulkAddModal(false);
       // TODO: Refresh items list
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add items');
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add items';
+      Alert.alert('Error', errorMessage);
       console.error('Error adding bulk items:', error);
     }
   };
