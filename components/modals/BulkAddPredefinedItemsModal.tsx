@@ -12,7 +12,7 @@ interface BulkAddModalProps {
   onSave: (items: PredefinedItemRequest[]) => void;
 }
 
-const CATEGORIES = ['Food', 'Beverages', 'Electronics', 'Clothing', 'Other'];
+const CATEGORIES = ['Food', 'Beverages', 'Electronics', 'Clothing', 'Supplies', 'Other'];
 const UNIT_TYPES = ['pcs', 'kg', 'lb', 'liters', 'gal', 'oz', 'boxes'];
 
 export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAddModalProps) {
@@ -136,6 +136,9 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
               </Picker>
             </View>
           </View>
+
+          {/* Bottom padding for fixed buttons */}
+          <View style={{ height: 80 }} />
         </ScrollView>
 
         {/* Fixed bottom buttons */}
@@ -223,7 +226,7 @@ const styles = StyleSheet.create({
     minHeight: 150,
     maxHeight: 250,
     textAlignVertical: 'top',
-    fontFamily: 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   
   sectionTitle: {

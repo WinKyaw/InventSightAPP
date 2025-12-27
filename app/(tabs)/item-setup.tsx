@@ -84,28 +84,17 @@ export default function ItemSetupScreen() {
 
   const handleSaveBulkItems = async (items: PredefinedItemRequest[]) => {
     try {
-      // Get company ID from user's companyId or extract from token
-      let companyId = user?.companyId;
-      
-      if (!companyId) {
-        // Try to get tenant_id from the JWT token
-        try {
-          const token = await tokenManager.getAccessToken();
-          
-          if (token) {
-            const decoded = jwtDecode<JWTPayload>(token);
-            companyId = decoded.tenant_id;
-          }
-        } catch (tokenError) {
-          console.error('Error decoding token:', tokenError);
-        }
-      }
+      // ✅ FIX: Get company ID from user object properties
+      const companyId = (user as any)?.defaultTenantId || (user as any)?.tenantId || user?.companyId;
       
       if (!companyId) {
         Alert.alert('Error', 'Company ID not found. Please log in again.');
-        console.error('Company ID not found');
+        console.error('❌ User object:', user);
         return;
       }
+      
+      console.log('🏢 Using company ID:', companyId);
+      console.log('📦 Bulk adding items:', items);
       
       const result = await PredefinedItemsService.bulkCreateItems(
         items,
@@ -118,7 +107,7 @@ export default function ItemSetupScreen() {
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add items';
       Alert.alert('Error', errorMessage);
-      console.error('Error adding bulk items:', error);
+      console.error('❌ Error adding bulk items:', error);
     }
   };
 

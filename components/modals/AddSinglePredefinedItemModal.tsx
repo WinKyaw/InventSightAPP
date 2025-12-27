@@ -12,7 +12,7 @@ interface SingleItemModalProps {
   onSave: (item: PredefinedItemRequest) => void;
 }
 
-const CATEGORIES = ['Food', 'Beverages', 'Electronics', 'Clothing', 'Other'];
+const CATEGORIES = ['Food', 'Beverages', 'Electronics', 'Clothing', 'Supplies', 'Other'];
 const UNIT_TYPES = ['pcs', 'kg', 'lb', 'liters', 'gal', 'oz', 'boxes'];
 
 export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: SingleItemModalProps) {
