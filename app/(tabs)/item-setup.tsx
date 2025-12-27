@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { jwtDecode } from 'jwt-decode';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PermissionService } from '../../services/api/permissionService';
@@ -33,6 +36,10 @@ export default function ItemSetupScreen() {
   const [showAddOptionsModal, setShowAddOptionsModal] = useState(false);
   const [showSingleItemModal, setShowSingleItemModal] = useState(false);
   const [showBulkAddModal, setShowBulkAddModal] = useState(false);
+  
+  // CSV import/export states
+  const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     checkAccess();
@@ -111,6 +118,95 @@ export default function ItemSetupScreen() {
     }
   };
 
+  // CSV Import Handler
+  const handleImportCSV = async () => {
+    try {
+      setImporting(true);
+      
+      // Pick CSV file
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'text/csv',
+        copyToCacheDirectory: true,
+      });
+      
+      if (result.canceled) {
+        setImporting(false);
+        return;
+      }
+      
+      const companyId = (user as any)?.defaultTenantId || (user as any)?.tenantId || user?.companyId;
+      
+      if (!companyId) {
+        Alert.alert('Error', 'Company ID not found. Please log in again.');
+        setImporting(false);
+        return;
+      }
+      
+      // Create FormData
+      const formData = new FormData();
+      formData.append('file', {
+        uri: result.assets[0].uri,
+        name: result.assets[0].name,
+        type: 'text/csv',
+      } as any);
+      
+      // Upload to backend
+      const response = await PredefinedItemsService.importCSV(formData, companyId);
+      
+      Alert.alert(
+        'Import Complete', 
+        `Successfully imported ${response.successful || 0} items.\n${response.failed || 0} failed.`
+      );
+      
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to import CSV';
+      Alert.alert('Import Error', errorMessage);
+      console.error('❌ CSV Import Error:', error);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // CSV Export Handler
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      
+      const companyId = (user as any)?.defaultTenantId || (user as any)?.tenantId || user?.companyId;
+      
+      if (!companyId) {
+        Alert.alert('Error', 'Company ID not found. Please log in again.');
+        setExporting(false);
+        return;
+      }
+      
+      // Download CSV from backend
+      const csvContent = await PredefinedItemsService.exportCSV(companyId);
+      
+      // Save to file system
+      const fileName = `predefined-items-${new Date().toISOString().split('T')[0]}.csv`;
+      const fileUri = FileSystem.cacheDirectory + fileName;
+      
+      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      
+      // Share the file
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri);
+      } else {
+        Alert.alert('Success', `CSV exported to ${fileUri}`);
+      }
+      
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to export CSV';
+      Alert.alert('Export Error', errorMessage);
+      console.error('❌ CSV Export Error:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -145,6 +241,39 @@ export default function ItemSetupScreen() {
           </TouchableOpacity>
         }
       />
+      
+      {/* CSV Import/Export Section */}
+      <View style={styles.csvSection}>
+        <Text style={styles.sectionTitle}>Bulk Operations</Text>
+        <View style={styles.csvButtons}>
+          <TouchableOpacity 
+            style={[styles.csvButton, importing && styles.csvButtonDisabled]}
+            onPress={handleImportCSV}
+            disabled={importing}
+          >
+            <Ionicons name="cloud-upload-outline" size={20} color="white" />
+            <Text style={styles.csvButtonText}>
+              {importing ? 'Importing...' : 'Import CSV'}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.csvButton, styles.exportButton, exporting && styles.csvButtonDisabled]}
+            onPress={handleExportCSV}
+            disabled={exporting}
+          >
+            <Ionicons name="cloud-download-outline" size={20} color="white" />
+            <Text style={styles.csvButtonText}>
+              {exporting ? 'Exporting...' : 'Export CSV'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        <Text style={styles.csvHint}>
+          💡 Import/export items in bulk using CSV files
+        </Text>
+      </View>
+
       <View style={styles.centerContainer}>
         <Text style={styles.placeholderText}>
           📦 New Item Setup Page
@@ -228,5 +357,50 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  csvSection: {
+    padding: 16,
+    backgroundColor: 'white',
+    marginBottom: 16,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  csvButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  csvButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+  },
+  exportButton: {
+    backgroundColor: Colors.success,
+  },
+  csvButtonDisabled: {
+    opacity: 0.5,
+  },
+  csvButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  csvHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
   },
 });
