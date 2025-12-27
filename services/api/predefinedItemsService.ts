@@ -120,11 +120,65 @@ export class PredefinedItemsService {
   }
 
   /**
+   * Import items from CSV file
+   * @param formData FormData containing the CSV file
+   * @param companyId Company ID
+   * @returns Promise<any> Import response with successful and failed counts
+   */
+  static async importCSV(formData: FormData, companyId: string): Promise<any> {
+    try {
+      console.log('📥 Importing CSV for company:', companyId);
+      
+      const response = await apiClient.post(
+        `${this.BASE_URL}/import-csv?companyId=${companyId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      
+      console.log('✅ CSV Import Response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ CSV Import Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Export items to CSV file
+   * @param companyId Company ID
+   * @returns Promise<string> CSV content
+   */
+  static async exportCSV(companyId: string): Promise<string> {
+    try {
+      console.log('📤 Exporting CSV for company:', companyId);
+      
+      const response = await apiClient.get<string>(
+        `${this.BASE_URL}/export-csv?companyId=${companyId}`,
+        {
+          headers: {
+            'Accept': 'text/csv',
+          },
+        }
+      );
+      
+      console.log('✅ CSV Export successful');
+      return response;
+    } catch (error) {
+      console.error('❌ CSV Export Error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Import items from CSV data
    * @param csvData Parsed CSV data as array of items
    * @returns Promise<ImportResponse>
    */
-  static async importCSV(csvData: PredefinedItemRequest[]): Promise<ImportResponse> {
+  static async importCSVData(csvData: PredefinedItemRequest[]): Promise<ImportResponse> {
     try {
       const response = await apiClient.post<ImportResponse>(
         `${this.BASE_URL}/import`,
@@ -141,7 +195,7 @@ export class PredefinedItemsService {
    * Export all items to CSV format
    * @returns Promise<string> CSV content
    */
-  static async exportCSV(): Promise<string> {
+  static async exportCSVData(): Promise<string> {
     try {
       const response = await apiClient.get<string>(`${this.BASE_URL}/export`, {
         headers: {

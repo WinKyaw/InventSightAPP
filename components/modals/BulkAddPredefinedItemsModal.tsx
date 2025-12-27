@@ -64,11 +64,13 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
     >
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={Colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Bulk Add Items</Text>
-          <View style={{ width: 24 }} /> {/* Spacer */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>Bulk Add Items</Text>
+          </View>
+          <View style={styles.spacer} />
         </View>
 
         <ScrollView 
@@ -173,10 +175,27 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  
+  titleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
   title: {
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text,
+  },
+  
+  spacer: {
+    width: 40,
   },
   
   // Scrollable content area
