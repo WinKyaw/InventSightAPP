@@ -127,7 +127,7 @@ export class PredefinedItemsService {
    */
   static async importCSV(formData: FormData, companyId: string): Promise<any> {
     try {
-      console.log('📤 Importing CSV for company:', companyId);
+      console.log('📥 Importing CSV for company:', companyId);
       
       const response = await apiClient.post(
         `${this.BASE_URL}/import-csv?companyId=${companyId}`,
@@ -154,7 +154,7 @@ export class PredefinedItemsService {
    */
   static async exportCSV(companyId: string): Promise<string> {
     try {
-      console.log('📥 Exporting CSV for company:', companyId);
+      console.log('📤 Exporting CSV for company:', companyId);
       
       const response = await apiClient.get<string>(
         `${this.BASE_URL}/export-csv?companyId=${companyId}`,
