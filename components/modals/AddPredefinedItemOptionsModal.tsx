@@ -75,6 +75,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    paddingTop: 24,
   },
   
   header: {
@@ -82,7 +83,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
-    paddingTop: 8,
   },
   title: {
     fontSize: 20,
