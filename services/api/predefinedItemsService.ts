@@ -156,7 +156,7 @@ export class PredefinedItemsService {
     try {
       console.log('📥 Exporting CSV for company:', companyId);
       
-      const response = await apiClient.get(
+      const response = await apiClient.get<string>(
         `${this.BASE_URL}/export-csv?companyId=${companyId}`,
         {
           headers: {
