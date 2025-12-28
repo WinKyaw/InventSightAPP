@@ -81,7 +81,8 @@ export default function ItemSetupScreen() {
         return;
       }
       
-      await PredefinedItemsService.createItem(item, companyId);
+      console.log('🏢 Using company ID:', companyId);
+      await PredefinedItemsService.createItem(item);
       Alert.alert('Success', 'Item added successfully');
       setShowSingleItemModal(false);
       // TODO: Refresh items list
