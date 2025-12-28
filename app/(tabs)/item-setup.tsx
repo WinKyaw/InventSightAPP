@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { jwtDecode } from 'jwt-decode';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -10,7 +9,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PermissionService } from '../../services/api/permissionService';
 import { canManageSupply } from '../../utils/permissions';
-import { tokenManager } from '../../utils/tokenManager';
 import { Header } from '../../components/shared/Header';
 import { Colors } from '../../constants/Colors';
 import { PredefinedItemsService } from '../../services/api/predefinedItemsService';
@@ -18,13 +16,6 @@ import { PredefinedItemRequest } from '../../types/predefinedItems';
 import { AddPredefinedItemOptionsModal } from '../../components/modals/AddPredefinedItemOptionsModal';
 import { AddSinglePredefinedItemModal } from '../../components/modals/AddSinglePredefinedItemModal';
 import { BulkAddPredefinedItemsModal } from '../../components/modals/BulkAddPredefinedItemsModal';
-
-interface JWTPayload {
-  tenant_id?: string;
-  sub?: string;
-  userId?: string;
-  [key: string]: any;
-}
 
 export default function ItemSetupScreen() {
   const { user, isAuthenticated } = useAuth();
@@ -78,35 +69,47 @@ export default function ItemSetupScreen() {
 
   const handleSaveSingleItem = async (item: PredefinedItemRequest) => {
     try {
-      await PredefinedItemsService.createItem(item);
+      const companyId = user?.companyId;
+      
+      if (!companyId) {
+        Alert.alert(
+          'Error', 
+          'Company ID not found. Please log out and log in again.',
+          [{ text: 'OK' }]
+        );
+        console.error('❌ No company ID in user object:', user);
+        return;
+      }
+      
+      await PredefinedItemsService.createItem(item, companyId);
       Alert.alert('Success', 'Item added successfully');
       setShowSingleItemModal(false);
       // TODO: Refresh items list
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add item';
       Alert.alert('Error', errorMessage);
-      console.error('Error adding item:', error);
+      console.error('❌ Error adding item:', error);
     }
   };
 
   const handleSaveBulkItems = async (items: PredefinedItemRequest[]) => {
     try {
-      // ✅ FIX: Get company ID from user object properties
-      const companyId = (user as any)?.defaultTenantId || (user as any)?.tenantId || user?.companyId;
+      const companyId = user?.companyId;
       
       if (!companyId) {
-        Alert.alert('Error', 'Company ID not found. Please log in again.');
-        console.error('❌ User object:', user);
+        Alert.alert(
+          'Error', 
+          'Company ID not found. Please log out and log in again.',
+          [{ text: 'OK' }]
+        );
+        console.error('❌ No company ID in user object:', user);
         return;
       }
       
       console.log('🏢 Using company ID:', companyId);
       console.log('📦 Bulk adding items:', items);
       
-      const result = await PredefinedItemsService.bulkCreateItems(
-        items,
-        companyId
-      );
+      const result = await PredefinedItemsService.bulkCreateItems(items, companyId);
       
       Alert.alert('Success', `Added ${result.created || items.length} items successfully`);
       setShowBulkAddModal(false);
@@ -134,10 +137,10 @@ export default function ItemSetupScreen() {
         return;
       }
       
-      const companyId = (user as any)?.defaultTenantId || (user as any)?.tenantId || user?.companyId;
+      const companyId = user?.companyId;
       
       if (!companyId) {
-        Alert.alert('Error', 'Company ID not found. Please log in again.');
+        Alert.alert('Error', 'Company ID not found. Please log out and log in again.');
         setImporting(false);
         return;
       }
@@ -172,10 +175,10 @@ export default function ItemSetupScreen() {
     try {
       setExporting(true);
       
-      const companyId = (user as any)?.defaultTenantId || (user as any)?.tenantId || user?.companyId;
+      const companyId = user?.companyId;
       
       if (!companyId) {
-        Alert.alert('Error', 'Company ID not found. Please log in again.');
+        Alert.alert('Error', 'Company ID not found. Please log out and log in again.');
         setExporting(false);
         return;
       }
@@ -245,6 +248,16 @@ export default function ItemSetupScreen() {
       {/* CSV Import/Export Section */}
       <View style={styles.csvSection}>
         <Text style={styles.sectionTitle}>Bulk Operations</Text>
+        
+        {/* CSV Format Info */}
+        <View style={styles.csvInfo}>
+          <Ionicons name="information-circle-outline" size={16} color={Colors.primary} />
+          <Text style={styles.csvInfoText}>
+            CSV Format: name, category, unitType, sku{'\n'}
+            Example: Apples, Food, lb, APL-001
+          </Text>
+        </View>
+        
         <View style={styles.csvButtons}>
           <TouchableOpacity 
             style={[styles.csvButton, importing && styles.csvButtonDisabled]}
@@ -371,6 +384,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text,
     marginBottom: 12,
+  },
+  csvInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  csvInfoText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.text,
+    lineHeight: 18,
   },
   csvButtons: {
     flexDirection: 'row',

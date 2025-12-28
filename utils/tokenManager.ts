@@ -255,6 +255,41 @@ class TokenManager {
       return false;
     }
   }
+
+  /**
+   * Get tenant/company ID from stored JWT token
+   */
+  async getCompanyId(): Promise<string | null> {
+    try {
+      const token = await this.getAccessToken();
+      
+      if (!token) {
+        console.warn('⚠️ No access token found');
+        return null;
+      }
+
+      const claims = jwtDecode<JWTClaims>(token);
+      
+      if (!claims) {
+        console.error('❌ Failed to decode token claims');
+        return null;
+      }
+
+      // Extract tenant_id from claims
+      const companyId = claims.tenant_id || claims.tenantId;
+      
+      if (companyId) {
+        console.log('✅ Extracted company ID from JWT:', companyId);
+        return companyId;
+      }
+
+      console.warn('⚠️ No tenant_id found in JWT claims');
+      return null;
+    } catch (error) {
+      console.error('❌ Error getting company ID:', error);
+      return null;
+    }
+  }
 }
 
 // Export singleton instance
