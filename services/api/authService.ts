@@ -14,6 +14,28 @@ import { navigationService } from './navigationService';
 // Demo mode configuration
 const DEMO_MODE = process.env.DEMO_MODE === 'true' || (process.env.NODE_ENV === 'development' && !process.env.API_BASE_URL);
 
+/**
+ * Extract company ID from JWT token
+ * @param token JWT token string
+ * @returns Company ID or undefined
+ */
+const extractCompanyIdFromToken = (token: string): string | undefined => {
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1]));
+      const companyId = payload.tenant_id || payload.tenantId;
+      if (companyId) {
+        console.log('✅ Extracted company ID from JWT:', companyId);
+      }
+      return companyId;
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not extract company ID from token');
+  }
+  return undefined;
+};
+
 // Mock data for demo mode
 const DEMO_USERS = {
   'winkyaw@example.com': {
@@ -85,6 +107,9 @@ class AuthService {
     // ✅ SECURITY FIX: Don't log response containing tokens
     // console.log('📥 Raw API Response:', apiResponse); // REMOVED - contains token!
     
+    // ✅ Extract company ID from JWT token
+    const companyId = extractCompanyIdFromToken(apiResponse.token);
+    
     // Transform the API response to match expected LoginResponse format
     const loginData: LoginResponse = {
       user: {
@@ -92,6 +117,7 @@ class AuthService {
         email: apiResponse.email,
         name: apiResponse.fullName,
         role: apiResponse.role.toLowerCase(),
+        companyId,  // ✅ Add extracted company ID
         activeStoreId: apiResponse.activeStoreId,  // ✅ Include store ID if provided
         activeStoreName: apiResponse.activeStoreName,  // ✅ Include store name if provided
       },
@@ -222,6 +248,9 @@ class AuthService {
       // ✅ SECURITY FIX: Don't log response containing tokens
       // console.log('📥 Raw Signup API Response:', apiResponse); // REMOVED - contains token!
       
+      // ✅ Extract company ID from JWT token
+      const companyId = extractCompanyIdFromToken(apiResponse.token);
+      
       // Transform the API response to match expected LoginResponse format
       // Backend returns user data at root level, not nested in "user" object
       const signupData: LoginResponse = {
@@ -230,6 +259,7 @@ class AuthService {
           email: apiResponse.email,
           name: apiResponse.fullName || `${credentials.firstName} ${credentials.lastName}`,
           role: apiResponse.role.toLowerCase(),
+          companyId,  // ✅ Add extracted company ID
           activeStoreId: apiResponse.activeStoreId,  // ✅ Include store ID if provided
           activeStoreName: apiResponse.activeStoreName,  // ✅ Include store name if provided
         },

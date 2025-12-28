@@ -98,6 +98,7 @@ export interface JWTClaims {
   sub?: string;
   userId?: string;
   tenant_id?: string;
+  tenantId?: string;  // Alternative naming for tenant ID
   exp?: number;
   iat?: number;
   [key: string]: any; // Allow other claims
