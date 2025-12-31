@@ -56,7 +56,7 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
   };
   
   const handleSelectStores = () => {
-    const storeOptions = stores.map(s => s.storeName).join('\n');
+    const storeOptions = stores.map((s: Store) => s.storeName).join('\n');
     Alert.alert(
       'Select Stores',
       `Available stores:\n${storeOptions}\n\nCurrently selected: ${selectedStores.length} store(s)`,
@@ -68,7 +68,7 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
         },
         {
           text: 'Select All',
-          onPress: () => setSelectedStores(stores.map(s => s.id))
+          onPress: () => setSelectedStores(stores.map((s: Store) => s.id))
         },
         { text: 'OK' }
       ]
@@ -76,7 +76,7 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
   };
   
   const handleSelectWarehouses = () => {
-    const warehouseOptions = warehouses.map(w => w.name).join('\n');
+    const warehouseOptions = warehouses.map((w: WarehouseSummary) => w.name).join('\n');
     Alert.alert(
       'Select Warehouses',
       `Available warehouses:\n${warehouseOptions}\n\nCurrently selected: ${selectedWarehouses.length} warehouse(s)`,
@@ -88,7 +88,7 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
         },
         {
           text: 'Select All',
-          onPress: () => setSelectedWarehouses(warehouses.map(w => w.id))
+          onPress: () => setSelectedWarehouses(warehouses.map((w: WarehouseSummary) => w.id))
         },
         { text: 'OK' }
       ]
@@ -136,7 +136,7 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
     }
 
     onSave(items);
-    resetForm();
+    // Note: Form will be reset when modal closes via useEffect
   };
   
   const resetForm = () => {
