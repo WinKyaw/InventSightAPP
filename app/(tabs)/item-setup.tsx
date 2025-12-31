@@ -27,6 +27,7 @@ import { PredefinedItem, PredefinedItemRequest } from '../../types/predefinedIte
 import { AddPredefinedItemOptionsModal } from '../../components/modals/AddPredefinedItemOptionsModal';
 import { AddSinglePredefinedItemModal } from '../../components/modals/AddSinglePredefinedItemModal';
 import { BulkAddPredefinedItemsModal } from '../../components/modals/BulkAddPredefinedItemsModal';
+import { LocationAssociationModal } from '../../components/modals/LocationAssociationModal';
 
 export default function ItemSetupScreen() {
   const { user, isAuthenticated } = useAuth();
@@ -42,6 +43,12 @@ export default function ItemSetupScreen() {
   // CSV import/export states
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  // Selection mode states
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [managingItemId, setManagingItemId] = useState<string | null>(null);
 
   // Items list state
   const [items, setItems] = useState<PredefinedItem[]>([]);
@@ -368,6 +375,48 @@ export default function ItemSetupScreen() {
     }
   };
 
+  // Selection mode functions
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems(prev =>
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const selectAll = () => {
+    setSelectedItems(items.map(item => item.id));
+  };
+
+  const deselectAll = () => {
+    setSelectedItems([]);
+    setSelectionMode(false);
+  };
+
+  const handleBulkAssign = () => {
+    if (selectedItems.length === 0) {
+      Alert.alert('No Selection', 'Please select at least one item');
+      return;
+    }
+    setShowLocationModal(true);
+  };
+
+  const handleManageLocations = (itemId: string) => {
+    setManagingItemId(itemId);
+    setSelectedItems([itemId]);
+    setShowLocationModal(true);
+  };
+
+  const handleLocationAssignSuccess = () => {
+    fetchItems(0, false);  // Refresh items
+    if (!managingItemId) {
+      // Bulk assign completed
+      setSelectionMode(false);
+      setSelectedItems([]);
+    }
+    setManagingItemId(null);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -389,17 +438,47 @@ export default function ItemSetupScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header 
-        title="New Item Setup"
-        subtitle="Manage Predefined Items"
+        title={selectionMode ? `${selectedItems.length} selected` : "New Item Setup"}
+        subtitle={selectionMode ? undefined : "Manage Predefined Items"}
         backgroundColor="#F59E0B"
+        leftComponent={
+          selectionMode ? (
+            <TouchableOpacity onPress={deselectAll}>
+              <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+          ) : undefined
+        }
         rightComponent={
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddOptionsModal(true)}
-          >
-            <Ionicons name="add-circle" size={28} color="white" />
-            <Text style={styles.addButtonText}>Add Item</Text>
-          </TouchableOpacity>
+          selectionMode ? (
+            <View style={styles.selectionActions}>
+              <TouchableOpacity onPress={selectAll} style={styles.selectionButton}>
+                <Text style={styles.selectionButtonText}>Select All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handleBulkAssign}
+                style={[styles.selectionButton, styles.assignButton]}
+              >
+                <Ionicons name="location" size={20} color="white" />
+                <Text style={styles.selectionButtonText}>Assign</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => setSelectionMode(true)}
+              >
+                <Ionicons name="checkbox-outline" size={24} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setShowAddOptionsModal(true)}
+              >
+                <Ionicons name="add-circle" size={28} color="white" />
+                <Text style={styles.addButtonText}>Add Item</Text>
+              </TouchableOpacity>
+            </View>
+          )
         }
       />
       
@@ -508,30 +587,88 @@ export default function ItemSetupScreen() {
             data={items || []}  // ✅ Fallback to empty array
             keyExtractor={(item, index) => item.id?.toString() || `item-${index}`}
             renderItem={({ item }) => (
-              <View style={styles.itemCard}>
-                <View style={styles.itemHeader}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemCategory}>{item.category}</Text>
-                </View>
-                <View style={styles.itemDetails}>
-                  <Text style={styles.itemDetailText}>
-                    SKU: {item.sku || 'N/A'}
-                  </Text>
-                  <Text style={styles.itemDetailText}>
-                    Unit: {item.unitType}
-                  </Text>
-                  {item.defaultPrice && (
+              <TouchableOpacity
+                style={[
+                  styles.itemCard,
+                  selectionMode && selectedItems.includes(item.id) && styles.itemCardSelected
+                ]}
+                onPress={() => {
+                  if (selectionMode) {
+                    toggleItemSelection(item.id);
+                  }
+                }}
+                onLongPress={() => {
+                  if (!selectionMode) {
+                    setSelectionMode(true);
+                    toggleItemSelection(item.id);
+                  }
+                }}
+              >
+                {selectionMode && (
+                  <View style={styles.checkboxContainer}>
+                    <View style={[
+                      styles.checkbox,
+                      selectedItems.includes(item.id) && styles.checkboxActive
+                    ]}>
+                      {selectedItems.includes(item.id) && (
+                        <Ionicons name="checkmark" size={16} color="white" />
+                      )}
+                    </View>
+                  </View>
+                )}
+                
+                <View style={[styles.itemContent, selectionMode && styles.itemContentWithCheckbox]}>
+                  <View style={styles.itemHeader}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemCategory}>{item.category}</Text>
+                  </View>
+                  
+                  <View style={styles.itemDetails}>
                     <Text style={styles.itemDetailText}>
-                      Price: ${item.defaultPrice.toFixed(2)}
+                      SKU: {item.sku || 'N/A'}
+                    </Text>
+                    <Text style={styles.itemDetailText}>
+                      Unit: {item.unitType}
+                    </Text>
+                    {item.defaultPrice && (
+                      <Text style={styles.itemDetailText}>
+                        Price: ${item.defaultPrice.toFixed(2)}
+                      </Text>
+                    )}
+                  </View>
+                  
+                  {item.description && (
+                    <Text style={styles.itemDescription} numberOfLines={2}>
+                      {item.description}
                     </Text>
                   )}
+                  
+                  {/* Location Management Section */}
+                  {!selectionMode && (
+                    <View style={styles.locationsSection}>
+                      <View style={styles.locationBadges}>
+                        {/* Placeholder badges - actual counts would come from API */}
+                        <View style={styles.locationBadge}>
+                          <Ionicons name="storefront" size={12} color={Colors.primary} />
+                          <Text style={styles.locationBadgeText}>Stores</Text>
+                        </View>
+                        <View style={styles.locationBadge}>
+                          <Ionicons name="business" size={12} color={Colors.primary} />
+                          <Text style={styles.locationBadgeText}>Warehouses</Text>
+                        </View>
+                      </View>
+                      
+                      <TouchableOpacity
+                        style={styles.manageButton}
+                        onPress={() => handleManageLocations(item.id)}
+                      >
+                        <Ionicons name="location-outline" size={16} color={Colors.primary} />
+                        <Text style={styles.manageButtonText}>Manage</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
-                {item.description && (
-                  <Text style={styles.itemDescription} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                )}
-              </View>
+              </TouchableOpacity>
             )}
             refreshControl={
               <RefreshControl
@@ -587,6 +724,25 @@ export default function ItemSetupScreen() {
         visible={showBulkAddModal}
         onClose={() => setShowBulkAddModal(false)}
         onSave={(items) => handleSaveBulkItems(items)}
+      />
+
+      {/* Location Association Modal */}
+      <LocationAssociationModal
+        visible={showLocationModal}
+        onClose={() => {
+          setShowLocationModal(false);
+          setManagingItemId(null);
+          if (!managingItemId) {
+            setSelectedItems([]);
+          }
+        }}
+        itemIds={managingItemId ? [managingItemId] : selectedItems}
+        itemNames={
+          managingItemId
+            ? [items.find(i => i.id === managingItemId)?.name || '']
+            : selectedItems.map(id => items.find(i => i.id === id)?.name || '')
+        }
+        onSuccess={handleLocationAssignSuccess}
       />
     </SafeAreaView>
   );
@@ -822,5 +978,109 @@ const styles = StyleSheet.create({
   loadingMore: {
     padding: 16,
     alignItems: 'center',
+  },
+  // Selection mode styles
+  selectionActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  selectionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  assignButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  selectionButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconButton: {
+    padding: 4,
+  },
+  itemCardSelected: {
+    borderColor: Colors.primary,
+    borderWidth: 2,
+    backgroundColor: '#EFF6FF',
+  },
+  checkboxContainer: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 1,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+  },
+  checkboxActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  itemContent: {
+    flex: 1,
+  },
+  itemContentWithCheckbox: {
+    marginLeft: 40,
+  },
+  locationsSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  locationBadges: {
+    flexDirection: 'row',
+    gap: 8,
+    flex: 1,
+  },
+  locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+  },
+  locationBadgeText: {
+    fontSize: 11,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  manageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  manageButtonText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });
