@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +27,7 @@ import { AddPredefinedItemOptionsModal } from '../../components/modals/AddPredef
 import { AddSinglePredefinedItemModal } from '../../components/modals/AddSinglePredefinedItemModal';
 import { BulkAddPredefinedItemsModal } from '../../components/modals/BulkAddPredefinedItemsModal';
 import { LocationAssociationModal } from '../../components/modals/LocationAssociationModal';
+import { FilterSortModal } from '../../components/modals/FilterSortModal';
 
 export default function ItemSetupScreen() {
   const { user, isAuthenticated } = useAuth();
@@ -61,6 +61,9 @@ export default function ItemSetupScreen() {
   // Search and filter
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Constants
   const PAGE_SIZE = 20;
@@ -388,7 +391,11 @@ export default function ItemSetupScreen() {
     setSelectedItems(items.map(item => item.id));
   };
 
-  const deselectAll = () => {
+  const unselectAll = () => {
+    setSelectedItems([]);
+  };
+
+  const cancelSelection = () => {
     setSelectedItems([]);
     setSelectionMode(false);
   };
@@ -443,7 +450,7 @@ export default function ItemSetupScreen() {
         backgroundColor="#F59E0B"
         leftComponent={
           selectionMode ? (
-            <TouchableOpacity onPress={deselectAll}>
+            <TouchableOpacity onPress={cancelSelection}>
               <Ionicons name="close" size={28} color="white" />
             </TouchableOpacity>
           ) : undefined
@@ -453,6 +460,9 @@ export default function ItemSetupScreen() {
             <View style={styles.selectionActions}>
               <TouchableOpacity onPress={selectAll} style={styles.selectionButton}>
                 <Text style={styles.selectionButtonText}>Select All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={unselectAll} style={styles.selectionButton}>
+                <Text style={styles.selectionButtonText}>Unselect All</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 onPress={handleBulkAssign}
@@ -486,15 +496,6 @@ export default function ItemSetupScreen() {
       <View style={styles.csvSection}>
         <Text style={styles.sectionTitle}>Bulk Operations</Text>
         
-        {/* CSV Format Info */}
-        <View style={styles.csvInfo}>
-          <Ionicons name="information-circle-outline" size={16} color={Colors.primary} />
-          <Text style={styles.csvInfoText}>
-            CSV Format: name, category, unitType, sku{'\n'}
-            Example: Apples, Food, lb, APL-001
-          </Text>
-        </View>
-        
         <View style={styles.csvButtons}>
           <TouchableOpacity 
             style={[styles.csvButton, importing && styles.csvButtonDisabled]}
@@ -518,55 +519,35 @@ export default function ItemSetupScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        
-        <Text style={styles.csvHint}>
-          💡 Import/export items in bulk using CSV files
-        </Text>
       </View>
 
       {/* Items List Section */}
       <View style={styles.itemsSection}>
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color={Colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search items..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor={Colors.textSecondary}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={Colors.textSecondary} />
-            </TouchableOpacity>
-          )}
+        {/* Search Bar with Filter */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={Colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search items..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor={Colors.textSecondary}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.filterButton}
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Ionicons name="options-outline" size={24} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
-
-        {/* Category Filter */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryFilter}
-        >
-          {['All', 'Food', 'Beverages', 'Supplies', 'Other'].map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[
-                styles.categoryChip,
-                selectedCategory === cat && styles.categoryChipActive
-              ]}
-              onPress={() => setSelectedCategory(cat)}
-            >
-              <Text style={[
-                styles.categoryChipText,
-                selectedCategory === cat && styles.categoryChipTextActive
-              ]}>
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
         {/* Items List */}
         {loadingItems && (!items || items.length === 0) ? (
@@ -680,22 +661,23 @@ export default function ItemSetupScreen() {
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
             ListFooterComponent={
-              loadingItems && items.length > 0 ? (
-                <View style={styles.loadingMore}>
-                  <ActivityIndicator size="small" color={Colors.primary} />
+              <>
+                {loadingItems && items.length > 0 && (
+                  <View style={styles.loadingMore}>
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  </View>
+                )}
+                {/* Items Count at Bottom */}
+                <View style={styles.itemsCountFooter}>
+                  <Text style={styles.itemsCountText}>
+                    {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                  </Text>
                 </View>
-              ) : null
+              </>
             }
             contentContainerStyle={styles.listContainer}
           />
         )}
-
-        {/* Items Count */}
-        <View style={styles.itemsCount}>
-          <Text style={styles.itemsCountText}>
-            {totalItems} {totalItems === 1 ? 'item' : 'items'}
-          </Text>
-        </View>
       </View>
 
       {/* Add Options Modal */}
@@ -743,6 +725,19 @@ export default function ItemSetupScreen() {
             : selectedItems.map(id => items.find(i => i.id === id)?.name || '')
         }
         onSuccess={handleLocationAssignSuccess}
+      />
+
+      {/* Filter Sort Modal */}
+      <FilterSortModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        selectedCategory={selectedCategory}
+        onSelectCategory={(category) => setSelectedCategory(category)}
+        categories={['All', 'Food', 'Beverages', 'Supplies', 'Other']}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSelectSort={(sort) => setSortBy(sort)}
+        onToggleSortOrder={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
       />
     </SafeAreaView>
   );
@@ -800,25 +795,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 12,
   },
-  csvInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#EFF6FF',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
-  },
-  csvInfoText: {
-    flex: 1,
-    fontSize: 12,
-    color: Colors.text,
-    lineHeight: 18,
-  },
   csvButtons: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 8,
   },
   csvButton: {
     flex: 1,
@@ -841,21 +820,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  csvHint: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-  },
   itemsSection: {
     flex: 1,
     backgroundColor: Colors.background,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 16,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    margin: 16,
-    marginBottom: 8,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
@@ -867,27 +848,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
   },
-  categoryFilter: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.lightGray,
-    marginRight: 8,
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.primary,
-  },
-  categoryChipText: {
-    fontSize: 14,
-    color: Colors.text,
-  },
-  categoryChipTextActive: {
-    color: 'white',
-    fontWeight: '600',
+  filterButton: {
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContainer: {
     padding: 16,
@@ -964,12 +932,10 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
-  itemsCount: {
-    padding: 12,
+  itemsCountFooter: {
+    padding: 16,
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: 'white',
+    marginTop: 8,
   },
   itemsCountText: {
     fontSize: 13,
