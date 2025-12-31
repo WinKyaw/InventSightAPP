@@ -110,7 +110,11 @@ export default function ItemSetupScreen() {
       console.log('🏢 Using company ID:', companyId);
       console.log('📦 Bulk adding items:', items);
       
-      const result = await PredefinedItemsService.bulkCreateItems(items, companyId);
+      // Extract location IDs from first item (all items have the same locations)
+      const storeIds = items[0]?.storeIds;
+      const warehouseIds = items[0]?.warehouseIds;
+      
+      const result = await PredefinedItemsService.bulkCreateItems(items, companyId, storeIds, warehouseIds);
       
       Alert.alert('Success', `Added ${result.created || items.length} items successfully`);
       setShowBulkAddModal(false);
@@ -154,19 +158,63 @@ export default function ItemSetupScreen() {
         type: 'text/csv',
       } as any);
       
-      // Upload to backend
-      const response = await PredefinedItemsService.importCSV(formData, companyId);
-      
+      // Ask user about location association
       Alert.alert(
-        'Import Complete', 
-        `Successfully imported ${response.successful || 0} items.\n${response.failed || 0} failed.`
+        'Location Association',
+        'Do you want to associate imported items with your current location?',
+        [
+          {
+            text: 'No',
+            onPress: async () => {
+              try {
+                const response = await PredefinedItemsService.importCSV(formData, companyId);
+                Alert.alert(
+                  'Import Complete', 
+                  `Successfully imported ${response.successful || 0} items.\n${response.failed || 0} failed.`
+                );
+              } catch (error: any) {
+                const errorMessage = error?.response?.data?.message || error?.message || 'Failed to import CSV';
+                Alert.alert('Import Error', errorMessage);
+                console.error('❌ CSV Import Error:', error);
+              } finally {
+                setImporting(false);
+              }
+            }
+          },
+          {
+            text: 'Yes',
+            onPress: async () => {
+              try {
+                // Add current location to import
+                const storeId = user?.currentStoreId;
+                const warehouseId = user?.currentWarehouseId;
+                
+                const response = await PredefinedItemsService.importCSV(
+                  formData, 
+                  companyId,
+                  storeId ? [storeId] : undefined,
+                  warehouseId ? [warehouseId] : undefined
+                );
+                Alert.alert(
+                  'Import Complete', 
+                  `Successfully imported ${response.successful || 0} items.\n${response.failed || 0} failed.`
+                );
+              } catch (error: any) {
+                const errorMessage = error?.response?.data?.message || error?.message || 'Failed to import CSV';
+                Alert.alert('Import Error', errorMessage);
+                console.error('❌ CSV Import Error:', error);
+              } finally {
+                setImporting(false);
+              }
+            }
+          }
+        ]
       );
       
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to import CSV';
       Alert.alert('Import Error', errorMessage);
       console.error('❌ CSV Import Error:', error);
-    } finally {
       setImporting(false);
     }
   };

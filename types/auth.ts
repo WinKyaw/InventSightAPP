@@ -24,6 +24,8 @@ export interface AuthUser {
   companyId?: string;  // Company ID for multi-tenant operations
   activeStoreId?: string;  // Active store ID for receipt creation
   activeStoreName?: string;  // Active store name for display
+  currentStoreId?: string;  // Current store ID for item creation
+  currentWarehouseId?: string;  // Current warehouse ID for item creation
 }
 
 export interface AuthTokens {

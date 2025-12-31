@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, Platform, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { Colors } from '../../constants/Colors';
 import { PredefinedItemRequest } from '../../types/predefinedItems';
+import { useAuth } from '../../context/AuthContext';
+import { StoreService, Store } from '../../services/api/storeService';
+import { WarehouseService } from '../../services/api/warehouse';
+import { WarehouseSummary } from '../../types/warehouse';
 
 interface SingleItemModalProps {
   visible: boolean;
@@ -16,12 +20,82 @@ const CATEGORIES = ['Food', 'Beverages', 'Electronics', 'Clothing', 'Supplies', 
 const UNIT_TYPES = ['pcs', 'kg', 'lb', 'liters', 'gal', 'oz', 'boxes'];
 
 export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: SingleItemModalProps) {
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Food');
   const [unitType, setUnitType] = useState('pcs');
   const [sku, setSku] = useState('');
   const [defaultPrice, setDefaultPrice] = useState('');
   const [description, setDescription] = useState('');
+  
+  // Location selection states
+  const [useCurrentLocation, setUseCurrentLocation] = useState(true);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
+  const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseSummary[]>([]);
+  
+  // Load stores and warehouses when modal opens
+  useEffect(() => {
+    if (visible) {
+      loadLocations();
+    }
+  }, [visible]);
+  
+  const loadLocations = async () => {
+    try {
+      const [storesData, warehousesData] = await Promise.all([
+        StoreService.getUserStores(),
+        WarehouseService.getWarehouses(),
+      ]);
+      setStores(storesData);
+      setWarehouses(warehousesData);
+    } catch (error) {
+      console.error('Failed to load locations:', error);
+    }
+  };
+  
+  const handleSelectStores = () => {
+    // Simple alert-based multi-select
+    const storeOptions = stores.map(s => s.storeName).join('\n');
+    Alert.alert(
+      'Select Stores',
+      `Available stores:\n${storeOptions}\n\nCurrently selected: ${selectedStores.length} store(s)`,
+      [
+        {
+          text: 'Clear Selection',
+          onPress: () => setSelectedStores([]),
+          style: 'destructive'
+        },
+        {
+          text: 'Select All',
+          onPress: () => setSelectedStores(stores.map(s => s.id))
+        },
+        { text: 'OK' }
+      ]
+    );
+  };
+  
+  const handleSelectWarehouses = () => {
+    // Simple alert-based multi-select
+    const warehouseOptions = warehouses.map(w => w.name).join('\n');
+    Alert.alert(
+      'Select Warehouses',
+      `Available warehouses:\n${warehouseOptions}\n\nCurrently selected: ${selectedWarehouses.length} warehouse(s)`,
+      [
+        {
+          text: 'Clear Selection',
+          onPress: () => setSelectedWarehouses([]),
+          style: 'destructive'
+        },
+        {
+          text: 'Select All',
+          onPress: () => setSelectedWarehouses(warehouses.map(w => w.id))
+        },
+        { text: 'OK' }
+      ]
+    );
+  };
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -47,6 +121,15 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
       sku: sku.trim() || undefined,
       defaultPrice: price,
       description: description.trim() || undefined,
+      
+      // Add location associations
+      storeIds: useCurrentLocation 
+        ? (user?.currentStoreId ? [user.currentStoreId] : undefined)
+        : (selectedStores.length > 0 ? selectedStores : undefined),
+        
+      warehouseIds: useCurrentLocation
+        ? (user?.currentWarehouseId ? [user.currentWarehouseId] : undefined)
+        : (selectedWarehouses.length > 0 ? selectedWarehouses : undefined),
     };
 
     onSave(item);
@@ -60,6 +143,9 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
     setSku('');
     setDefaultPrice('');
     setDescription('');
+    setUseCurrentLocation(true);
+    setSelectedStores([]);
+    setSelectedWarehouses([]);
   };
 
   return (
@@ -174,6 +260,69 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
               numberOfLines={3}
             />
           </View>
+
+          {/* Location Association Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Location Association (Optional)</Text>
+            <Text style={styles.sectionSubtitle}>
+              Specify where this item will be available
+            </Text>
+          </View>
+
+          {/* Use Current Location Toggle */}
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLabel}>
+              <Ionicons name="location" size={20} color={Colors.primary} />
+              <Text style={styles.toggleText}>Use my current location</Text>
+            </View>
+            <Switch
+              value={useCurrentLocation}
+              onValueChange={setUseCurrentLocation}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+            />
+          </View>
+
+          {!useCurrentLocation && (
+            <>
+              {/* Store Selection */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Stores (Optional)</Text>
+                <TouchableOpacity 
+                  style={styles.selectButton}
+                  onPress={handleSelectStores}
+                >
+                  <Text style={styles.selectButtonText}>
+                    {selectedStores.length > 0 
+                      ? `${selectedStores.length} store(s) selected` 
+                      : 'Select stores'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Warehouse Selection */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Warehouses (Optional)</Text>
+                <TouchableOpacity 
+                  style={styles.selectButton}
+                  onPress={handleSelectWarehouses}
+                >
+                  <Text style={styles.selectButtonText}>
+                    {selectedWarehouses.length > 0 
+                      ? `${selectedWarehouses.length} warehouse(s) selected` 
+                      : 'Select warehouses'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          <Text style={styles.hint}>
+            {useCurrentLocation 
+              ? '💡 Item will be added to your current store/warehouse' 
+              : '💡 Leave empty to add without location association'}
+          </Text>
         </ScrollView>
 
         {/* Fixed bottom buttons */}
@@ -277,6 +426,73 @@ const styles = StyleSheet.create({
   pickerItem: {
     fontSize: 16,
     color: Colors.text,
+  },
+  
+  // Location section styles
+  sectionHeader: {
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  
+  sectionSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 16,
+  },
+  
+  toggleLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  
+  toggleText: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  
+  selectButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+  },
+  
+  selectButtonText: {
+    fontSize: 15,
+    color: Colors.text,
+  },
+  
+  hint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+    marginTop: 8,
+    marginBottom: 16,
   },
   
   // Fixed bottom action buttons
