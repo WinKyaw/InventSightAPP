@@ -506,7 +506,7 @@ export default function ItemSetupScreen() {
         ) : (
           <FlatList
             data={items || []}  // ✅ Fallback to empty array
-            keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+            keyExtractor={(item, index) => item.id?.toString() || `item-${index}`}
             renderItem={({ item }) => (
               <View style={styles.itemCard}>
                 <View style={styles.itemHeader}>

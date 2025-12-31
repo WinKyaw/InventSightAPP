@@ -60,7 +60,7 @@ export class PredefinedItemsService {
         }
       }>(`${this.BASE_URL}?${params.toString()}`);
 
-      // Transform to flat structure for easier consumption
+      // Transform to ensure consistent structure with null safety
       return {
         success: rawResponse.success,
         message: rawResponse.message,
