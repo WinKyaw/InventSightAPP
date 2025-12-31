@@ -55,6 +55,9 @@ export default function ItemSetupScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
+  // Constants
+  const PAGE_SIZE = 20;
+
   useEffect(() => {
     checkAccess();
   }, []);
@@ -98,7 +101,7 @@ export default function ItemSetupScreen() {
       
       const response = await PredefinedItemsService.getAllItems(
         pageNum,
-        20,
+        PAGE_SIZE,
         searchQuery || undefined,
         selectedCategory !== 'All' ? selectedCategory : undefined
       );
@@ -111,7 +114,7 @@ export default function ItemSetupScreen() {
         }
         
         setTotalItems(response.totalItems);
-        setHasMore(response.items.length === 20);
+        setHasMore(response.items.length === PAGE_SIZE);
         setPage(pageNum);
       }
     } catch (error: any) {
@@ -480,7 +483,7 @@ export default function ItemSetupScreen() {
         ) : (
           <FlatList
             data={items}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
               <View style={styles.itemCard}>
                 <View style={styles.itemHeader}>
