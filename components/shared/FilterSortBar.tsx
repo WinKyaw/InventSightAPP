@@ -7,73 +7,34 @@ interface FilterSortBarProps {
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   onFilterPress: () => void;
-  onSortPress: () => void;
-  onClearFilter: () => void;
+  itemCount?: number;
 }
 
 export function FilterSortBar({ 
   selectedCategory, 
   sortBy, 
   sortOrder, 
-  onFilterPress, 
-  onSortPress, 
-  onClearFilter 
+  onFilterPress,
+  itemCount 
 }: FilterSortBarProps) {
-  const getSortLabel = () => {
-    const labels: Record<string, string> = { 
-      name: 'Name', 
-      price: 'Price', 
-      quantity: 'Stock', 
-      total: 'Value', 
-      salesCount: 'Sales' 
-    };
-    return labels[sortBy] || 'Name';
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.row}>
+        {/* Item count on the left */}
+        {itemCount !== undefined && (
+          <View style={styles.countContainer}>
+            <Text style={styles.countText}>
+              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+            </Text>
+          </View>
+        )}
+        
+        {/* Filter icon button on the right */}
         <TouchableOpacity
-          style={[
-            styles.filterButton,
-            selectedCategory !== 'All' && styles.filterButtonActive
-          ]}
+          style={styles.filterIconButton}
           onPress={onFilterPress}
         >
-          <Ionicons 
-            name="funnel-outline" 
-            size={16} 
-            color={selectedCategory !== 'All' ? '#10B981' : '#6B7280'} 
-          />
-          <Text style={[
-            styles.filterButtonText,
-            selectedCategory !== 'All' && styles.filterButtonTextActive
-          ]}>
-            {selectedCategory === 'All' ? 'Filter' : selectedCategory}
-          </Text>
-          {selectedCategory !== 'All' && (
-            <TouchableOpacity
-              style={styles.clearFilterButton}
-              onPress={onClearFilter}
-            >
-              <Ionicons name="close-circle" size={16} color="#10B981" />
-            </TouchableOpacity>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.sortButton}
-          onPress={onSortPress}
-        >
-          <Ionicons name="swap-vertical-outline" size={16} color="#6B7280" />
-          <Text style={styles.sortButtonText}>
-            {getSortLabel()}
-          </Text>
-          <Ionicons 
-            name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} 
-            size={14} 
-            color="#6B7280" 
-          />
+          <Text style={styles.filterIcon}>☰</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -93,48 +54,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 6,
-    minWidth: 80,
+  countContainer: {
+    flex: 1,
   },
-  filterButtonActive: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#10B981',
-  },
-  filterButtonText: {
+  countText: {
     fontSize: 14,
     color: '#6B7280',
-    fontWeight: '500',
-  },
-  filterButtonTextActive: {
-    color: '#10B981',
     fontWeight: '600',
   },
-  clearFilterButton: {
-    marginLeft: 4,
-  },
-  sortButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  filterIconButton: {
     backgroundColor: '#F9FAFB',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    gap: 6,
   },
-  sortButtonText: {
-    fontSize: 14,
+  filterIcon: {
+    fontSize: 20,
     color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: 'bold',
   },
 });

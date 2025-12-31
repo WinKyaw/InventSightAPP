@@ -11,8 +11,7 @@ import { FilterSortBar } from '../../components/shared/FilterSortBar';
 import { AddItemModal } from '../../components/modals/AddItemModal';
 import { EditItemModal } from '../../components/modals/EditItemModal';
 import { StockManagementModal } from '../../components/modals/StockManagementModal';
-import { FilterModal } from '../../components/modals/FilterModal';
-import { SortModal } from '../../components/modals/SortModal';
+import { FilterSortModal } from '../../components/modals/FilterSortModal';
 import { productToItem } from '../../utils/productUtils';
 import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
@@ -67,8 +66,7 @@ export default function ItemsScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [showSortModal, setShowSortModal] = useState(false);
+  const [showFilterSortModal, setShowFilterSortModal] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [stockManagementProduct, setStockManagementProduct] = useState<Product | null>(null);
@@ -136,6 +134,10 @@ export default function ItemsScreen() {
       setSortBy(newSortBy);
       setSortOrder('asc');
     }
+  };
+
+  const handleToggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
   const handleDeletePress = (id: number, name: string) => {
@@ -236,9 +238,8 @@ export default function ItemsScreen() {
         selectedCategory={selectedCategoryName}
         sortBy={sortBy}
         sortOrder={sortOrder}
-        onFilterPress={() => setShowFilterModal(true)}
-        onSortPress={() => setShowSortModal(true)}
-        onClearFilter={() => clearFilters()}
+        onFilterPress={() => setShowFilterSortModal(true)}
+        itemCount={items.length}
       />
 
       <ScrollView 
@@ -410,23 +411,19 @@ export default function ItemsScreen() {
         product={stockManagementProduct}
       />
       
-      <FilterModal
-        visible={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
+      <FilterSortModal
+        visible={showFilterSortModal}
+        onClose={() => setShowFilterSortModal(false)}
         selectedCategory={selectedCategoryName}
         onSelectCategory={(category) => {
           const categoryId = category === 'All' ? null : categories.find(cat => cat.name === category)?.id || null;
           setSelectedCategoryId(categoryId);
         }}
         categories={categoryNames}
-      />
-
-      <SortModal
-        visible={showSortModal}
-        onClose={() => setShowSortModal(false)}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSelectSort={handleSortPress}
+        onToggleSortOrder={handleToggleSortOrder}
       />
     </SafeAreaView>
   );
