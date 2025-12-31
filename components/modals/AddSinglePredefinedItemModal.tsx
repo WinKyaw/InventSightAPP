@@ -39,6 +39,9 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
   useEffect(() => {
     if (visible) {
       loadLocations();
+    } else {
+      // Reset form when modal closes
+      resetForm();
     }
   }, [visible]);
   

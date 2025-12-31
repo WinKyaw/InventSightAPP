@@ -208,7 +208,11 @@ export default function ItemSetupScreen() {
               }
             }
           }
-        ]
+        ],
+        {
+          cancelable: true,
+          onDismiss: () => setImporting(false)
+        }
       );
       
     } catch (error: any) {

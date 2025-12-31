@@ -36,6 +36,9 @@ export function BulkAddPredefinedItemsModal({ visible, onClose, onSave }: BulkAd
   useEffect(() => {
     if (visible) {
       loadLocations();
+    } else {
+      // Reset form when modal closes
+      resetForm();
     }
   }, [visible]);
   
