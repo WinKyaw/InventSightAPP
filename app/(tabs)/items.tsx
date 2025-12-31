@@ -140,6 +140,11 @@ export default function ItemsScreen() {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
+  const handleCategorySelect = (category: string) => {
+    const categoryId = category === 'All' ? null : categories.find(cat => cat.name === category)?.id || null;
+    setSelectedCategoryId(categoryId);
+  };
+
   const handleDeletePress = (id: number, name: string) => {
     Alert.alert(
       'Delete Product',
@@ -415,10 +420,7 @@ export default function ItemsScreen() {
         visible={showFilterSortModal}
         onClose={() => setShowFilterSortModal(false)}
         selectedCategory={selectedCategoryName}
-        onSelectCategory={(category) => {
-          const categoryId = category === 'All' ? null : categories.find(cat => cat.name === category)?.id || null;
-          setSelectedCategoryId(categoryId);
-        }}
+        onSelectCategory={handleCategorySelect}
         categories={categoryNames}
         sortBy={sortBy}
         sortOrder={sortOrder}

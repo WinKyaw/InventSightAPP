@@ -25,10 +25,6 @@ export function FilterSortModal({
   onSelectSort,
   onToggleSortOrder
 }: FilterSortModalProps) {
-  const handleCategorySelect = (category: string) => {
-    onSelectCategory(category);
-  };
-
   return (
     <RNModal
       visible={visible}
@@ -66,7 +62,7 @@ export function FilterSortModal({
                           styles.categoryChip,
                           selectedCategory === category && styles.selectedCategoryChip
                         ]}
-                        onPress={() => handleCategorySelect(category)}
+                        onPress={() => onSelectCategory(category)}
                       >
                         <Text style={[
                           styles.categoryChipText,
