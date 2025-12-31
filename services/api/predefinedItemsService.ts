@@ -18,6 +18,7 @@ export class PredefinedItemsService {
 
   /**
    * Get all predefined items with pagination and filters
+   * @param companyId Company ID (REQUIRED)
    * @param page Page number (0-indexed)
    * @param size Items per page
    * @param search Search query (name, SKU, or category)
@@ -25,6 +26,7 @@ export class PredefinedItemsService {
    * @returns Promise<PredefinedItemsResponse>
    */
   static async getAllItems(
+    companyId: string,
     page: number = 0,
     size: number = 20,
     search?: string,
@@ -32,6 +34,7 @@ export class PredefinedItemsService {
   ): Promise<PredefinedItemsResponse> {
     try {
       const params = new URLSearchParams({
+        companyId,
         page: page.toString(),
         size: size.toString(),
       });

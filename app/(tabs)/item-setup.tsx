@@ -99,7 +99,18 @@ export default function ItemSetupScreen() {
     try {
       setLoadingItems(true);
       
+      const companyId = user?.companyId;
+      
+      if (!companyId) {
+        console.error('❌ No company ID available');
+        Alert.alert('Error', 'Company ID not found. Please log out and log in again.');
+        return;
+      }
+      
+      console.log('🔄 Fetching items for company:', companyId);
+      
       const response = await PredefinedItemsService.getAllItems(
+        companyId,
         pageNum,
         PAGE_SIZE,
         searchQuery || undefined,
@@ -116,6 +127,8 @@ export default function ItemSetupScreen() {
         setTotalItems(response.totalItems);
         setHasMore(response.items.length === PAGE_SIZE);
         setPage(pageNum);
+        
+        console.log('✅ Loaded items:', response.items.length);
       }
     } catch (error: any) {
       console.error('Failed to fetch items:', error);
@@ -139,7 +152,10 @@ export default function ItemSetupScreen() {
 
   useEffect(() => {
     if (canAccess && user?.companyId) {
+      console.log('🎯 Initial load - Company ID:', user.companyId);
       fetchItems(0, false);
+    } else if (canAccess && !user?.companyId) {
+      console.warn('⚠️ Cannot fetch items - no company ID');
     }
   }, [canAccess, user?.companyId, searchQuery, selectedCategory]);
 
