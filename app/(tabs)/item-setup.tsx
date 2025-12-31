@@ -358,6 +358,8 @@ export default function ItemSetupScreen() {
       const fileName = `predefined-items-${new Date().toISOString().split('T')[0]}.csv`;
       const fileUri = FileSystem.cacheDirectory + fileName;
       
+      // Note: Using string 'utf8' instead of FileSystem.EncodingType.UTF8 
+      // because EncodingType is undefined in expo-file-system v19+ (SDK 54)
       await FileSystem.writeAsStringAsync(fileUri, csvContent, {
         encoding: 'utf8',
       });
@@ -794,7 +796,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   helperBanner: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: Colors.lightBlue,
     paddingHorizontal: 16,
     paddingVertical: 10,
     flexDirection: 'row',
