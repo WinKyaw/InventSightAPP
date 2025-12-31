@@ -104,13 +104,27 @@ export class PredefinedItemsService {
    * Bulk create multiple items at once
    * @param items Array of items to create
    * @param companyId Company ID (required)
+   * @param storeIds Optional array of store IDs to associate with all items
+   * @param warehouseIds Optional array of warehouse IDs to associate with all items
    * @returns Promise<BulkCreateResponse>
    */
-  static async bulkCreateItems(items: PredefinedItemRequest[], companyId: string): Promise<BulkCreateResponse> {
+  static async bulkCreateItems(
+    items: PredefinedItemRequest[], 
+    companyId: string,
+    storeIds?: string[],
+    warehouseIds?: string[]
+  ): Promise<BulkCreateResponse> {
     try {
+      // Add location associations to all items
+      const itemsWithLocations = items.map(item => ({
+        ...item,
+        storeIds: item.storeIds || storeIds,
+        warehouseIds: item.warehouseIds || warehouseIds,
+      }));
+
       const response = await apiClient.post<BulkCreateResponse>(
         `${this.BASE_URL}/bulk-create?companyId=${companyId}`,
-        items
+        itemsWithLocations
       );
       return response;
     } catch (error) {
@@ -123,14 +137,30 @@ export class PredefinedItemsService {
    * Import items from CSV file
    * @param formData FormData containing the CSV file
    * @param companyId Company ID
+   * @param storeIds Optional array of store IDs to associate with imported items
+   * @param warehouseIds Optional array of warehouse IDs to associate with imported items
    * @returns Promise<any> Import response with successful and failed counts
    */
-  static async importCSV(formData: FormData, companyId: string): Promise<any> {
+  static async importCSV(
+    formData: FormData, 
+    companyId: string,
+    storeIds?: string[],
+    warehouseIds?: string[]
+  ): Promise<any> {
     try {
       console.log('📥 Importing CSV for company:', companyId);
       
+      // Build query params with location IDs if provided
+      let url = `${this.BASE_URL}/import-csv?companyId=${companyId}`;
+      if (storeIds && storeIds.length > 0) {
+        url += `&storeIds=${storeIds.join(',')}`;
+      }
+      if (warehouseIds && warehouseIds.length > 0) {
+        url += `&warehouseIds=${warehouseIds.join(',')}`;
+      }
+      
       const response = await apiClient.post(
-        `${this.BASE_URL}/import-csv?companyId=${companyId}`,
+        url,
         formData,
         {
           headers: {
