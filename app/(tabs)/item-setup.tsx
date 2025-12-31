@@ -358,8 +358,10 @@ export default function ItemSetupScreen() {
       const fileName = `predefined-items-${new Date().toISOString().split('T')[0]}.csv`;
       const fileUri = FileSystem.cacheDirectory + fileName;
       
+      // Note: Using string 'utf8' instead of FileSystem.EncodingType.UTF8 
+      // because EncodingType is undefined in expo-file-system v19+ (SDK 54)
       await FileSystem.writeAsStringAsync(fileUri, csvContent, {
-        encoding: FileSystem.EncodingType.UTF8,
+        encoding: 'utf8',
       });
       
       // Share the file
@@ -491,6 +493,16 @@ export default function ItemSetupScreen() {
           )
         }
       />
+      
+      {/* Multi-Select Helper Text */}
+      {!selectionMode && (
+        <View style={styles.helperBanner}>
+          <Ionicons name="information-circle-outline" size={16} color={Colors.primary} />
+          <Text style={styles.helperText}>
+            Tap the checkbox icon to select multiple items and assign them to stores/warehouses
+          </Text>
+        </View>
+      )}
       
       {/* CSV Import/Export Section */}
       <View style={styles.csvSection}>
@@ -783,6 +795,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  helperBanner: {
+    backgroundColor: Colors.lightBlue,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  helperText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.primary,
+    lineHeight: 18,
+  },
   csvSection: {
     padding: 16,
     backgroundColor: 'white',
@@ -936,10 +964,14 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
   itemsCountText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '500',
   },
   loadingMore: {
     padding: 16,
