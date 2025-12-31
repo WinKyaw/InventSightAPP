@@ -47,11 +47,31 @@ export class PredefinedItemsService {
         params.append('category', category);
       }
 
-      const response = await apiClient.get<PredefinedItemsResponse>(
-        `${this.BASE_URL}?${params.toString()}`
-      );
+      // Backend returns nested structure, so we get the raw response
+      const rawResponse = await apiClient.get<{
+        success: boolean;
+        message: string;
+        data: {
+          items: PredefinedItem[];
+          totalElements: number;
+          totalPages: number;
+          currentPage: number;
+          pageSize: number;
+        }
+      }>(`${this.BASE_URL}?${params.toString()}`);
 
-      return response;
+      // Transform to ensure consistent structure with null safety
+      return {
+        success: rawResponse.success,
+        message: rawResponse.message,
+        data: {
+          items: rawResponse.data?.items || [],
+          totalElements: rawResponse.data?.totalElements || 0,
+          totalPages: rawResponse.data?.totalPages || 0,
+          currentPage: rawResponse.data?.currentPage || 0,
+          pageSize: rawResponse.data?.pageSize || size,
+        }
+      };
     } catch (error) {
       console.error('Failed to fetch predefined items:', error);
       throw error;
