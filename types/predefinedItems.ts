@@ -29,10 +29,14 @@ export interface PredefinedItemRequest {
 
 export interface PredefinedItemsResponse {
   success: boolean;
-  items: PredefinedItem[];
-  totalItems: number;
-  totalPages: number;
-  currentPage: number;
+  message?: string;
+  data: {
+    items: PredefinedItem[];
+    totalElements: number;    // ← Backend uses "totalElements" not "totalItems"
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  };
 }
 
 export interface BulkCreateResponse {

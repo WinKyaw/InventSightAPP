@@ -117,22 +117,29 @@ export default function ItemSetupScreen() {
         selectedCategory !== 'All' ? selectedCategory : undefined
       );
       
-      if (response.success) {
+      // ✅ Access nested data with null safety
+      if (response.success && response.data) {
+        const itemsList = response.data.items || [];
+        
         if (append) {
-          setItems(prev => [...prev, ...response.items]);
+          setItems(prev => [...prev, ...itemsList]);
         } else {
-          setItems(response.items);
+          setItems(itemsList);
         }
         
-        setTotalItems(response.totalItems);
-        setHasMore(response.items.length === PAGE_SIZE);
+        setTotalItems(response.data.totalElements || 0);
+        setHasMore(itemsList.length === PAGE_SIZE);
         setPage(pageNum);
         
-        console.log('✅ Loaded items:', response.items.length);
+        console.log('✅ Loaded items:', itemsList.length);
+      } else {
+        console.warn('⚠️ Response missing data:', response);
+        setItems([]);
       }
     } catch (error: any) {
       console.error('Failed to fetch items:', error);
       Alert.alert('Error', 'Failed to load items');
+      setItems([]);  // ✅ Set empty array on error
     } finally {
       setLoadingItems(false);
       setRefreshingItems(false);
@@ -483,12 +490,12 @@ export default function ItemSetupScreen() {
         </ScrollView>
 
         {/* Items List */}
-        {loadingItems && items.length === 0 ? (
+        {loadingItems && (!items || items.length === 0) ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>Loading items...</Text>
           </View>
-        ) : items.length === 0 ? (
+        ) : (!items || items.length === 0) ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="cube-outline" size={64} color={Colors.textSecondary} />
             <Text style={styles.emptyTitle}>No items found</Text>
@@ -498,8 +505,8 @@ export default function ItemSetupScreen() {
           </View>
         ) : (
           <FlatList
-            data={items}
-            keyExtractor={(item) => item.id.toString()}
+            data={items || []}  // ✅ Fallback to empty array
+            keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
             renderItem={({ item }) => (
               <View style={styles.itemCard}>
                 <View style={styles.itemHeader}>
