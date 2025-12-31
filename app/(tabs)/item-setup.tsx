@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Alert, 
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
+  TextInput,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -12,7 +23,7 @@ import { canManageSupply } from '../../utils/permissions';
 import { Header } from '../../components/shared/Header';
 import { Colors } from '../../constants/Colors';
 import { PredefinedItemsService } from '../../services/api/predefinedItemsService';
-import { PredefinedItemRequest } from '../../types/predefinedItems';
+import { PredefinedItem, PredefinedItemRequest } from '../../types/predefinedItems';
 import { AddPredefinedItemOptionsModal } from '../../components/modals/AddPredefinedItemOptionsModal';
 import { AddSinglePredefinedItemModal } from '../../components/modals/AddSinglePredefinedItemModal';
 import { BulkAddPredefinedItemsModal } from '../../components/modals/BulkAddPredefinedItemsModal';
@@ -31,6 +42,21 @@ export default function ItemSetupScreen() {
   // CSV import/export states
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  // Items list state
+  const [items, setItems] = useState<PredefinedItem[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [refreshingItems, setRefreshingItems] = useState(false);
+
+  // Search and filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+
+  // Constants
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     checkAccess();
@@ -67,6 +93,56 @@ export default function ItemSetupScreen() {
     }
   };
 
+  const fetchItems = async (pageNum: number = 0, append: boolean = false) => {
+    if (loadingItems) return;
+    
+    try {
+      setLoadingItems(true);
+      
+      const response = await PredefinedItemsService.getAllItems(
+        pageNum,
+        PAGE_SIZE,
+        searchQuery || undefined,
+        selectedCategory !== 'All' ? selectedCategory : undefined
+      );
+      
+      if (response.success) {
+        if (append) {
+          setItems(prev => [...prev, ...response.items]);
+        } else {
+          setItems(response.items);
+        }
+        
+        setTotalItems(response.totalItems);
+        setHasMore(response.items.length === PAGE_SIZE);
+        setPage(pageNum);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch items:', error);
+      Alert.alert('Error', 'Failed to load items');
+    } finally {
+      setLoadingItems(false);
+      setRefreshingItems(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshingItems(true);
+    fetchItems(0, false);
+  };
+
+  const handleLoadMore = () => {
+    if (hasMore && !loadingItems) {
+      fetchItems(page + 1, true);
+    }
+  };
+
+  useEffect(() => {
+    if (canAccess && user?.companyId) {
+      fetchItems(0, false);
+    }
+  }, [canAccess, user?.companyId, searchQuery, selectedCategory]);
+
   const handleSaveSingleItem = async (item: PredefinedItemRequest) => {
     try {
       const companyId = user?.companyId;
@@ -85,7 +161,8 @@ export default function ItemSetupScreen() {
       await PredefinedItemsService.createItem(item);
       Alert.alert('Success', 'Item added successfully');
       setShowSingleItemModal(false);
-      // TODO: Refresh items list
+      // Refresh items list
+      fetchItems(0, false);
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add item';
       Alert.alert('Error', errorMessage);
@@ -118,7 +195,8 @@ export default function ItemSetupScreen() {
       
       Alert.alert('Success', `Added ${result.created || items.length} items successfully`);
       setShowBulkAddModal(false);
-      // TODO: Refresh items list
+      // Refresh items list
+      fetchItems(0, false);
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add items';
       Alert.alert('Error', errorMessage);
@@ -172,6 +250,8 @@ export default function ItemSetupScreen() {
                   'Import Complete', 
                   `Successfully imported ${response.successful || 0} items.\n${response.failed || 0} failed.`
                 );
+                // Refresh items list
+                fetchItems(0, false);
               } catch (error: any) {
                 const errorMessage = error?.response?.data?.message || error?.message || 'Failed to import CSV';
                 Alert.alert('Import Error', errorMessage);
@@ -199,6 +279,8 @@ export default function ItemSetupScreen() {
                   'Import Complete', 
                   `Successfully imported ${response.successful || 0} items.\n${response.failed || 0} failed.`
                 );
+                // Refresh items list
+                fetchItems(0, false);
               } catch (error: any) {
                 const errorMessage = error?.response?.data?.message || error?.message || 'Failed to import CSV';
                 Alert.alert('Import Error', errorMessage);
@@ -340,17 +422,120 @@ export default function ItemSetupScreen() {
         </Text>
       </View>
 
-      <View style={styles.centerContainer}>
-        <Text style={styles.placeholderText}>
-          📦 New Item Setup Page
-        </Text>
-        <Text style={styles.placeholderSubtext}>
-          This page will allow you to manage predefined items,{'\n'}
-          import/export CSV, and perform bulk operations.
-        </Text>
-        <Text style={styles.infoText}>
-          Full implementation coming soon.
-        </Text>
+      {/* Items List Section */}
+      <View style={styles.itemsSection}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={Colors.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search items..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor={Colors.textSecondary}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Category Filter */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryFilter}
+        >
+          {['All', 'Food', 'Beverages', 'Supplies', 'Other'].map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.categoryChip,
+                selectedCategory === cat && styles.categoryChipActive
+              ]}
+              onPress={() => setSelectedCategory(cat)}
+            >
+              <Text style={[
+                styles.categoryChipText,
+                selectedCategory === cat && styles.categoryChipTextActive
+              ]}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Items List */}
+        {loadingItems && items.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Loading items...</Text>
+          </View>
+        ) : items.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="cube-outline" size={64} color={Colors.textSecondary} />
+            <Text style={styles.emptyTitle}>No items found</Text>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery ? 'Try a different search' : 'Add your first item to get started'}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={items}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.itemCard}>
+                <View style={styles.itemHeader}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemCategory}>{item.category}</Text>
+                </View>
+                <View style={styles.itemDetails}>
+                  <Text style={styles.itemDetailText}>
+                    SKU: {item.sku || 'N/A'}
+                  </Text>
+                  <Text style={styles.itemDetailText}>
+                    Unit: {item.unitType}
+                  </Text>
+                  {item.defaultPrice && (
+                    <Text style={styles.itemDetailText}>
+                      Price: ${item.defaultPrice.toFixed(2)}
+                    </Text>
+                  )}
+                </View>
+                {item.description && (
+                  <Text style={styles.itemDescription} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                )}
+              </View>
+            )}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshingItems}
+                onRefresh={handleRefresh}
+                colors={[Colors.primary]}
+              />
+            }
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              loadingItems && items.length > 0 ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : null
+            }
+            contentContainerStyle={styles.listContainer}
+          />
+        )}
+
+        {/* Items Count */}
+        <View style={styles.itemsCount}>
+          <Text style={styles.itemsCountText}>
+            {totalItems} {totalItems === 1 ? 'item' : 'items'}
+          </Text>
+        </View>
       </View>
 
       {/* Add Options Modal */}
@@ -427,10 +612,8 @@ const styles = StyleSheet.create({
   csvSection: {
     padding: 16,
     backgroundColor: 'white',
-    marginBottom: 16,
-    borderRadius: 8,
-    marginHorizontal: 16,
-    marginTop: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
   sectionTitle: {
     fontSize: 16,
@@ -483,5 +666,138 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     fontStyle: 'italic',
+  },
+  itemsSection: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    margin: 16,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  categoryFilter: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  categoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.lightGray,
+    marginRight: 8,
+  },
+  categoryChipActive: {
+    backgroundColor: Colors.primary,
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  categoryChipTextActive: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  listContainer: {
+    padding: 16,
+    paddingTop: 0,
+  },
+  itemCard: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  itemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    flex: 1,
+  },
+  itemCategory: {
+    fontSize: 12,
+    color: Colors.primary,
+    backgroundColor: Colors.lightGray,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  itemDetails: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 8,
+  },
+  itemDetailText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  itemDescription: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  itemsCount: {
+    padding: 12,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: 'white',
+  },
+  itemsCountText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  loadingMore: {
+    padding: 16,
+    alignItems: 'center',
   },
 });
