@@ -34,7 +34,7 @@ export class PredefinedItemsService {
   ): Promise<PredefinedItemsResponse> {
     try {
       const params = new URLSearchParams({
-        companyId: companyId,
+        companyId,
         page: page.toString(),
         size: size.toString(),
       });
