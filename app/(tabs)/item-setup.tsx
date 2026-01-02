@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+// Using legacy API for compatibility with writeAsStringAsync in Expo SDK 54+
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
@@ -673,22 +674,23 @@ export default function ItemSetupScreen() {
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
             ListFooterComponent={
-              <>
-                {loadingItems && items.length > 0 && (
-                  <View style={styles.loadingMore}>
-                    <ActivityIndicator size="small" color={Colors.primary} />
-                  </View>
-                )}
-                {/* Items Count at Bottom */}
-                <View style={styles.itemsCountFooter}>
-                  <Text style={styles.itemsCountText}>
-                    {totalItems} {totalItems === 1 ? 'item' : 'items'}
-                  </Text>
+              loadingItems && items.length > 0 ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
                 </View>
-              </>
+              ) : null
             }
             contentContainerStyle={styles.listContainer}
           />
+        )}
+        
+        {/* Items Count at Bottom - Always Visible */}
+        {items && items.length > 0 && (
+          <View style={styles.itemsCountFooter}>
+            <Text style={styles.itemsCountText}>
+              {totalItems} {totalItems === 1 ? 'item' : 'items'}
+            </Text>
+          </View>
         )}
       </View>
 
