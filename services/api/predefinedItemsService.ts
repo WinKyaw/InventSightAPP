@@ -270,7 +270,7 @@ export class PredefinedItemsService {
    */
   static async associateStores(itemId: string, storeIds: string[]): Promise<void> {
     try {
-      await apiClient.post(`${this.BASE_URL}/${itemId}/stores`, { storeIds });
+      await apiClient.post(`${this.BASE_URL}/${itemId}/stores`, { locationIds: storeIds });
     } catch (error) {
       console.error('Failed to associate stores:', error);
       throw error;
@@ -285,7 +285,7 @@ export class PredefinedItemsService {
    */
   static async associateWarehouses(itemId: string, warehouseIds: string[]): Promise<void> {
     try {
-      await apiClient.post(`${this.BASE_URL}/${itemId}/warehouses`, { warehouseIds });
+      await apiClient.post(`${this.BASE_URL}/${itemId}/warehouses`, { locationIds: warehouseIds });
     } catch (error) {
       console.error('Failed to associate warehouses:', error);
       throw error;
