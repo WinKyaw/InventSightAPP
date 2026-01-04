@@ -24,7 +24,6 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Food');
   const [unitType, setUnitType] = useState('pcs');
-  const [sku, setSku] = useState('');
   const [defaultPrice, setDefaultPrice] = useState('');
   const [description, setDescription] = useState('');
   
@@ -106,23 +105,24 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
       return;
     }
 
-    // Validate price if provided
-    let price: number | undefined = undefined;
-    if (defaultPrice) {
-      const parsedPrice = parseFloat(defaultPrice);
-      if (isNaN(parsedPrice) || parsedPrice < 0) {
-        Alert.alert('Error', 'Please enter a valid price (must be a positive number)');
-        return;
-      }
-      price = parsedPrice;
+    // Validate default price is required
+    if (!defaultPrice || defaultPrice.trim() === '') {
+      Alert.alert('Error', 'Default price is required');
+      return;
+    }
+
+    // Validate price is a valid number > 0
+    const parsedPrice = parseFloat(defaultPrice);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      Alert.alert('Error', 'Default price must be a number greater than 0');
+      return;
     }
 
     const item: PredefinedItemRequest = {
       name: name.trim(),
       category,
       unitType,
-      sku: sku.trim() || undefined,
-      defaultPrice: price,
+      defaultPrice: parsedPrice,
       description: description.trim() || undefined,
       
       // Add location associations
@@ -143,7 +143,6 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
     setName('');
     setCategory('Food');
     setUnitType('pcs');
-    setSku('');
     setDefaultPrice('');
     setDescription('');
     setUseCurrentLocation(true);
@@ -225,21 +224,11 @@ export function AddSinglePredefinedItemModal({ visible, onClose, onSave }: Singl
             </View>
           </View>
 
-          {/* SKU (Optional) */}
+          {/* Default Price */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>SKU (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={sku}
-              onChangeText={setSku}
-              placeholder="e.g., APL-001"
-              placeholderTextColor={Colors.textSecondary}
-            />
-          </View>
-
-          {/* Default Price (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Default Price (Optional)</Text>
+            <Text style={styles.label}>
+              Default Price <Text style={styles.required}>*</Text>
+            </Text>
             <TextInput
               style={styles.input}
               value={defaultPrice}
