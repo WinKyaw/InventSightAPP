@@ -19,6 +19,27 @@ import { PermissionService } from '../../services/api/permissionService';
 import { apiClient } from '../../services/api/apiClient';
 import { Colors } from '../../constants/Colors';
 
+// Constants
+const RESTOCK_HISTORY_PAGE_SIZE = 50;
+
+// Interfaces for restock functionality
+interface RestockHistoryItem {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+interface RestockHistoryResponse {
+  additions: RestockHistoryItem[];
+  totalItems: number;
+  currentPage: number;
+  totalPages: number;
+}
+
 export default function ItemsScreen() {
   // ✅ SECURITY FIX: Add authentication check
   const { isAuthenticated, isInitialized, user } = useAuth();
@@ -82,7 +103,7 @@ export default function ItemsScreen() {
     notes: '',
   });
   const [activeTab, setActiveTab] = useState<'inventory' | 'restocks'>('inventory');
-  const [restockHistory, setRestockHistory] = useState<any[]>([]);
+  const [restockHistory, setRestockHistory] = useState<RestockHistoryItem[]>([]);
 
   // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
   const loadedRef = useRef(false);
@@ -196,10 +217,16 @@ export default function ItemsScreen() {
       return;
     }
 
-    // Validate quantity is a positive number
-    const quantity = parseInt(restockItem.quantity, 10);
-    if (isNaN(quantity) || quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid positive quantity');
+    // Validate that the quantity is a valid positive integer
+    const trimmedQuantity = restockItem.quantity.trim();
+    if (!/^\d+$/.test(trimmedQuantity)) {
+      Alert.alert('Error', 'Please enter a valid positive whole number');
+      return;
+    }
+
+    const quantity = parseInt(trimmedQuantity, 10);
+    if (quantity <= 0) {
+      Alert.alert('Error', 'Quantity must be greater than 0');
       return;
     }
 
@@ -236,9 +263,6 @@ export default function ItemsScreen() {
     }
   };
 
-  // Constants
-  const RESTOCK_HISTORY_PAGE_SIZE = 50;
-
   // Load restock history
   const loadRestockHistory = async () => {
     const currentStoreId = user?.currentStoreId || user?.activeStoreId;
@@ -250,7 +274,7 @@ export default function ItemsScreen() {
     try {
       console.log('📋 Loading restock history for store:', currentStoreId);
 
-      const response: any = await apiClient.get(
+      const response = await apiClient.get<RestockHistoryResponse>(
         `/api/store-inventory/store/${currentStoreId}/additions?page=0&size=${RESTOCK_HISTORY_PAGE_SIZE}`
       );
 
