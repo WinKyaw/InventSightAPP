@@ -98,7 +98,6 @@ export default function ItemsScreen() {
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [restockItem, setRestockItem] = useState({
     productId: '',
-    productName: '',
     quantity: '',
     notes: '',
   });
@@ -225,10 +224,6 @@ export default function ItemsScreen() {
     }
 
     const quantity = parseInt(trimmedQuantity, 10);
-    if (quantity <= 0) {
-      Alert.alert('Error', 'Quantity must be greater than 0');
-      return;
-    }
 
     // Get current store ID from user
     const currentStoreId = user?.currentStoreId || user?.activeStoreId;
@@ -253,7 +248,7 @@ export default function ItemsScreen() {
       setShowRestockModal(false);
       
       // Reset form
-      setRestockItem({ productId: '', productName: '', quantity: '', notes: '' });
+      setRestockItem({ productId: '', quantity: '', notes: '' });
       
       // Refresh product list
       loadProducts();
@@ -613,7 +608,6 @@ export default function ItemsScreen() {
                       setRestockItem({
                         ...restockItem,
                         productId: product.id,
-                        productName: product.name,
                       });
                     }}
                   >
@@ -650,16 +644,21 @@ export default function ItemsScreen() {
             />
 
             {/* Submit Button */}
-            <TouchableOpacity
-              style={[
-                itemsStyles.submitButton,
-                (!restockItem.productId || !restockItem.quantity) && itemsStyles.submitButtonDisabled,
-              ]}
-              onPress={handleRestock}
-              disabled={!restockItem.productId || !restockItem.quantity}
-            >
-              <Text style={itemsStyles.submitButtonText}>Add to Inventory</Text>
-            </TouchableOpacity>
+            {(() => {
+              const isFormValid = !!(restockItem.productId && restockItem.quantity);
+              return (
+                <TouchableOpacity
+                  style={[
+                    itemsStyles.submitButton,
+                    !isFormValid && itemsStyles.submitButtonDisabled,
+                  ]}
+                  onPress={handleRestock}
+                  disabled={!isFormValid}
+                >
+                  <Text style={itemsStyles.submitButtonText}>Add to Inventory</Text>
+                </TouchableOpacity>
+              );
+            })()}
           </ScrollView>
         </View>
       </Modal>
