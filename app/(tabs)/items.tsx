@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Modal, TextInput, FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,8 @@ import { productToItem } from '../../utils/productUtils';
 import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
 import { PermissionService } from '../../services/api/permissionService';
+import { apiClient } from '../../services/api/apiClient';
+import { Colors } from '../../constants/Colors';
 
 export default function ItemsScreen() {
   // ✅ SECURITY FIX: Add authentication check
@@ -70,6 +72,17 @@ export default function ItemsScreen() {
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [stockManagementProduct, setStockManagementProduct] = useState<Product | null>(null);
+
+  // Restock modal state
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [restockItem, setRestockItem] = useState({
+    productId: '',
+    productName: '',
+    quantity: '',
+    notes: '',
+  });
+  const [activeTab, setActiveTab] = useState<'inventory' | 'restocks'>('inventory');
+  const [restockHistory, setRestockHistory] = useState<any[]>([]);
 
   // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
   const loadedRef = useRef(false);
@@ -176,6 +189,69 @@ export default function ItemsScreen() {
     }
   };
 
+  // Handle restock submission
+  const handleRestock = async () => {
+    if (!restockItem.productId || !restockItem.quantity) {
+      Alert.alert('Error', 'Please select a product and enter quantity');
+      return;
+    }
+
+    // Get current store ID from user
+    const currentStoreId = user?.currentStoreId || user?.activeStoreId;
+    if (!currentStoreId) {
+      Alert.alert('Error', 'No store selected. Please select a store first.');
+      return;
+    }
+
+    try {
+      console.log('📦 Restocking product:', restockItem);
+
+      const response = await apiClient.post('/api/store-inventory/add', {
+        storeId: currentStoreId,
+        productId: restockItem.productId,
+        quantity: parseInt(restockItem.quantity),
+        notes: restockItem.notes,
+      });
+
+      console.log('✅ Restock successful:', response);
+
+      Alert.alert('Success', 'Inventory updated successfully');
+      setShowRestockModal(false);
+      
+      // Reset form
+      setRestockItem({ productId: '', productName: '', quantity: '', notes: '' });
+      
+      // Refresh product list
+      loadProducts();
+    } catch (error) {
+      console.error('❌ Restock failed:', error);
+      Alert.alert('Error', 'Failed to update inventory');
+    }
+  };
+
+  // Load restock history
+  const loadRestockHistory = async () => {
+    const currentStoreId = user?.currentStoreId || user?.activeStoreId;
+    if (!currentStoreId) {
+      console.log('⚠️ No store selected');
+      return;
+    }
+
+    try {
+      console.log('📋 Loading restock history for store:', currentStoreId);
+
+      const response: any = await apiClient.get(
+        `/api/store-inventory/store/${currentStoreId}/additions?page=0&size=50`
+      );
+
+      console.log('✅ Restock history loaded:', response.additions?.length || 0);
+      setRestockHistory(response.additions || []);
+    } catch (error) {
+      console.error('❌ Failed to load restock history:', error);
+      setRestockHistory([]);
+    }
+  };
+
   // Get category names for the filter modal
   const categoryNames = ['All', ...categories.map(cat => cat.name)];
   const selectedCategoryName = selectedCategoryId 
@@ -224,10 +300,11 @@ export default function ItemsScreen() {
         rightComponent={
           permissions.canAdd ? (
             <TouchableOpacity 
-              style={styles.headerButton} 
-              onPress={() => setShowAddModal(true)}
+              style={itemsStyles.restockButton} 
+              onPress={() => setShowRestockModal(true)}
             >
-              <Text style={styles.headerButtonText}>Add Item</Text>
+              <Ionicons name="add-circle" size={24} color="white" />
+              <Text style={itemsStyles.restockButtonText}>Restock Items</Text>
             </TouchableOpacity>
           ) : null
         }
@@ -247,7 +324,42 @@ export default function ItemsScreen() {
         itemCount={items.length}
       />
 
-      <ScrollView 
+      {/* Tab Navigation */}
+      <View style={itemsStyles.tabContainer}>
+        <TouchableOpacity
+          style={[itemsStyles.tab, activeTab === 'inventory' && itemsStyles.activeTab]}
+          onPress={() => setActiveTab('inventory')}
+        >
+          <Ionicons 
+            name="cube-outline" 
+            size={20} 
+            color={activeTab === 'inventory' ? Colors.primary : Colors.textSecondary} 
+          />
+          <Text style={[itemsStyles.tabText, activeTab === 'inventory' && itemsStyles.activeTabText]}>
+            Inventory
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[itemsStyles.tab, activeTab === 'restocks' && itemsStyles.activeTab]}
+          onPress={() => {
+            setActiveTab('restocks');
+            loadRestockHistory();
+          }}
+        >
+          <Ionicons 
+            name="time-outline" 
+            size={20} 
+            color={activeTab === 'restocks' ? Colors.primary : Colors.textSecondary} 
+          />
+          <Text style={[itemsStyles.tabText, activeTab === 'restocks' && itemsStyles.activeTabText]}>
+            Restocks
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'inventory' ? (
+        <ScrollView 
         style={styles.itemsList} 
         showsVerticalScrollIndicator={true}
         nestedScrollEnabled={true}
@@ -392,6 +504,131 @@ export default function ItemsScreen() {
           )}
         </View>
       </ScrollView>
+      ) : (
+        /* Restock History Tab */
+        <FlatList
+          data={restockHistory}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={itemsStyles.restockCard}>
+              <View style={itemsStyles.restockHeader}>
+                <Text style={itemsStyles.restockProductName}>{item.productName}</Text>
+                <Text style={itemsStyles.restockQuantity}>+{item.quantity}</Text>
+              </View>
+              <Text style={itemsStyles.restockDate}>
+                {new Date(item.createdAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
+              <Text style={itemsStyles.restockUser}>By: {item.createdBy}</Text>
+              {item.notes && (
+                <Text style={itemsStyles.restockNotes}>Note: {item.notes}</Text>
+              )}
+            </View>
+          )}
+          ListEmptyComponent={
+            <View style={itemsStyles.emptyState}>
+              <Ionicons name="time-outline" size={48} color={Colors.textSecondary} />
+              <Text style={itemsStyles.emptyStateText}>No restock history yet</Text>
+            </View>
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={loadRestockHistory}
+              colors={['#10B981']}
+              tintColor="#10B981"
+            />
+          }
+          contentContainerStyle={{ padding: 16 }}
+        />
+      )}
+
+      {/* Restock Modal */}
+      <Modal
+        visible={showRestockModal}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowRestockModal(false)}
+      >
+        <View style={itemsStyles.modalContainer}>
+          <View style={itemsStyles.modalHeader}>
+            <Text style={itemsStyles.modalTitle}>Restock Inventory</Text>
+            <TouchableOpacity onPress={() => setShowRestockModal(false)}>
+              <Ionicons name="close" size={28} color={Colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={itemsStyles.modalContent}>
+            {/* Product Selector */}
+            <Text style={itemsStyles.inputLabel}>Select Product *</Text>
+            <View style={itemsStyles.pickerContainer}>
+              <ScrollView style={itemsStyles.productPicker} nestedScrollEnabled>
+                {products.map((product) => (
+                  <TouchableOpacity
+                    key={product.id}
+                    style={[
+                      itemsStyles.productOption,
+                      restockItem.productId === product.id && itemsStyles.productOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setRestockItem({
+                        ...restockItem,
+                        productId: product.id,
+                        productName: product.name,
+                      });
+                    }}
+                  >
+                    <View style={itemsStyles.productOptionContent}>
+                      <Text style={itemsStyles.productOptionTitle}>{product.name}</Text>
+                      <Text style={itemsStyles.productOptionSubtext}>
+                        Current Stock: {product.quantity} units
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Quantity Input */}
+            <Text style={itemsStyles.inputLabel}>Quantity to Add *</Text>
+            <TextInput
+              style={itemsStyles.input}
+              placeholder="Enter quantity"
+              keyboardType="numeric"
+              value={restockItem.quantity}
+              onChangeText={(value) => setRestockItem({ ...restockItem, quantity: value })}
+            />
+
+            {/* Notes (Optional) */}
+            <Text style={itemsStyles.inputLabel}>Notes (Optional)</Text>
+            <TextInput
+              style={[itemsStyles.input, itemsStyles.textArea]}
+              placeholder="Add notes about this restock..."
+              multiline
+              numberOfLines={3}
+              value={restockItem.notes}
+              onChangeText={(value) => setRestockItem({ ...restockItem, notes: value })}
+            />
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[
+                itemsStyles.submitButton,
+                (!restockItem.productId || !restockItem.quantity) && itemsStyles.submitButtonDisabled,
+              ]}
+              onPress={handleRestock}
+              disabled={!restockItem.productId || !restockItem.quantity}
+            >
+              <Text style={itemsStyles.submitButtonText}>Add to Inventory</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
 
       <AddItemModal 
         visible={showAddModal} 
@@ -430,3 +667,202 @@ export default function ItemsScreen() {
     </SafeAreaView>
   );
 }
+
+// Custom styles for items page
+const itemsStyles = StyleSheet.create({
+  restockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  restockButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.white,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  
+  // Product picker
+  pickerContainer: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    marginBottom: 20,
+    backgroundColor: Colors.white,
+  },
+  productPicker: {
+    maxHeight: 200,
+  },
+  productOption: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  productOptionSelected: {
+    backgroundColor: Colors.lightBlue,
+  },
+  productOptionContent: {
+    gap: 4,
+  },
+  productOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  productOptionSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  
+  // Input fields
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: Colors.text,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: 'white',
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  
+  // Submit button
+  submitButton: {
+    backgroundColor: Colors.primary,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  submitButtonDisabled: {
+    backgroundColor: Colors.border,
+  },
+  submitButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Tab styles
+  tabContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    marginBottom: 16,
+    backgroundColor: Colors.white,
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.primary,
+  },
+  tabText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  activeTabText: {
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  
+  // Restock card
+  restockCard: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.success,
+  },
+  restockHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  restockProductName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+    flex: 1,
+  },
+  restockQuantity: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.success,
+  },
+  restockDate: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  restockUser: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  restockNotes: {
+    fontSize: 14,
+    color: Colors.text,
+    fontStyle: 'italic',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  
+  // Empty state
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginTop: 12,
+  },
+});
