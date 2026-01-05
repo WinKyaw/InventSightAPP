@@ -670,6 +670,31 @@ class WarehouseServiceClass {
       throw error;
     }
   }
+
+  /**
+   * Get products available for a specific warehouse
+   * These are products from predefined items assigned to this warehouse
+   */
+  async getWarehouseAvailableProducts(warehouseId: string): Promise<any[]> {
+    try {
+      console.log(`📦 Fetching available products for warehouse: ${warehouseId}`);
+      
+      const response = await apiClient.get(
+        `/api/warehouses/${warehouseId}/available-products`
+      );
+      
+      // Handle different response formats
+      const responseData = (response as any)?.data || response;
+      const products = responseData?.products || [];
+      
+      console.log(`✅ Found ${products.length} products available for this warehouse`);
+      return products;
+    } catch (error) {
+      console.error('❌ Error fetching warehouse products:', error);
+      // Return empty array instead of throwing to handle gracefully
+      return [];
+    }
+  }
 }
 
 // Export singleton instance
@@ -684,6 +709,8 @@ export const getWarehouseRestocks = (warehouseId: string, forceRefresh?: boolean
   WarehouseService.getWarehouseRestocks(warehouseId, forceRefresh, page, size);
 export const getWarehouseSales = (warehouseId: string, forceRefresh?: boolean, page?: number, size?: number) => 
   WarehouseService.getWarehouseSales(warehouseId, forceRefresh, page, size);
+export const getWarehouseAvailableProducts = (warehouseId: string) => 
+  WarehouseService.getWarehouseAvailableProducts(warehouseId);
 
 export { WarehouseService };
 export default WarehouseService;

@@ -594,17 +594,31 @@ export default function WarehouseScreen() {
 
   // Load products for inventory addition
   const loadProducts = async () => {
+    if (!selectedWarehouse) {
+      console.log('⚠️ No warehouse selected');
+      return;
+    }
+
     try {
       setLoadingProducts(true);
-      console.log('📦 Loading products for inventory addition...');
-      // Note: Loading 100 products for simplicity. In production, consider implementing
-      // pagination or search functionality as the product catalog grows.
-      const response = await ProductService.getAllProducts(1, 100);
-      setProducts(response.products || []);
-      console.log(`✅ Loaded ${response.products?.length || 0} products`);
+      console.log('📦 Loading products for warehouse:', selectedWarehouse.id);
+      
+      // Get products available for this warehouse
+      const warehouseProducts = await WarehouseService.getWarehouseAvailableProducts(
+        selectedWarehouse.id
+      );
+      
+      setProducts(warehouseProducts);
+      console.log(`✅ Loaded ${warehouseProducts.length} products for this warehouse`);
+      
+      // Show helpful message if no products available
+      if (warehouseProducts.length === 0) {
+        console.log('⚠️ No products assigned to this warehouse');
+      }
     } catch (error) {
       console.error('❌ Failed to load products:', error);
-      Alert.alert('Error', 'Failed to load products');
+      Alert.alert('Error', 'Failed to load products for this warehouse');
+      setProducts([]);
     } finally {
       setLoadingProducts(false);
     }
@@ -1523,6 +1537,17 @@ export default function WarehouseScreen() {
               <Text style={styles.inputLabel}>Product *</Text>
               {loadingProducts ? (
                 <ActivityIndicator size="small" color="#6366F1" />
+              ) : products.length === 0 ? (
+                // ✅ NEW: Show helpful message when no products available
+                <View style={styles.emptyProductContainer}>
+                  <Ionicons name="cube-outline" size={32} color="#9CA3AF" />
+                  <Text style={styles.emptyProductText}>
+                    No products assigned to this warehouse
+                  </Text>
+                  <Text style={styles.emptyProductSubtext}>
+                    Please assign predefined items to this warehouse first
+                  </Text>
+                </View>
               ) : (
                 <View style={styles.pickerContainer}>
                   <ScrollView style={styles.productPicker} nestedScrollEnabled>
@@ -2431,5 +2456,28 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#6B7280',
     fontSize: 14,
+  },
+  emptyProductContainer: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+  },
+  emptyProductText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  emptyProductSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
