@@ -196,6 +196,13 @@ export default function ItemsScreen() {
       return;
     }
 
+    // Validate quantity is a positive number
+    const quantity = parseInt(restockItem.quantity, 10);
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Error', 'Please enter a valid positive quantity');
+      return;
+    }
+
     // Get current store ID from user
     const currentStoreId = user?.currentStoreId || user?.activeStoreId;
     if (!currentStoreId) {
@@ -209,7 +216,7 @@ export default function ItemsScreen() {
       const response = await apiClient.post('/api/store-inventory/add', {
         storeId: currentStoreId,
         productId: restockItem.productId,
-        quantity: parseInt(restockItem.quantity),
+        quantity: quantity,
         notes: restockItem.notes,
       });
 
@@ -229,6 +236,9 @@ export default function ItemsScreen() {
     }
   };
 
+  // Constants
+  const RESTOCK_HISTORY_PAGE_SIZE = 50;
+
   // Load restock history
   const loadRestockHistory = async () => {
     const currentStoreId = user?.currentStoreId || user?.activeStoreId;
@@ -241,7 +251,7 @@ export default function ItemsScreen() {
       console.log('📋 Loading restock history for store:', currentStoreId);
 
       const response: any = await apiClient.get(
-        `/api/store-inventory/store/${currentStoreId}/additions?page=0&size=50`
+        `/api/store-inventory/store/${currentStoreId}/additions?page=0&size=${RESTOCK_HISTORY_PAGE_SIZE}`
       );
 
       console.log('✅ Restock history loaded:', response.additions?.length || 0);
@@ -599,7 +609,7 @@ export default function ItemsScreen() {
             <TextInput
               style={itemsStyles.input}
               placeholder="Enter quantity"
-              keyboardType="numeric"
+              keyboardType="number-pad"
               value={restockItem.quantity}
               onChangeText={(value) => setRestockItem({ ...restockItem, quantity: value })}
             />
