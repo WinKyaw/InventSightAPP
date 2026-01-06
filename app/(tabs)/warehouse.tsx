@@ -564,12 +564,21 @@ export default function WarehouseScreen() {
     return () => clearTabSwitchTimer();
   }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData, clearTabSwitchTimer]);
 
-  // Load products when Add Inventory or Withdraw Inventory modal opens
+  // Load products when Add Inventory modal opens or warehouse changes
   useEffect(() => {
-    if ((showAddInventoryModal || showWithdrawInventoryModal) && products.length === 0) {
+    if (showAddInventoryModal && selectedWarehouse) {
+      console.log('📦 Add Inventory modal opened, loading products for warehouse:', selectedWarehouse.id);
       loadProducts();
     }
-  }, [showAddInventoryModal, showWithdrawInventoryModal]);
+  }, [showAddInventoryModal, selectedWarehouse?.id]); // Re-load when warehouse changes
+
+  // Load products for withdrawal when Withdraw modal opens or warehouse changes
+  useEffect(() => {
+    if (showWithdrawInventoryModal && selectedWarehouse) {
+      console.log('📦 Withdraw modal opened, loading warehouse products:', selectedWarehouse.id);
+      loadWarehouseProducts();
+    }
+  }, [showWithdrawInventoryModal, selectedWarehouse?.id]); // Re-load when warehouse changes
 
   // Load all products when component mounts or warehouse changes (for product name lookups)
   useEffect(() => {
@@ -770,6 +779,7 @@ export default function WarehouseScreen() {
         quantity: '',
         notes: '',
       });
+      setProducts([]); // Clear products after successful add
       
       console.log('✅ Inventory added, cache cleared. Data will refresh on next tab switch.');
       
@@ -833,6 +843,7 @@ export default function WarehouseScreen() {
         notes: '',
         maxQuantity: 0,
       });
+      setWarehouseProducts([]); // Clear warehouse products after successful withdrawal
       
       console.log('✅ Inventory withdrawn, cache cleared. Data will refresh on next tab switch.');
       
@@ -1618,6 +1629,7 @@ export default function WarehouseScreen() {
                       quantity: '',
                       notes: '',
                     });
+                    setProducts([]); // Clear products when closing modal
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -1745,6 +1757,7 @@ export default function WarehouseScreen() {
                       notes: '',
                       maxQuantity: 0,
                     });
+                    setWarehouseProducts([]); // Clear warehouse products when closing modal
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
