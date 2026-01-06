@@ -96,11 +96,6 @@ export default function ItemsScreen() {
 
   // Restock modal state
   const [showRestockModal, setShowRestockModal] = useState(false);
-  const [restockItem, setRestockItem] = useState({
-    productId: '',
-    quantity: '',
-    notes: '',
-  });
   const [activeTab, setActiveTab] = useState<'inventory' | 'restocks'>('inventory');
   const [restockHistory, setRestockHistory] = useState<RestockHistoryItem[]>([]);
 
@@ -261,7 +256,7 @@ export default function ItemsScreen() {
       // Validate all items have quantity
       const invalidItems = selectedProducts.filter(p => {
         const trimmedQuantity = p.quantity?.trim();
-        return !trimmedQuantity || !/^\d+$/.test(trimmedQuantity) || parseInt(trimmedQuantity) <= 0;
+        return !trimmedQuantity || !/^\d+$/.test(trimmedQuantity) || trimmedQuantity === '0';
       });
       
       if (invalidItems.length > 0) {
@@ -690,7 +685,7 @@ export default function ItemsScreen() {
                         <TextInput
                           style={itemsStyles.quantityInput}
                           placeholder="0"
-                          keyboardType="numeric"
+                          keyboardType="number-pad"
                           value={selectedProduct?.quantity || ''}
                           onChangeText={(value) => updateProductQuantity(product.id, value)}
                         />
@@ -952,7 +947,7 @@ const itemsStyles = StyleSheet.create({
 
   // Summary container
   summaryContainer: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: Colors.successLight,
     padding: 16,
     borderRadius: 8,
     marginTop: 20,
