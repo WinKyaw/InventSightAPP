@@ -136,7 +136,7 @@ export default function ItemsScreen() {
       console.error('❌ Failed to load stores:', error);
       setStores([]);
     }
-  }, [currentStore]);
+  }, []); // ✅ FIXED: Removed currentStore dependency to prevent infinite re-renders
 
   // Load stores on mount
   React.useEffect(() => {
@@ -503,7 +503,10 @@ export default function ItemsScreen() {
                 <View key={item.id}>
                   {index > 0 && <View style={styles.itemSeparator} />}
                   <TouchableOpacity
-                    style={styles.itemRow}
+                    style={[
+                      styles.itemRow,
+                      !isGMPlus && itemsStyles.itemRowDisabled // ✅ FIXED: Add visual feedback when disabled
+                    ]}
                     onPress={() => isGMPlus && toggleItemExpansion(item.id)}
                     disabled={!isGMPlus}
                   >
@@ -997,6 +1000,11 @@ const itemsStyles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: '500',
   },
+
+  // Item Row Disabled State
+  itemRowDisabled: {
+    opacity: 1, // ✅ Keep full opacity but indicate it's not expandable
+  },
   
   // Modal styles
   modalContainer: {
@@ -1204,7 +1212,7 @@ const itemsStyles = StyleSheet.create({
     marginBottom: 8,
   },
   storeOptionSelected: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: Colors.secondaryLight, // ✅ FIXED: Use constant instead of hard-coded color
     borderWidth: 2,
     borderColor: Colors.secondary,
   },

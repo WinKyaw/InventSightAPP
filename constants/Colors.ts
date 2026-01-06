@@ -1,6 +1,7 @@
 export const Colors = {
   primary: '#3B82F6',
   secondary: '#10B981',
+  secondaryLight: '#D1FAE5', // ✅ NEW: Light green for selected states
   accent: '#F59E0B',
   purple: '#8B5CF6',
   danger: '#EF4444',
