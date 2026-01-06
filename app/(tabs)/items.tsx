@@ -700,7 +700,7 @@ export default function ItemsScreen() {
       <Modal
         visible={showRestockModal}
         animationType="slide"
-        presentationStyle="pageSheet"
+        transparent={false}
         onRequestClose={handleCloseRestockModal}
       >
         <SafeAreaView style={itemsStyles.modalSafeArea} edges={['top']}>
