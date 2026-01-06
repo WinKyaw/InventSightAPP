@@ -157,9 +157,6 @@ export default function ItemsScreen() {
       setStores([]);
     }
   }, []); // Empty deps - function is stable across renders
-  
-  // Expose loadStores as loadUserStores for use in handleCreateStore
-  const loadUserStores = loadStores;
 
   // Load stores on mount
   useEffect(() => {
@@ -213,7 +210,7 @@ export default function ItemsScreen() {
                 });
                 
                 // Refresh stores list
-                loadUserStores();
+                loadStores();
               },
             },
           ]
@@ -1686,31 +1683,6 @@ const itemsStyles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginTop: 2,
-  },
-
-  // Add Store Modal Styles
-  addStoreContent: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  placeholderButton: {
-    backgroundColor: Colors.secondary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  placeholderButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
 
   // Form styles
