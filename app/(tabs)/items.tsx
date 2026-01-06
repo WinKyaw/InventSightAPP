@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Modal, TextInput, FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -45,7 +45,7 @@ export default function ItemsScreen() {
   const { isAuthenticated, isInitialized, user } = useAuth();
   const router = useRouter();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isInitialized && !isAuthenticated) {
       console.log('🔐 Items: Unauthorized access blocked, redirecting to login');
       router.replace('/(auth)/login');
@@ -119,7 +119,7 @@ export default function ItemsScreen() {
   const loadedRef = useRef(false);
 
   // Load stores on mount
-  const loadStores = React.useCallback(async () => {
+  const loadStores = useCallback(async () => {
     try {
       console.log('🏪 Loading user stores...');
       const userStores = await StoreService.getUserStores();
@@ -128,7 +128,7 @@ export default function ItemsScreen() {
       setStores(userStores);
       
       // Auto-select first store if available
-      // Note: This runs only once on mount due to empty dependency array
+      // This logic runs when loadStores is called (which happens once on mount via useEffect)
       if (userStores.length > 0) {
         console.log('📍 Auto-selecting first store:', userStores[0].storeName);
         setCurrentStore(userStores[0]);
@@ -137,15 +137,15 @@ export default function ItemsScreen() {
       console.error('❌ Failed to load stores:', error);
       setStores([]);
     }
-  }, []); // Empty deps - runs once on mount, auto-selects first store
+  }, []); // Empty deps - function is stable across renders
 
   // Load stores on mount
-  React.useEffect(() => {
+  useEffect(() => {
     loadStores();
   }, [loadStores]);
 
   // Load permissions once on mount
-  const loadPermissions = React.useCallback(async () => {
+  const loadPermissions = useCallback(async () => {
     try {
       // Batch check all permissions at once
       const results = await PermissionService.checkPermissions([
@@ -164,13 +164,13 @@ export default function ItemsScreen() {
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadPermissions();
   }, [loadPermissions]);
 
   // ✅ LAZY LOADING: Load products and categories only when Items screen is focused
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       // Prevent loading if already loaded or currently loading
       if (loadedRef.current || loading) {
         console.log('⏭️  Items: Skipping load (already loaded or loading)');
