@@ -283,6 +283,44 @@ export default function ItemsScreen() {
     }, [loadProducts, loadCategories, loading])
   );
 
+  // ✅ FIX: Reload products when store changes
+  useEffect(() => {
+    // Only reload if we've already loaded products at least once
+    if (!loadedRef.current) {
+      console.log('⏭️  Items: Skipping store change reload - not initialized yet');
+      return;
+    }
+
+    // Don't reload on initial mount (currentStore is null initially)
+    if (!currentStore?.id) {
+      console.log('⏭️  Items: Skipping store change reload - no store selected');
+      return;
+    }
+
+    console.log('🏪 Store changed to:', currentStore.storeName);
+    
+    // Activate the store in the backend (sets tenant context)
+    const activateAndReload = async () => {
+      try {
+        await StoreService.activateStore(currentStore.id);
+        
+        console.log('🔄 Reloading products for new store...');
+        
+        // Clear product cache to ensure fresh data
+        const { CacheManager } = await import('../../utils/cacheManager');
+        CacheManager.invalidateProducts();
+        
+        // Reload products for the new store
+        await loadProducts(1, true);
+      } catch (error) {
+        console.error('❌ Failed to activate store:', error);
+        Alert.alert('Error', 'Failed to switch stores. Please try again.');
+      }
+    };
+    
+    activateAndReload();
+  }, [currentStore?.id, loadProducts]);
+
   // Convert products to items for UI compatibility
   const items = (products ?? []).map(productToItem);
 

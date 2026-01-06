@@ -59,4 +59,18 @@ export class StoreService {
       throw error;
     }
   }
+
+  /**
+   * Activate a store (sets it as the current active store in the backend tenant context)
+   */
+  static async activateStore(id: string): Promise<void> {
+    try {
+      console.log(`🔄 Activating store ${id}...`);
+      await apiClient.post(API_ENDPOINTS.STORES.ACTIVATE(id), {});
+      console.log(`✅ Store ${id} activated successfully`);
+    } catch (error: unknown) {
+      console.error(`❌ Failed to activate store ${id}:`, error);
+      throw error;
+    }
+  }
 }
