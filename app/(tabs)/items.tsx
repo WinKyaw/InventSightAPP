@@ -101,7 +101,7 @@ export default function ItemsScreen() {
 
   // State for multi-item restock
   const [selectedProducts, setSelectedProducts] = useState<Array<{
-    productId: string;
+    productId: number;
     productName: string;
     quantity: string;
   }>>([]);
@@ -233,7 +233,7 @@ export default function ItemsScreen() {
   };
 
   // Update quantity for selected product
-  const updateProductQuantity = (productId: string, quantity: string) => {
+  const updateProductQuantity = (productId: number, quantity: string) => {
     setSelectedProducts(prev =>
       prev.map(p =>
         p.productId === productId
@@ -674,7 +674,7 @@ export default function ItemsScreen() {
                     <View style={itemsStyles.productInfo}>
                       <Text style={itemsStyles.productName}>{product.name}</Text>
                       <Text style={itemsStyles.productMeta}>
-                        Current Stock: {product.quantity} {product.unit || 'units'}
+                        Current Stock: {product.quantity} units
                       </Text>
                     </View>
 
