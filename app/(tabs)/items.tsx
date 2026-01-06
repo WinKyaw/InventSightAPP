@@ -300,8 +300,8 @@ export default function ItemsScreen() {
 
     console.log('🏪 Store changed to:', currentStore.storeName);
     
-    // Activate the store in the backend (sets tenant context)
-    const activateAndReload = async () => {
+    // Activate the store in the backend (sets tenant context) and reload products
+    (async () => {
       try {
         await StoreService.activateStore(currentStore.id);
         
@@ -316,9 +316,7 @@ export default function ItemsScreen() {
         console.error('❌ Failed to activate store:', error);
         Alert.alert('Error', 'Failed to switch stores. Please try again.');
       }
-    };
-    
-    activateAndReload();
+    })();
   }, [currentStore?.id, loadProducts]);
 
   // Convert products to items for UI compatibility

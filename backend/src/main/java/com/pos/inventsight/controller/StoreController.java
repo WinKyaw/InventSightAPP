@@ -49,17 +49,26 @@ public class StoreController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getStoreById(@PathVariable String id) {
-        logger.info("Fetching store with ID: {}", id);
-        Optional<Store> store = storeRepository.findById(UUID.fromString(id));
-        
-        if (store.isPresent()) {
+        try {
+            logger.info("Fetching store with ID: {}", id);
+            UUID storeId = UUID.fromString(id);
+            Optional<Store> store = storeRepository.findById(storeId);
+            
+            if (store.isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("store", mapStoreToResponse(store.get()));
+                return ResponseEntity.ok(response);
+            } else {
+                logger.warn("Store not found with ID: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid UUID format: {}", id);
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("store", mapStoreToResponse(store.get()));
-            return ResponseEntity.ok(response);
-        } else {
-            logger.warn("Store not found with ID: {}", id);
-            return ResponseEntity.notFound().build();
+            response.put("success", false);
+            response.put("message", "Invalid store ID format");
+            return ResponseEntity.badRequest().body(response);
         }
     }
 
@@ -70,29 +79,41 @@ public class StoreController {
      */
     @PostMapping("/{id}/activate")
     public ResponseEntity<Map<String, Object>> activateStore(@PathVariable String id) {
-        logger.info("Activating store with ID: {}", id);
-        
-        Optional<Store> store = storeRepository.findById(UUID.fromString(id));
-        
-        if (store.isEmpty()) {
-            logger.warn("Store not found with ID: {}", id);
-            return ResponseEntity.notFound().build();
+        try {
+            logger.info("Activating store with ID: {}", id);
+            UUID storeId = UUID.fromString(id);
+            
+            Optional<Store> store = storeRepository.findById(storeId);
+            
+            if (store.isEmpty()) {
+                logger.warn("Store not found with ID: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // TODO: In production, store the active store ID in:
+            // - Session attribute
+            // - JWT token claim
+            // - User database record
+            // - Redis cache with user ID as key
+            // For now, we just validate the store exists
+            // The actual tenant filtering happens in the repository layer
+            // based on the current authentication context
+            
+            logger.info("Store {} activated successfully", store.get().getName());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Store activated successfully");
+            response.put("store", mapStoreToResponse(store.get()));
+            
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid UUID format: {}", id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Invalid store ID format");
+            return ResponseEntity.badRequest().body(response);
         }
-        
-        // TODO: In production, store the active store ID in:
-        // - Session attribute
-        // - JWT token claim
-        // - User database record
-        // - Redis cache with user ID as key
-        
-        logger.info("Store {} activated successfully", store.get().getName());
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Store activated successfully");
-        response.put("store", mapStoreToResponse(store.get()));
-        
-        return ResponseEntity.ok(response);
     }
 
     /**
