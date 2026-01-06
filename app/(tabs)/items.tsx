@@ -14,7 +14,7 @@ import { productToItem } from '../../utils/productUtils';
 import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
 import { PermissionService } from '../../services/api/permissionService';
-import { apiClient } from '../../services/api/apiClient';
+import apiClient from '../../services/api/apiClient';
 import { Colors } from '../../constants/Colors';
 import { StoreService, Store } from '../../services/api/storeService';
 import { canManageWarehouses } from '../../utils/permissions';
@@ -73,6 +73,22 @@ export default function ItemsScreen() {
   const [currentStore, setCurrentStore] = useState<Store | null>(null);
   const [showStoreSelector, setShowStoreSelector] = useState(false);
   const [showAddStoreModal, setShowAddStoreModal] = useState(false);
+  
+  // Add Store form state
+  const [storeForm, setStoreForm] = useState({
+    storeName: '',
+    description: '',
+    address: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: '',
+    phone: '',
+    email: '',
+    website: '',
+    taxId: '',
+  });
+  const [isSubmittingStore, setIsSubmittingStore] = useState(false);
 
   const {
     products,
@@ -146,6 +162,86 @@ export default function ItemsScreen() {
   useEffect(() => {
     loadStores();
   }, [loadStores]);
+
+  // Handler to create store
+  const handleCreateStore = async () => {
+    // Validation
+    if (!storeForm.storeName.trim()) {
+      Alert.alert('Validation Error', 'Store name is required');
+      return;
+    }
+
+    try {
+      setIsSubmittingStore(true);
+      console.log('🏪 Creating new store:', storeForm.storeName);
+
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+        store: Store;
+      }>('/api/stores', storeForm);
+
+      if (response.success) {
+        console.log('✅ Store created successfully:', response.store);
+        
+        Alert.alert(
+          'Success',
+          `Store "${response.store.storeName}" created successfully!`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Close modal
+                setShowAddStoreModal(false);
+                
+                // Reset form
+                setStoreForm({
+                  storeName: '',
+                  description: '',
+                  address: '',
+                  city: '',
+                  state: '',
+                  postalCode: '',
+                  country: '',
+                  phone: '',
+                  email: '',
+                  website: '',
+                  taxId: '',
+                });
+                
+                // Refresh stores list
+                loadStores();
+              },
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      console.error('❌ Error creating store:', error);
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'Failed to create store. Please try again.'
+      );
+    } finally {
+      setIsSubmittingStore(false);
+    }
+  };
+
+  // Update Add Store button handler
+  const handleAddStorePress = () => {
+    if (isGMPlus) {
+      setShowAddStoreModal(true);
+    } else {
+      Alert.alert(
+        'Upgrade Required',
+        'Add Store feature is only available for GM+ subscription. Please upgrade to access this feature.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => console.log('Navigate to upgrade') },
+        ]
+      );
+    }
+  };
 
   // Load permissions once on mount
   const loadPermissions = useCallback(async () => {
@@ -418,7 +514,7 @@ export default function ItemsScreen() {
           <View style={itemsStyles.storeActions}>
             <TouchableOpacity 
               style={itemsStyles.addStoreButton}
-              onPress={() => setShowAddStoreModal(true)}
+              onPress={handleAddStorePress}
             >
               <Ionicons name="add" size={20} color="white" />
               <Text style={itemsStyles.addStoreText}>Add Store</Text>
@@ -908,35 +1004,186 @@ export default function ItemsScreen() {
         </View>
       </Modal>
 
-      {/* ✅ NEW: Add Store Modal Placeholder */}
+      {/* ✅ Add Store Modal */}
       <Modal
         visible={showAddStoreModal}
         animationType="slide"
-        transparent={true}
+        presentationStyle="pageSheet"
         onRequestClose={() => setShowAddStoreModal(false)}
       >
-        <View style={itemsStyles.modalOverlay}>
-          <View style={itemsStyles.storeSelectorModal}>
+        <SafeAreaView style={itemsStyles.modalSafeArea} edges={['top']}>
+          <View style={itemsStyles.modalContainer}>
+            {/* Header */}
             <View style={itemsStyles.modalHeader}>
               <Text style={itemsStyles.modalTitle}>Add New Store</Text>
-              <TouchableOpacity onPress={() => setShowAddStoreModal(false)}>
+              <TouchableOpacity
+                onPress={() => setShowAddStoreModal(false)}
+                style={itemsStyles.closeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Ionicons name="close" size={28} color={Colors.text} />
               </TouchableOpacity>
             </View>
-            
-            <View style={itemsStyles.addStoreContent}>
-              <Text style={itemsStyles.placeholderText}>
-                Store creation functionality will be implemented here.
-              </Text>
+
+            <ScrollView style={itemsStyles.modalContent}>
+              {/* Store Name (Required) */}
+              <View style={itemsStyles.formGroup}>
+                <Text style={itemsStyles.formLabel}>
+                  Store Name <Text style={itemsStyles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={itemsStyles.formInput}
+                  placeholder="e.g., Downtown Store"
+                  value={storeForm.storeName}
+                  onChangeText={(text) => setStoreForm({ ...storeForm, storeName: text })}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              {/* Description */}
+              <View style={itemsStyles.formGroup}>
+                <Text style={itemsStyles.formLabel}>Description</Text>
+                <TextInput
+                  style={[itemsStyles.formInput, itemsStyles.textArea]}
+                  placeholder="Store description (optional)"
+                  value={storeForm.description}
+                  onChangeText={(text) => setStoreForm({ ...storeForm, description: text })}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              {/* Address */}
+              <View style={itemsStyles.formGroup}>
+                <Text style={itemsStyles.formLabel}>Address</Text>
+                <TextInput
+                  style={itemsStyles.formInput}
+                  placeholder="Street address"
+                  value={storeForm.address}
+                  onChangeText={(text) => setStoreForm({ ...storeForm, address: text })}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              {/* City & State */}
+              <View style={itemsStyles.formRow}>
+                <View style={[itemsStyles.formGroup, itemsStyles.formGroupHalf]}>
+                  <Text style={itemsStyles.formLabel}>City</Text>
+                  <TextInput
+                    style={itemsStyles.formInput}
+                    placeholder="City"
+                    value={storeForm.city}
+                    onChangeText={(text) => setStoreForm({ ...storeForm, city: text })}
+                    autoCapitalize="words"
+                  />
+                </View>
+
+                <View style={[itemsStyles.formGroup, itemsStyles.formGroupHalf]}>
+                  <Text style={itemsStyles.formLabel}>State</Text>
+                  <TextInput
+                    style={itemsStyles.formInput}
+                    placeholder="State"
+                    value={storeForm.state}
+                    onChangeText={(text) => setStoreForm({ ...storeForm, state: text })}
+                    autoCapitalize="characters"
+                  />
+                </View>
+              </View>
+
+              {/* Postal Code & Country */}
+              <View style={itemsStyles.formRow}>
+                <View style={[itemsStyles.formGroup, itemsStyles.formGroupHalf]}>
+                  <Text style={itemsStyles.formLabel}>Postal Code</Text>
+                  <TextInput
+                    style={itemsStyles.formInput}
+                    placeholder="ZIP/Postal"
+                    value={storeForm.postalCode}
+                    onChangeText={(text) => setStoreForm({ ...storeForm, postalCode: text })}
+                    keyboardType="default"
+                  />
+                </View>
+
+                <View style={[itemsStyles.formGroup, itemsStyles.formGroupHalf]}>
+                  <Text style={itemsStyles.formLabel}>Country</Text>
+                  <TextInput
+                    style={itemsStyles.formInput}
+                    placeholder="Country"
+                    value={storeForm.country}
+                    onChangeText={(text) => setStoreForm({ ...storeForm, country: text })}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
+
+              {/* Phone */}
+              <View style={itemsStyles.formGroup}>
+                <Text style={itemsStyles.formLabel}>Phone</Text>
+                <TextInput
+                  style={itemsStyles.formInput}
+                  placeholder="(555) 123-4567"
+                  value={storeForm.phone}
+                  onChangeText={(text) => setStoreForm({ ...storeForm, phone: text })}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              {/* Email */}
+              <View style={itemsStyles.formGroup}>
+                <Text style={itemsStyles.formLabel}>Email</Text>
+                <TextInput
+                  style={itemsStyles.formInput}
+                  placeholder="store@example.com"
+                  value={storeForm.email}
+                  onChangeText={(text) => setStoreForm({ ...storeForm, email: text })}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              {/* Website */}
+              <View style={itemsStyles.formGroup}>
+                <Text style={itemsStyles.formLabel}>Website</Text>
+                <TextInput
+                  style={itemsStyles.formInput}
+                  placeholder="https://example.com"
+                  value={storeForm.website}
+                  onChangeText={(text) => setStoreForm({ ...storeForm, website: text })}
+                  keyboardType="url"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              {/* Tax ID */}
+              <View style={itemsStyles.formGroup}>
+                <Text style={itemsStyles.formLabel}>Tax ID</Text>
+                <TextInput
+                  style={itemsStyles.formInput}
+                  placeholder="Tax identification number"
+                  value={storeForm.taxId}
+                  onChangeText={(text) => setStoreForm({ ...storeForm, taxId: text })}
+                />
+              </View>
+
+              {/* Submit Button */}
               <TouchableOpacity
-                style={itemsStyles.placeholderButton}
-                onPress={() => setShowAddStoreModal(false)}
+                style={[
+                  itemsStyles.submitButton,
+                  (!storeForm.storeName.trim() || isSubmittingStore) && itemsStyles.submitButtonDisabled,
+                ]}
+                onPress={handleCreateStore}
+                disabled={!storeForm.storeName.trim() || isSubmittingStore}
               >
-                <Text style={itemsStyles.placeholderButtonText}>Close</Text>
+                {isSubmittingStore ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={itemsStyles.submitButtonText}>Create Store</Text>
+                )}
               </TouchableOpacity>
-            </View>
+
+              <View style={{ height: 40 }} />
+            </ScrollView>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -1438,28 +1685,34 @@ const itemsStyles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Add Store Modal Styles
-  addStoreContent: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
+  // Form styles
+  formGroup: {
     marginBottom: 20,
   },
-  placeholderButton: {
-    backgroundColor: Colors.secondary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
+  formGroupHalf: {
+    flex: 1,
   },
-  placeholderButtonText: {
-    color: 'white',
+  formRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  formLabel: {
     fontSize: 16,
     fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  required: {
+    color: Colors.error,
+  },
+  formInput: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: Colors.text,
   },
 });
