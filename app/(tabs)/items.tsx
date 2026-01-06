@@ -259,10 +259,13 @@ export default function ItemsScreen() {
   const handleMultiItemRestock = async () => {
     try {
       // Validate all items have quantity
-      const invalidItems = selectedProducts.filter(p => !p.quantity || parseInt(p.quantity) <= 0);
+      const invalidItems = selectedProducts.filter(p => {
+        const trimmedQuantity = p.quantity?.trim();
+        return !trimmedQuantity || !/^\d+$/.test(trimmedQuantity) || parseInt(trimmedQuantity) <= 0;
+      });
       
       if (invalidItems.length > 0) {
-        Alert.alert('Error', 'Please enter valid quantities for all selected items');
+        Alert.alert('Error', 'Please enter valid positive quantities for all selected items');
         return;
       }
 
@@ -280,7 +283,7 @@ export default function ItemsScreen() {
         const response = await apiClient.post('/api/store-inventory/add', {
           storeId: currentStoreId,
           productId: item.productId,
-          quantity: parseInt(item.quantity),
+          quantity: parseInt(item.quantity.trim(), 10),
           notes: globalNotes,
         });
         return response.data;
@@ -717,10 +720,13 @@ export default function ItemsScreen() {
                 </Text>
                 {selectedProducts.map((item) => {
                   const product = products.find(p => p.id === item.productId);
+                  const displayQuantity = item.quantity?.trim() || '-';
                   return (
                     <View key={item.productId} style={itemsStyles.summaryRow}>
                       <Text style={itemsStyles.summaryProduct}>{product?.name}</Text>
-                      <Text style={itemsStyles.summaryQuantity}>+{item.quantity || '0'}</Text>
+                      <Text style={itemsStyles.summaryQuantity}>
+                        {displayQuantity !== '-' ? `+${displayQuantity}` : displayQuantity}
+                      </Text>
                     </View>
                   );
                 })}
