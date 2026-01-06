@@ -127,8 +127,9 @@ export default function ItemsScreen() {
       console.log('✅ Stores loaded:', userStores.length);
       setStores(userStores);
       
-      // Auto-select first store if available and no store selected
-      if (userStores.length > 0 && !currentStore) {
+      // Auto-select first store if available
+      // Note: This runs only once on mount due to empty dependency array
+      if (userStores.length > 0) {
         console.log('📍 Auto-selecting first store:', userStores[0].storeName);
         setCurrentStore(userStores[0]);
       }
@@ -136,7 +137,7 @@ export default function ItemsScreen() {
       console.error('❌ Failed to load stores:', error);
       setStores([]);
     }
-  }, []); // ✅ FIXED: Removed currentStore dependency to prevent infinite re-renders
+  }, []); // Empty deps - runs once on mount, auto-selects first store
 
   // Load stores on mount
   React.useEffect(() => {
@@ -503,12 +504,10 @@ export default function ItemsScreen() {
                 <View key={item.id}>
                   {index > 0 && <View style={styles.itemSeparator} />}
                   <TouchableOpacity
-                    style={[
-                      styles.itemRow,
-                      !isGMPlus && itemsStyles.itemRowDisabled // ✅ FIXED: Add visual feedback when disabled
-                    ]}
+                    style={styles.itemRow}
                     onPress={() => isGMPlus && toggleItemExpansion(item.id)}
                     disabled={!isGMPlus}
+                    activeOpacity={isGMPlus ? 0.7 : 1} // Visual feedback: no opacity change for non-GM users
                   >
                     <View style={styles.itemInfo}>
                       <View style={styles.itemNameRow}>
@@ -999,11 +998,6 @@ const itemsStyles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     fontWeight: '500',
-  },
-
-  // Item Row Disabled State
-  itemRowDisabled: {
-    opacity: 1, // ✅ Keep full opacity but indicate it's not expandable
   },
   
   // Modal styles
