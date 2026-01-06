@@ -104,6 +104,14 @@ export default function ItemsScreen() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'restocks'>('inventory');
   const [restockHistory, setRestockHistory] = useState<RestockHistoryItem[]>([]);
 
+  // State for multi-item restock
+  const [selectedProducts, setSelectedProducts] = useState<Array<{
+    productId: string;
+    productName: string;
+    quantity: string;
+  }>>([]);
+  const [globalNotes, setGlobalNotes] = useState('');
+
   // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
   const loadedRef = useRef(false);
 
@@ -209,52 +217,93 @@ export default function ItemsScreen() {
     }
   };
 
-  // Handle restock submission
-  const handleRestock = async () => {
-    if (!restockItem.productId || !restockItem.quantity) {
-      Alert.alert('Error', 'Please select a product and enter quantity');
-      return;
+  // Toggle product selection
+  const toggleProductSelection = (product: Product) => {
+    const isSelected = selectedProducts.some(p => p.productId === product.id);
+    
+    if (isSelected) {
+      // Remove from selection
+      setSelectedProducts(prev => prev.filter(p => p.productId !== product.id));
+    } else {
+      // Add to selection
+      setSelectedProducts(prev => [
+        ...prev,
+        {
+          productId: product.id,
+          productName: product.name,
+          quantity: '',
+        },
+      ]);
     }
+  };
 
-    // Validate that the quantity is a valid positive integer
-    const trimmedQuantity = restockItem.quantity.trim();
-    if (!/^\d+$/.test(trimmedQuantity)) {
-      Alert.alert('Error', 'Please enter a valid positive whole number');
-      return;
-    }
+  // Update quantity for selected product
+  const updateProductQuantity = (productId: string, quantity: string) => {
+    setSelectedProducts(prev =>
+      prev.map(p =>
+        p.productId === productId
+          ? { ...p, quantity }
+          : p
+      )
+    );
+  };
 
-    const quantity = parseInt(trimmedQuantity, 10);
+  // Handle modal close
+  const handleCloseModal = () => {
+    setShowRestockModal(false);
+    setSelectedProducts([]);
+    setGlobalNotes('');
+  };
 
-    // Get current store ID from user
-    const currentStoreId = user?.currentStoreId || user?.activeStoreId;
-    if (!currentStoreId) {
-      Alert.alert('Error', 'No store selected. Please select a store first.');
-      return;
-    }
-
+  // Handle multi-item restock submission
+  const handleMultiItemRestock = async () => {
     try {
-      console.log('📦 Restocking product:', restockItem);
+      // Validate all items have quantity
+      const invalidItems = selectedProducts.filter(p => !p.quantity || parseInt(p.quantity) <= 0);
+      
+      if (invalidItems.length > 0) {
+        Alert.alert('Error', 'Please enter valid quantities for all selected items');
+        return;
+      }
 
-      const response = await apiClient.post('/api/store-inventory/add', {
-        storeId: currentStoreId,
-        productId: restockItem.productId,
-        quantity: quantity,
-        notes: restockItem.notes,
+      // Get current store ID from user
+      const currentStoreId = user?.currentStoreId || user?.activeStoreId;
+      if (!currentStoreId) {
+        Alert.alert('Error', 'No store selected. Please select a store first.');
+        return;
+      }
+
+      console.log('📦 Restocking multiple items:', selectedProducts);
+
+      // Create array of promises for parallel API calls
+      const restockPromises = selectedProducts.map(async (item) => {
+        const response = await apiClient.post('/api/store-inventory/add', {
+          storeId: currentStoreId,
+          productId: item.productId,
+          quantity: parseInt(item.quantity),
+          notes: globalNotes,
+        });
+        return response.data;
       });
 
-      console.log('✅ Restock successful:', response);
+      // Execute all restocks in parallel
+      await Promise.all(restockPromises);
 
-      Alert.alert('Success', 'Inventory updated successfully');
-      setShowRestockModal(false);
-      
+      console.log('✅ Multi-item restock successful');
+
+      Alert.alert(
+        'Success',
+        `${selectedProducts.length} item(s) restocked successfully`
+      );
+
       // Reset form
-      setRestockItem({ productId: '', quantity: '', notes: '' });
-      
+      handleCloseModal();
+
       // Refresh product list
       loadProducts();
     } catch (error) {
-      console.error('❌ Restock failed:', error);
-      Alert.alert('Error', 'Failed to update inventory');
+      console.error('❌ Multi-item restock failed:', error);
+      Alert.alert('Error', 'Failed to restock items. Please try again.');
     }
   };
 
@@ -582,83 +631,115 @@ export default function ItemsScreen() {
         visible={showRestockModal}
         animationType="slide"
         transparent={false}
-        onRequestClose={() => setShowRestockModal(false)}
+        onRequestClose={handleCloseModal}
       >
         <View style={itemsStyles.modalContainer}>
           <View style={itemsStyles.modalHeader}>
             <Text style={itemsStyles.modalTitle}>Restock Inventory</Text>
-            <TouchableOpacity onPress={() => setShowRestockModal(false)}>
+            <TouchableOpacity onPress={handleCloseModal}>
               <Ionicons name="close" size={28} color={Colors.text} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={itemsStyles.modalContent}>
-            {/* Product Selector */}
-            <Text style={itemsStyles.inputLabel}>Select Product *</Text>
-            <View style={itemsStyles.pickerContainer}>
-              <ScrollView style={itemsStyles.productPicker} nestedScrollEnabled>
-                {products.map((product) => (
-                  <TouchableOpacity
-                    key={product.id}
-                    style={[
-                      itemsStyles.productOption,
-                      restockItem.productId === product.id && itemsStyles.productOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setRestockItem({
-                        ...restockItem,
-                        productId: product.id,
-                      });
-                    }}
-                  >
-                    <View style={itemsStyles.productOptionContent}>
-                      <Text style={itemsStyles.productOptionTitle}>{product.name}</Text>
-                      <Text style={itemsStyles.productOptionSubtext}>
-                        Current Stock: {product.quantity} units
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+            {/* Instructions */}
+            <View style={itemsStyles.instructionBanner}>
+              <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
+              <Text style={itemsStyles.instructionText}>
+                Select products and enter quantities to restock
+              </Text>
             </View>
 
-            {/* Quantity Input */}
-            <Text style={itemsStyles.inputLabel}>Quantity to Add *</Text>
-            <TextInput
-              style={itemsStyles.input}
-              placeholder="Enter quantity"
-              keyboardType="number-pad"
-              value={restockItem.quantity}
-              onChangeText={(value) => setRestockItem({ ...restockItem, quantity: value })}
-            />
+            {/* Product Selection List */}
+            <Text style={itemsStyles.sectionLabel}>Select Products *</Text>
+            
+            <ScrollView style={itemsStyles.productListContainer} nestedScrollEnabled>
+              {products.map((product) => {
+                const isSelected = selectedProducts.some(p => p.productId === product.id);
+                const selectedProduct = selectedProducts.find(p => p.productId === product.id);
+                
+                return (
+                  <View key={product.id} style={itemsStyles.productRow}>
+                    {/* Checkbox */}
+                    <TouchableOpacity
+                      style={itemsStyles.checkbox}
+                      onPress={() => toggleProductSelection(product)}
+                    >
+                      <Ionicons
+                        name={isSelected ? 'checkbox' : 'square-outline'}
+                        size={24}
+                        color={isSelected ? Colors.primary : Colors.textSecondary}
+                      />
+                    </TouchableOpacity>
 
-            {/* Notes (Optional) */}
-            <Text style={itemsStyles.inputLabel}>Notes (Optional)</Text>
+                    {/* Product Info */}
+                    <View style={itemsStyles.productInfo}>
+                      <Text style={itemsStyles.productName}>{product.name}</Text>
+                      <Text style={itemsStyles.productMeta}>
+                        Current Stock: {product.quantity} {product.unit || 'units'}
+                      </Text>
+                    </View>
+
+                    {/* Quantity Input (only if selected) */}
+                    {isSelected && (
+                      <View style={itemsStyles.quantityInputWrapper}>
+                        <Text style={itemsStyles.quantityLabel}>Qty:</Text>
+                        <TextInput
+                          style={itemsStyles.quantityInput}
+                          placeholder="0"
+                          keyboardType="numeric"
+                          value={selectedProduct?.quantity || ''}
+                          onChangeText={(value) => updateProductQuantity(product.id, value)}
+                        />
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            {/* Global Notes (applies to all) */}
+            <Text style={itemsStyles.sectionLabel}>Notes (Optional)</Text>
             <TextInput
               style={[itemsStyles.input, itemsStyles.textArea]}
-              placeholder="Add notes about this restock..."
+              placeholder="Add notes about this restock (applies to all items)..."
               multiline
               numberOfLines={3}
-              value={restockItem.notes}
-              onChangeText={(value) => setRestockItem({ ...restockItem, notes: value })}
+              value={globalNotes}
+              onChangeText={setGlobalNotes}
             />
 
+            {/* Selected Items Summary */}
+            {selectedProducts.length > 0 && (
+              <View style={itemsStyles.summaryContainer}>
+                <Text style={itemsStyles.summaryTitle}>
+                  Selected: {selectedProducts.length} item(s)
+                </Text>
+                {selectedProducts.map((item) => {
+                  const product = products.find(p => p.id === item.productId);
+                  return (
+                    <View key={item.productId} style={itemsStyles.summaryRow}>
+                      <Text style={itemsStyles.summaryProduct}>{product?.name}</Text>
+                      <Text style={itemsStyles.summaryQuantity}>+{item.quantity || '0'}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
             {/* Submit Button */}
-            {(() => {
-              const isFormValid = !!(restockItem.productId && restockItem.quantity);
-              return (
-                <TouchableOpacity
-                  style={[
-                    itemsStyles.submitButton,
-                    !isFormValid && itemsStyles.submitButtonDisabled,
-                  ]}
-                  onPress={handleRestock}
-                  disabled={!isFormValid}
-                >
-                  <Text style={itemsStyles.submitButtonText}>Add to Inventory</Text>
-                </TouchableOpacity>
-              );
-            })()}
+            <TouchableOpacity
+              style={[
+                itemsStyles.submitButton,
+                selectedProducts.length === 0 && itemsStyles.submitButtonDisabled,
+              ]}
+              onPress={handleMultiItemRestock}
+              disabled={selectedProducts.length === 0}
+            >
+              <Text style={itemsStyles.submitButtonText}>
+                Add {selectedProducts.length} Item(s) to Inventory
+              </Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </Modal>
@@ -774,6 +855,131 @@ const itemsStyles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
+
+  // Instruction banner
+  instructionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.lightBlue,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    gap: 8,
+  },
+  instructionText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+
+  // Section label
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: Colors.text,
+  },
+
+  // Product list with checkboxes
+  productListContainer: {
+    maxHeight: 300,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    marginBottom: 20,
+    backgroundColor: 'white',
+  },
+
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 12,
+  },
+
+  checkbox: {
+    padding: 4,
+  },
+
+  productInfo: {
+    flex: 1,
+  },
+
+  productName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+
+  productMeta: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+
+  quantityInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  quantityLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+
+  quantityInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    minWidth: 80,
+    textAlign: 'center',
+    backgroundColor: 'white',
+  },
+
+  // Summary container
+  summaryContainer: {
+    backgroundColor: '#D1FAE5',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 20,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.success,
+  },
+
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+
+  summaryProduct: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+  },
+
+  summaryQuantity: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.success,
+  },
   
   // Input fields
   inputLabel: {
@@ -802,7 +1008,8 @@ const itemsStyles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 10,
+    marginBottom: 40,
   },
   submitButtonDisabled: {
     backgroundColor: Colors.border,
