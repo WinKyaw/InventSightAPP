@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Modal, TextInput, FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -6,8 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useItemsApi } from '../../context/ItemsApiContext';
 import { useAuth } from '../../context/AuthContext';
 import { Header } from '../../components/shared/Header';
-import { SearchBar } from '../../components/shared/SearchBar';
-import { FilterSortBar } from '../../components/shared/FilterSortBar';
 import { AddItemModal } from '../../components/modals/AddItemModal';
 import { EditItemModal } from '../../components/modals/EditItemModal';
 import { StockManagementModal } from '../../components/modals/StockManagementModal';
@@ -18,6 +16,8 @@ import { styles } from '../../constants/Styles';
 import { PermissionService } from '../../services/api/permissionService';
 import { apiClient } from '../../services/api/apiClient';
 import { Colors } from '../../constants/Colors';
+import { StoreService, Store } from '../../services/api/storeService';
+import { canManageWarehouses } from '../../utils/permissions';
 
 // Constants
 const RESTOCK_HISTORY_PAGE_SIZE = 50;
@@ -57,11 +57,22 @@ export default function ItemsScreen() {
     return null;
   }
 
+  // ✅ Check if user is GM+ (can expand items)
+  const isGMPlus = useMemo(() => {
+    return canManageWarehouses(user?.role);
+  }, [user?.role]);
+
   const [permissions, setPermissions] = useState({
     canAdd: false,
     canEdit: false,
     canDelete: false,
   });
+
+  // Store management state
+  const [stores, setStores] = useState<Store[]>([]);
+  const [currentStore, setCurrentStore] = useState<Store | null>(null);
+  const [showStoreSelector, setShowStoreSelector] = useState(false);
+  const [showAddStoreModal, setShowAddStoreModal] = useState(false);
 
   const {
     products,
@@ -106,6 +117,31 @@ export default function ItemsScreen() {
 
   // ✅ INFINITE LOOP FIX: Track loaded state to prevent repeated loads
   const loadedRef = useRef(false);
+
+  // Load stores on mount
+  const loadStores = React.useCallback(async () => {
+    try {
+      console.log('🏪 Loading user stores...');
+      const userStores = await StoreService.getUserStores();
+      
+      console.log('✅ Stores loaded:', userStores.length);
+      setStores(userStores);
+      
+      // Auto-select first store if available and no store selected
+      if (userStores.length > 0 && !currentStore) {
+        console.log('📍 Auto-selecting first store:', userStores[0].storeName);
+        setCurrentStore(userStores[0]);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load stores:', error);
+      setStores([]);
+    }
+  }, [currentStore]);
+
+  // Load stores on mount
+  React.useEffect(() => {
+    loadStores();
+  }, [loadStores]);
 
   // Load permissions once on mount
   const loadPermissions = React.useCallback(async () => {
@@ -323,35 +359,83 @@ export default function ItemsScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#10B981" barStyle="light-content" />
       
-      <Header 
-        title="Inventory Management"
-        backgroundColor="#10B981"
-        rightComponent={
-          permissions.canAdd ? (
+      {/* ✅ NEW: Store Selector Header (similar to Warehouse) */}
+      {isGMPlus && (
+        <View style={itemsStyles.storeHeader}>
+          <View style={itemsStyles.storeInfo}>
+            <Text style={itemsStyles.storeLabel}>Store</Text>
+            <Text style={itemsStyles.storeName}>{currentStore?.storeName || 'Select Store'}</Text>
+          </View>
+          
+          {/* GM+ Only: Add Store and Change buttons */}
+          <View style={itemsStyles.storeActions}>
             <TouchableOpacity 
-              style={itemsStyles.restockButton} 
-              onPress={() => setShowRestockModal(true)}
+              style={itemsStyles.addStoreButton}
+              onPress={() => setShowAddStoreModal(true)}
             >
-              <Ionicons name="add-circle" size={24} color="white" />
-              <Text style={itemsStyles.restockButtonText}>Restock Items</Text>
+              <Ionicons name="add" size={20} color="white" />
+              <Text style={itemsStyles.addStoreText}>Add Store</Text>
             </TouchableOpacity>
-          ) : null
-        }
-      />
+            
+            <TouchableOpacity 
+              style={itemsStyles.changeButton}
+              onPress={() => setShowStoreSelector(true)}
+            >
+              <Ionicons name="swap-horizontal" size={20} color="white" />
+              <Text style={itemsStyles.changeButtonText}>Change</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
-      <SearchBar
-        placeholder="Search inventory..."
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
+      {/* ✅ NEW: Updated Header with Store Name */}
+      <View style={itemsStyles.headerContainer}>
+        <Text style={itemsStyles.headerStoreName}>{currentStore?.storeName || 'No Store'}</Text>
+        <Text style={itemsStyles.subtitle}>Inventory Management</Text>
+      </View>
+      
+      {/* ✅ NEW: Restock button moved here */}
+      {permissions.canAdd && (
+        <View style={itemsStyles.restockButtonContainer}>
+          <TouchableOpacity 
+            style={itemsStyles.restockButton} 
+            onPress={() => setShowRestockModal(true)}
+          >
+            <Ionicons name="add-circle" size={24} color="white" />
+            <Text style={itemsStyles.restockButtonText}>Restock Items</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      <FilterSortBar
-        selectedCategory={selectedCategoryName}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onFilterPress={() => setShowFilterSortModal(true)}
-        itemCount={items.length}
-      />
+      {/* ✅ NEW: Search Bar with Inline Filter Button */}
+      <View style={itemsStyles.searchSection}>
+        <View style={itemsStyles.searchContainer}>
+          <View style={itemsStyles.searchInputWrapper}>
+            <Ionicons name="search" size={20} color={Colors.textSecondary} />
+            <TextInput
+              style={itemsStyles.searchInput}
+              placeholder="Search inventory..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          
+          {/* Filter button on same line */}
+          <TouchableOpacity 
+            style={itemsStyles.filterButton}
+            onPress={() => setShowFilterSortModal(true)}
+          >
+            <Ionicons name="options-outline" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* ✅ Total items count - moved closer to search */}
+        <View style={itemsStyles.totalItemsContainer}>
+          <Text style={itemsStyles.totalItemsText}>
+            {items.length} items
+          </Text>
+        </View>
+      </View>
 
       {/* Tab Navigation */}
       <View style={itemsStyles.tabContainer}>
@@ -420,43 +504,31 @@ export default function ItemsScreen() {
                   {index > 0 && <View style={styles.itemSeparator} />}
                   <TouchableOpacity
                     style={styles.itemRow}
-                    onPress={() => toggleItemExpansion(item.id)}
+                    onPress={() => isGMPlus && toggleItemExpansion(item.id)}
+                    disabled={!isGMPlus}
                   >
                     <View style={styles.itemInfo}>
                       <View style={styles.itemNameRow}>
                         <Text style={styles.itemName}>{item.name}</Text>
-                        {/* <View style={styles.categoryBadge}>
-                          <Text style={styles.categoryBadgeText}>{item.category}</Text>
-                        </View> */}
                       </View>
                     </View>
                     <View style={styles.itemStats}>
                       <Text style={styles.itemStat}>${item.price.toFixed(2)}</Text>
                       <Text style={styles.itemStat}>Qty: {item.quantity}</Text>
-                      {/* <Text style={[styles.itemStat, { color: '#3B82F6', fontWeight: '600' }]}>
-                        Sold: {item.salesCount || 0}
-                      </Text>
-                      <Text style={[styles.itemStat, { color: '#10B981', fontWeight: '600' }]}>
-                        ${item.total.toFixed(2)}
-                      </Text> */}
                     </View>
-                    {/* <View style={styles.itemActions}>
-                      <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => handleEditPress(products.find(p => p.id === item.id)!)}
-                      >
-                        <Ionicons name="create-outline" size={18} color="#3B82F6" />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => handleDeletePress(item.id, item.name)}
-                      >
-                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                      </TouchableOpacity>
-                    </View> */}
+                    
+                    {/* Show expand icon only for GM+ */}
+                    {isGMPlus && (
+                      <Ionicons 
+                        name={expandedItems.has(item.id) ? 'chevron-up' : 'chevron-down'} 
+                        size={24} 
+                        color={Colors.textSecondary} 
+                      />
+                    )}
                   </TouchableOpacity>
                   
-                  {expandedItems.has(item.id) && (
+                  {/* Expanded View (GM+ Only) */}
+                  {isGMPlus && expandedItems.has(item.id) && (
                     <View style={styles.itemExpanded}>
                       <View style={styles.itemExpandedGrid}>
                         <View style={styles.itemExpandedItem}>
@@ -697,25 +769,233 @@ export default function ItemsScreen() {
         onSelectSort={handleSortPress}
         onToggleSortOrder={handleToggleSortOrder}
       />
+
+      {/* ✅ NEW: Store Selector Modal (like Warehouse selector) */}
+      <Modal
+        visible={showStoreSelector}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowStoreSelector(false)}
+      >
+        <View style={itemsStyles.modalOverlay}>
+          <View style={itemsStyles.storeSelectorModal}>
+            <View style={itemsStyles.modalHeader}>
+              <Text style={itemsStyles.modalTitle}>Select Store</Text>
+              <TouchableOpacity onPress={() => setShowStoreSelector(false)}>
+                <Ionicons name="close" size={28} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={itemsStyles.storeList}>
+              {stores.map((store) => (
+                <TouchableOpacity
+                  key={store.id}
+                  style={[
+                    itemsStyles.storeOption,
+                    currentStore?.id === store.id && itemsStyles.storeOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setCurrentStore(store);
+                    setShowStoreSelector(false);
+                  }}
+                >
+                  <Ionicons 
+                    name="storefront-outline" 
+                    size={24} 
+                    color={currentStore?.id === store.id ? Colors.secondary : Colors.textSecondary} 
+                  />
+                  <View style={itemsStyles.storeOptionInfo}>
+                    <Text style={itemsStyles.storeOptionName}>{store.storeName}</Text>
+                    {store.city && (
+                      <Text style={itemsStyles.storeOptionLocation}>{store.city}, {store.state}</Text>
+                    )}
+                  </View>
+                  {currentStore?.id === store.id && (
+                    <Ionicons name="checkmark-circle" size={24} color={Colors.secondary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ NEW: Add Store Modal Placeholder */}
+      <Modal
+        visible={showAddStoreModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddStoreModal(false)}
+      >
+        <View style={itemsStyles.modalOverlay}>
+          <View style={itemsStyles.storeSelectorModal}>
+            <View style={itemsStyles.modalHeader}>
+              <Text style={itemsStyles.modalTitle}>Add New Store</Text>
+              <TouchableOpacity onPress={() => setShowAddStoreModal(false)}>
+                <Ionicons name="close" size={28} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={itemsStyles.addStoreContent}>
+              <Text style={itemsStyles.placeholderText}>
+                Store creation functionality will be implemented here.
+              </Text>
+              <TouchableOpacity
+                style={itemsStyles.placeholderButton}
+                onPress={() => setShowAddStoreModal(false)}
+              >
+                <Text style={itemsStyles.placeholderButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 // Custom styles for items page
 const itemsStyles = StyleSheet.create({
+  // Store Header Styles
+  storeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  storeInfo: {
+    flex: 1,
+  },
+  storeLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  storeName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  storeActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  addStoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  addStoreText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  changeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  changeButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Header Container Styles
+  headerContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: Colors.secondary,
+  },
+  headerStoreName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+
+  // Restock Button Container
+  restockButtonContainer: {
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
   restockButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
+    justifyContent: 'center',
   },
   restockButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+
+  // Search Section Styles
+  searchSection: {
+    backgroundColor: Colors.background,
+    paddingBottom: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 12,
+  },
+  searchInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  filterButton: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  totalItemsContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  totalItemsText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
   
   // Modal styles
@@ -897,5 +1177,74 @@ const itemsStyles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textSecondary,
     marginTop: 12,
+  },
+
+  // Store Selector Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  storeSelectorModal: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: 20,
+  },
+  storeList: {
+    padding: 16,
+  },
+  storeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+    marginBottom: 8,
+  },
+  storeOptionSelected: {
+    backgroundColor: '#D1FAE5',
+    borderWidth: 2,
+    borderColor: Colors.secondary,
+  },
+  storeOptionInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  storeOptionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  storeOptionLocation: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+
+  // Add Store Modal Styles
+  addStoreContent: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  placeholderButton: {
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  placeholderButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
