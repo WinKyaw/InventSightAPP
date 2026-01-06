@@ -18,7 +18,6 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/shared/Header';
-import { SearchBar } from '../../components/shared/SearchBar';
 import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInventoryList';
 import { AddWarehouseModal } from '../../components/modals/AddWarehouseModal';
 import { WarehouseSummary, WarehouseInventoryRow, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
@@ -103,6 +102,7 @@ export default function WarehouseScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showWarehousePicker, setShowWarehousePicker] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   
   // Pagination state for each tab
   const [inventoryPage, setInventoryPage] = useState(0);
@@ -1248,11 +1248,28 @@ export default function WarehouseScreen() {
         }
       />
 
-      <SearchBar
-        placeholder="Search by product, SKU, or warehouse..."
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
+      {/* ✅ Search Section with Filter Button */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search" size={20} color={Colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by product, SKU, or warehouse..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          
+          {/* Filter button on same line */}
+          <TouchableOpacity 
+            style={styles.filterButton}
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Ionicons name="options-outline" size={24} color="#6366F1" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
@@ -1774,6 +1791,51 @@ export default function WarehouseScreen() {
                   onPress={handleWithdrawInventory}
                 >
                   <Text style={styles.saveButtonText}>Withdraw</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Options</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Ionicons name="close" size={28} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.inputLabel}>Filter by Status</Text>
+              <Text style={styles.emptyText}>
+                Filter options will be implemented here
+              </Text>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowFilterModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={() => {
+                    // Apply filters logic here
+                    setShowFilterModal(false);
+                  }}
+                >
+                  <Text style={styles.saveButtonText}>Apply Filters</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -2498,5 +2560,41 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 4,
     textAlign: 'center',
+  },
+  // Search Section Styles
+  searchSection: {
+    backgroundColor: Colors.background,
+    paddingBottom: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 12,
+  },
+  searchInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  filterButton: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
 });

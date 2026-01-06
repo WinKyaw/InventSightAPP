@@ -281,7 +281,8 @@ export default function ItemsScreen() {
   };
 
   // Handle modal close
-  const handleCloseModal = () => {
+  const handleCloseRestockModal = () => {
+    console.log('🔴 Closing restock modal');
     setShowRestockModal(false);
     setSelectedProducts([]);
     setGlobalNotes('');
@@ -301,9 +302,8 @@ export default function ItemsScreen() {
         return;
       }
 
-      // Get current store ID from user
-      const currentStoreId = user?.currentStoreId || user?.activeStoreId;
-      if (!currentStoreId) {
+      // ✅ FIX: Get current store ID from currentStore state
+      if (!currentStore?.id) {
         Alert.alert('Error', 'No store selected. Please select a store first.');
         return;
       }
@@ -313,7 +313,7 @@ export default function ItemsScreen() {
       // Create array of promises for parallel API calls
       const restockPromises = selectedProducts.map(async (item) => {
         const response = await apiClient.post('/api/store-inventory/add', {
-          storeId: currentStoreId,
+          storeId: currentStore.id,
           productId: item.productId,
           quantity: parseInt(item.quantity.trim(), 10),
           notes: globalNotes,
@@ -332,7 +332,7 @@ export default function ItemsScreen() {
       );
 
       // Reset form
-      handleCloseModal();
+      handleCloseRestockModal();
 
       // Refresh product list
       loadProducts();
@@ -344,17 +344,16 @@ export default function ItemsScreen() {
 
   // Load restock history
   const loadRestockHistory = async () => {
-    const currentStoreId = user?.currentStoreId || user?.activeStoreId;
-    if (!currentStoreId) {
+    if (!currentStore?.id) {
       console.log('⚠️ No store selected');
       return;
     }
 
     try {
-      console.log('📋 Loading restock history for store:', currentStoreId);
+      console.log('📋 Loading restock history for store:', currentStore.id);
 
       const response = await apiClient.get<RestockHistoryResponse>(
-        `/api/store-inventory/store/${currentStoreId}/additions?page=0&size=${RESTOCK_HISTORY_PAGE_SIZE}`
+        `/api/store-inventory/store/${currentStore.id}/additions?page=0&size=${RESTOCK_HISTORY_PAGE_SIZE}`
       );
 
       console.log('✅ Restock history loaded:', response.additions?.length || 0);
@@ -436,10 +435,9 @@ export default function ItemsScreen() {
         </View>
       )}
 
-      {/* ✅ NEW: Updated Header with Store Name */}
-      <View style={itemsStyles.headerContainer}>
-        <Text style={itemsStyles.headerStoreName}>{currentStore?.storeName || 'No Store'}</Text>
-        <Text style={itemsStyles.subtitle}>Inventory Management</Text>
+      {/* ✅ Subtitle below store header */}
+      <View style={itemsStyles.subtitleContainer}>
+        <Text style={itemsStyles.pageSubtitle}>Inventory Management</Text>
       </View>
       
       {/* ✅ NEW: Restock button moved here */}
@@ -703,17 +701,22 @@ export default function ItemsScreen() {
         visible={showRestockModal}
         animationType="slide"
         transparent={false}
-        onRequestClose={handleCloseModal}
+        onRequestClose={handleCloseRestockModal}
       >
-        <View style={itemsStyles.modalContainer}>
-          <View style={itemsStyles.modalHeader}>
-            <Text style={itemsStyles.modalTitle}>Restock Inventory</Text>
-            <TouchableOpacity onPress={handleCloseModal}>
-              <Ionicons name="close" size={28} color={Colors.text} />
-            </TouchableOpacity>
-          </View>
+        <SafeAreaView style={itemsStyles.modalSafeArea} edges={['top']}>
+          <View style={itemsStyles.modalContainer}>
+            <View style={itemsStyles.modalHeader}>
+              <Text style={itemsStyles.modalTitle}>Restock Inventory</Text>
+              <TouchableOpacity 
+                onPress={handleCloseRestockModal}
+                style={itemsStyles.closeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={28} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
 
-          <ScrollView style={itemsStyles.modalContent}>
+            <ScrollView style={itemsStyles.modalContent}>
             {/* Instructions */}
             <View style={itemsStyles.instructionBanner}>
               <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
@@ -817,7 +820,8 @@ export default function ItemsScreen() {
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </Modal>
+      </SafeAreaView>
+    </Modal>
 
       <AddItemModal 
         visible={showAddModal} 
@@ -996,19 +1000,13 @@ const itemsStyles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Header Container Styles
-  headerContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  // Subtitle Container Styles
+  subtitleContainer: {
     backgroundColor: Colors.secondary,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  headerStoreName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 4,
-  },
-  subtitle: {
+  pageSubtitle: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
@@ -1083,23 +1081,30 @@ const itemsStyles = StyleSheet.create({
   },
   
   // Modal styles
-  modalContainer: {
+  modalSafeArea: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  modalContainer: {
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    backgroundColor: Colors.white,
+    backgroundColor: 'white',
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: Colors.text,
+  },
+  closeButton: {
+    padding: 4,
   },
   modalContent: {
     flex: 1,
