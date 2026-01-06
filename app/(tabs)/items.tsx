@@ -18,6 +18,7 @@ import apiClient from '../../services/api/apiClient';
 import { Colors } from '../../constants/Colors';
 import { StoreService, Store } from '../../services/api/storeService';
 import { canManageWarehouses } from '../../utils/permissions';
+import { CacheManager } from '../../utils/cacheManager';
 
 // Constants
 const RESTOCK_HISTORY_PAGE_SIZE = 50;
@@ -307,7 +308,6 @@ export default function ItemsScreen() {
         console.log('🔄 Reloading products for new store...');
         
         // Clear product cache to ensure fresh data
-        const { CacheManager } = await import('../../utils/cacheManager');
         CacheManager.invalidateProducts();
         
         // Reload products for the new store
