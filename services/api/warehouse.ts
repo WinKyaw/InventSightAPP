@@ -37,6 +37,9 @@ interface CachedData {
 
 const CACHE_DURATION = 60 * 1000; // 1 minute in milliseconds
 
+// Common field names to check when parsing API responses
+const COMMON_ARRAY_FIELD_NAMES = ['warehouses', 'products', 'items', 'data'] as const;
+
 /**
  * Helper function to parse API response and extract array data
  * Handles different response formats from backend:
@@ -76,12 +79,10 @@ function parseArrayResponse<T>(response: unknown, context: string, fieldName?: s
     }
     
     // Try common field names
-    const commonFields = ['warehouses', 'products', 'items', 'data'];
-    for (const field of commonFields) {
-      if (Array.isArray(data[field])) {
-        console.log(`✅ Found ${context} in field '${field}'`);
-        return data[field];
-      }
+    const arrayField = tryCommonFieldNames(data, COMMON_ARRAY_FIELD_NAMES);
+    if (arrayField) {
+      console.log(`✅ Found ${context} in field '${arrayField.name}'`);
+      return arrayField.value;
     }
     
     // Check if there's a nested data object
@@ -97,17 +98,28 @@ function parseArrayResponse<T>(response: unknown, context: string, fieldName?: s
       }
       
       // Try common fields in nested data
-      for (const field of commonFields) {
-        if (Array.isArray(data.data[field])) {
-          console.log(`✅ Found ${context} in nested data.${field}`);
-          return data.data[field];
-        }
+      const nestedArrayField = tryCommonFieldNames(data.data, COMMON_ARRAY_FIELD_NAMES);
+      if (nestedArrayField) {
+        console.log(`✅ Found ${context} in nested data.${nestedArrayField.name}`);
+        return nestedArrayField.value;
       }
     }
   }
   
   console.warn(`⚠️ ${context} unexpected format:`, typeof data, data);
   return [];
+}
+
+/**
+ * Helper to try a list of common field names and return the first array found
+ */
+function tryCommonFieldNames(obj: any, fieldNames: readonly string[]): { name: string; value: any[] } | null {
+  for (const field of fieldNames) {
+    if (Array.isArray(obj[field])) {
+      return { name: field, value: obj[field] };
+    }
+  }
+  return null;
 }
 
 /**

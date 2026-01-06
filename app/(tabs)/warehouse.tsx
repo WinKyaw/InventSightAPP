@@ -570,7 +570,7 @@ export default function WarehouseScreen() {
       console.log('📦 Add Inventory modal opened, loading products for warehouse:', selectedWarehouse.id);
       loadProducts();
     }
-  }, [showAddInventoryModal, selectedWarehouse?.id]); // Re-load when warehouse changes
+  }, [showAddInventoryModal, selectedWarehouse?.id, loadProducts]); // Re-load when warehouse changes
 
   // Load products for withdrawal when Withdraw modal opens or warehouse changes
   useEffect(() => {
@@ -578,7 +578,7 @@ export default function WarehouseScreen() {
       console.log('📦 Withdraw modal opened, loading warehouse products:', selectedWarehouse.id);
       loadWarehouseProducts();
     }
-  }, [showWithdrawInventoryModal, selectedWarehouse?.id]); // Re-load when warehouse changes
+  }, [showWithdrawInventoryModal, selectedWarehouse?.id, loadWarehouseProducts]); // Re-load when warehouse changes
 
   // Load all products when component mounts or warehouse changes (for product name lookups)
   useEffect(() => {
@@ -602,7 +602,7 @@ export default function WarehouseScreen() {
   }, [isReady, selectedWarehouse]);
 
   // Load products for inventory addition
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     if (!selectedWarehouse) {
       console.log('⚠️ No warehouse selected');
       return;
@@ -631,7 +631,7 @@ export default function WarehouseScreen() {
     } finally {
       setLoadingProducts(false);
     }
-  };
+  }, [selectedWarehouse]);
 
   // ✅ Load products from current warehouse inventory (not all products)
   const loadWarehouseProducts = useCallback(async () => {
