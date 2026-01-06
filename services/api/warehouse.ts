@@ -79,7 +79,7 @@ function parseArrayResponse<T>(response: unknown, context: string, fieldName?: s
     }
     
     // Try common field names
-    const arrayField = tryCommonFieldNames(data, COMMON_ARRAY_FIELD_NAMES);
+    const arrayField = tryCommonFieldNames<T>(data, COMMON_ARRAY_FIELD_NAMES);
     if (arrayField) {
       console.log(`✅ Found ${context} in field '${arrayField.name}'`);
       return arrayField.value;
@@ -98,7 +98,7 @@ function parseArrayResponse<T>(response: unknown, context: string, fieldName?: s
       }
       
       // Try common fields in nested data
-      const nestedArrayField = tryCommonFieldNames(data.data, COMMON_ARRAY_FIELD_NAMES);
+      const nestedArrayField = tryCommonFieldNames<T>(data.data, COMMON_ARRAY_FIELD_NAMES);
       if (nestedArrayField) {
         console.log(`✅ Found ${context} in nested data.${nestedArrayField.name}`);
         return nestedArrayField.value;
@@ -113,10 +113,10 @@ function parseArrayResponse<T>(response: unknown, context: string, fieldName?: s
 /**
  * Helper to try a list of common field names and return the first array found
  */
-function tryCommonFieldNames(obj: Record<string, unknown>, fieldNames: readonly string[]): { name: string; value: any[] } | null {
+function tryCommonFieldNames<T>(obj: Record<string, unknown>, fieldNames: readonly string[]): { name: string; value: T[] } | null {
   for (const field of fieldNames) {
     if (Array.isArray(obj[field])) {
-      return { name: field, value: obj[field] };
+      return { name: field, value: obj[field] as T[] };
     }
   }
   return null;
