@@ -178,7 +178,11 @@ export default function ItemsScreen() {
       setIsSubmittingStore(true);
       console.log('🏪 Creating new store:', storeForm.storeName);
 
-      const response = await apiClient.post('/api/stores', storeForm);
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+        store: Store;
+      }>('/api/stores', storeForm);
 
       if (response.success) {
         console.log('✅ Store created successfully:', response.store);
