@@ -162,6 +162,12 @@ export default function WarehouseScreen() {
   // ✅ REMOVED: Permission management state - Moved to Team Management
   // (showPermissionsModal, warehouseUsers, selectedUser, selectedPermission, loadingPermissions)
 
+  // Helper function to clear product state
+  const clearProductState = useCallback(() => {
+    setProducts([]);
+    setWarehouseProducts([]);
+  }, []);
+
   // Filter inventory based on search query
   const filteredInventory = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -779,7 +785,7 @@ export default function WarehouseScreen() {
         quantity: '',
         notes: '',
       });
-      setProducts([]); // Clear products after successful add
+      clearProductState(); // Clear products after successful add
       
       console.log('✅ Inventory added, cache cleared. Data will refresh on next tab switch.');
       
@@ -843,7 +849,7 @@ export default function WarehouseScreen() {
         notes: '',
         maxQuantity: 0,
       });
-      setWarehouseProducts([]); // Clear warehouse products after successful withdrawal
+      clearProductState(); // Clear warehouse products after successful withdrawal
       
       console.log('✅ Inventory withdrawn, cache cleared. Data will refresh on next tab switch.');
       
@@ -1629,7 +1635,7 @@ export default function WarehouseScreen() {
                       quantity: '',
                       notes: '',
                     });
-                    setProducts([]); // Clear products when closing modal
+                    clearProductState(); // Clear products when closing modal
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -1757,7 +1763,7 @@ export default function WarehouseScreen() {
                       notes: '',
                       maxQuantity: 0,
                     });
-                    setWarehouseProducts([]); // Clear warehouse products when closing modal
+                    clearProductState(); // Clear warehouse products when closing modal
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>

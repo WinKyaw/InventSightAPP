@@ -113,7 +113,7 @@ function parseArrayResponse<T>(response: unknown, context: string, fieldName?: s
 /**
  * Helper to try a list of common field names and return the first array found
  */
-function tryCommonFieldNames(obj: any, fieldNames: readonly string[]): { name: string; value: any[] } | null {
+function tryCommonFieldNames(obj: Record<string, unknown>, fieldNames: readonly string[]): { name: string; value: any[] } | null {
   for (const field of fieldNames) {
     if (Array.isArray(obj[field])) {
       return { name: field, value: obj[field] };
