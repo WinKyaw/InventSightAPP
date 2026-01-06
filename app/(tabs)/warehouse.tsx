@@ -162,6 +162,12 @@ export default function WarehouseScreen() {
   // ✅ REMOVED: Permission management state - Moved to Team Management
   // (showPermissionsModal, warehouseUsers, selectedUser, selectedPermission, loadingPermissions)
 
+  // Helper function to clear product state
+  const clearProductState = useCallback(() => {
+    setProducts([]);
+    setWarehouseProducts([]);
+  }, []);
+
   // Filter inventory based on search query
   const filteredInventory = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -564,12 +570,21 @@ export default function WarehouseScreen() {
     return () => clearTabSwitchTimer();
   }, [isReady, selectedWarehouse, activeTab, debouncedLoadTabData, clearTabSwitchTimer]);
 
-  // Load products when Add Inventory or Withdraw Inventory modal opens
+  // Load products when Add Inventory modal opens or warehouse changes
   useEffect(() => {
-    if ((showAddInventoryModal || showWithdrawInventoryModal) && products.length === 0) {
+    if (showAddInventoryModal && selectedWarehouse) {
+      console.log('📦 Add Inventory modal opened, loading products for warehouse:', selectedWarehouse.id);
       loadProducts();
     }
-  }, [showAddInventoryModal, showWithdrawInventoryModal]);
+  }, [showAddInventoryModal, selectedWarehouse?.id, loadProducts]); // Re-load when warehouse changes
+
+  // Load products for withdrawal when Withdraw modal opens or warehouse changes
+  useEffect(() => {
+    if (showWithdrawInventoryModal && selectedWarehouse) {
+      console.log('📦 Withdraw modal opened, loading warehouse products:', selectedWarehouse.id);
+      loadWarehouseProducts();
+    }
+  }, [showWithdrawInventoryModal, selectedWarehouse?.id, loadWarehouseProducts]); // Re-load when warehouse changes
 
   // Load all products when component mounts or warehouse changes (for product name lookups)
   useEffect(() => {
@@ -593,7 +608,7 @@ export default function WarehouseScreen() {
   }, [isReady, selectedWarehouse]);
 
   // Load products for inventory addition
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     if (!selectedWarehouse) {
       console.log('⚠️ No warehouse selected');
       return;
@@ -622,7 +637,7 @@ export default function WarehouseScreen() {
     } finally {
       setLoadingProducts(false);
     }
-  };
+  }, [selectedWarehouse]);
 
   // ✅ Load products from current warehouse inventory (not all products)
   const loadWarehouseProducts = useCallback(async () => {
@@ -770,6 +785,7 @@ export default function WarehouseScreen() {
         quantity: '',
         notes: '',
       });
+      clearProductState(); // Clear products after successful add
       
       console.log('✅ Inventory added, cache cleared. Data will refresh on next tab switch.');
       
@@ -833,6 +849,7 @@ export default function WarehouseScreen() {
         notes: '',
         maxQuantity: 0,
       });
+      clearProductState(); // Clear warehouse products after successful withdrawal
       
       console.log('✅ Inventory withdrawn, cache cleared. Data will refresh on next tab switch.');
       
@@ -1618,6 +1635,7 @@ export default function WarehouseScreen() {
                       quantity: '',
                       notes: '',
                     });
+                    clearProductState(); // Clear products when closing modal
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -1745,6 +1763,7 @@ export default function WarehouseScreen() {
                       notes: '',
                       maxQuantity: 0,
                     });
+                    clearProductState(); // Clear warehouse products when closing modal
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>

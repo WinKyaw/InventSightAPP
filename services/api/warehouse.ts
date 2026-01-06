@@ -37,14 +37,19 @@ interface CachedData {
 
 const CACHE_DURATION = 60 * 1000; // 1 minute in milliseconds
 
+// Common field names to check when parsing API responses
+const COMMON_ARRAY_FIELD_NAMES = ['warehouses', 'products', 'items', 'data'] as const;
+
 /**
  * Helper function to parse API response and extract array data
  * Handles different response formats from backend:
  * 1. Direct array: [...]
  * 2. Nested in data: { data: [...] }
  * 3. Paginated: { data: { content: [...] } }
+ * 4. Named field: { warehouses: [...] }, { products: [...] }, etc.
+ * 5. Nested named field: { data: { warehouses: [...] } }
  */
-function parseArrayResponse<T>(response: unknown, context: string): T[] {
+function parseArrayResponse<T>(response: unknown, context: string, fieldName?: string): T[] {
   // apiClient.get may return response.data directly or the full response
   // Try to access .data first, then fall back to the response itself
   const data = (response as any)?.data ?? response;
@@ -54,19 +59,67 @@ function parseArrayResponse<T>(response: unknown, context: string): T[] {
     return data;
   }
   
-  // Handle paginated response with content
-  if (data && typeof data === 'object' && Array.isArray(data.content)) {
-    return data.content;
-  }
-  
-  // Handle null/undefined or unexpected format
+  // Handle null/undefined early
   if (data === undefined || data === null) {
     console.warn(`⚠️ ${context} returned null/undefined`);
     return [];
   }
   
-  console.warn(`⚠️ ${context} unexpected format:`, typeof data);
+  // If data is an object, try various patterns
+  if (data && typeof data === 'object') {
+    // Handle paginated response with content
+    if (Array.isArray(data.content)) {
+      return data.content;
+    }
+    
+    // Handle named field if provided (e.g., { warehouses: [...] })
+    if (fieldName && Array.isArray(data[fieldName])) {
+      console.log(`✅ Found ${context} in field '${fieldName}'`);
+      return data[fieldName];
+    }
+    
+    // Try common field names
+    const arrayField = tryCommonFieldNames<T>(data, COMMON_ARRAY_FIELD_NAMES);
+    if (arrayField) {
+      console.log(`✅ Found ${context} in field '${arrayField.name}'`);
+      return arrayField.value;
+    }
+    
+    // Check if there's a nested data object
+    if (data.data && typeof data.data === 'object') {
+      if (Array.isArray(data.data)) {
+        return data.data;
+      }
+      
+      // Try the field name in nested data
+      if (fieldName && Array.isArray(data.data[fieldName])) {
+        console.log(`✅ Found ${context} in nested data.${fieldName}`);
+        return data.data[fieldName];
+      }
+      
+      // Try common fields in nested data
+      const nestedArrayField = tryCommonFieldNames<T>(data.data, COMMON_ARRAY_FIELD_NAMES);
+      if (nestedArrayField) {
+        console.log(`✅ Found ${context} in nested data.${nestedArrayField.name}`);
+        return nestedArrayField.value;
+      }
+    }
+  }
+  
+  console.warn(`⚠️ ${context} unexpected format:`, typeof data, data);
   return [];
+}
+
+/**
+ * Helper to try a list of common field names and return the first array found
+ */
+function tryCommonFieldNames<T>(obj: Record<string, unknown>, fieldNames: readonly string[]): { name: string; value: T[] } | null {
+  for (const field of fieldNames) {
+    if (Array.isArray(obj[field])) {
+      return { name: field, value: obj[field] as T[] };
+    }
+  }
+  return null;
 }
 
 /**
@@ -168,9 +221,11 @@ class WarehouseServiceClass {
       
       console.log('📦 Raw response type:', typeof response);
       console.log('📦 Is array:', Array.isArray(response));
+      console.log('📦 Raw response:', JSON.stringify(response, null, 2));
       
-      const warehouseList = parseArrayResponse<WarehouseSummary>(response, 'Warehouses API');
+      const warehouseList = parseArrayResponse<WarehouseSummary>(response, 'Warehouses API', 'warehouses');
       console.log('✅ Parsed warehouses:', warehouseList.length, 'warehouses');
+      console.log('📋 Warehouse list:', warehouseList.map(w => ({ id: w.id, name: w.name })));
       
       // Update cache
       this.warehousesCache = {
@@ -683,11 +738,16 @@ class WarehouseServiceClass {
         `/api/warehouses/${warehouseId}/available-products`
       );
       
-      // Handle different response formats
-      const responseData = (response as any)?.data || response;
-      const products = responseData?.products || [];
+      console.log('📦 Raw products response:', JSON.stringify(response, null, 2));
+      
+      // Use the robust parsing function to handle various response formats
+      const products = parseArrayResponse<any>(response, 'Warehouse Products API', 'products');
       
       console.log(`✅ Found ${products.length} products available for this warehouse`);
+      if (products.length > 0) {
+        console.log('📋 Products:', products.map((p: any) => ({ id: p.id, name: p.name })));
+      }
+      
       return products;
     } catch (error) {
       console.error('❌ Error fetching warehouse products:', error);
