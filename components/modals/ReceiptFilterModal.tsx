@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -42,6 +42,13 @@ export const ReceiptFilterModal: React.FC<ReceiptFilterModalProps> = ({
   onOpenEmployeePicker,
 }) => {
   const [localFilters, setLocalFilters] = useState<ReceiptFilters>(filters);
+
+  // Sync local filters with parent filters when visible or filters change
+  useEffect(() => {
+    if (visible) {
+      setLocalFilters(filters);
+    }
+  }, [visible, filters]);
 
   const toggleArrayFilter = (
     filterKey: 'status' | 'paymentMethod' | 'receiptType',
