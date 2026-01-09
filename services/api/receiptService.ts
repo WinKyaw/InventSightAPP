@@ -302,6 +302,79 @@ export class ReceiptService {
     // Convert object to array
     return Object.values(response);
   }
+
+  /**
+   * Get pending receipts (not completed)
+   */
+  static async getPendingReceipts(filter?: 'all' | 'delivery' | 'pickup'): Promise<Receipt[]> {
+    const params = new URLSearchParams({
+      status: 'PENDING,PROCESSING',
+    });
+    
+    if (filter === 'delivery') {
+      params.append('receiptType', 'DELIVERY');
+    } else if (filter === 'pickup') {
+      params.append('receiptType', 'PICKUP');
+    }
+    
+    const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
+    return Array.isArray(response) ? response : [];
+  }
+
+  /**
+   * Get completed receipts with advanced filters
+   */
+  static async getCompletedReceipts(filters: {
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    createdBy?: string;
+    fulfilledBy?: string;
+    deliveredBy?: string;
+    status?: string[];
+    paymentMethod?: string[];
+    receiptType?: string[];
+    customerId?: string;
+  }): Promise<Receipt[]> {
+    const params = new URLSearchParams();
+    
+    if (filters.search) params.append('search', filters.search);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.createdBy) params.append('createdBy', filters.createdBy);
+    if (filters.fulfilledBy) params.append('fulfilledBy', filters.fulfilledBy);
+    if (filters.deliveredBy) params.append('deliveredBy', filters.deliveredBy);
+    if (filters.status && filters.status.length > 0) {
+      params.append('status', filters.status.join(','));
+    }
+    if (filters.paymentMethod && filters.paymentMethod.length > 0) {
+      params.append('paymentMethod', filters.paymentMethod.join(','));
+    }
+    if (filters.receiptType && filters.receiptType.length > 0) {
+      params.append('receiptType', filters.receiptType.join(','));
+    }
+    if (filters.customerId) params.append('customerId', filters.customerId);
+    
+    // Only get completed receipts
+    params.append('completedOnly', 'true');
+    
+    const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
+    return Array.isArray(response) ? response : [];
+  }
+
+  /**
+   * Mark receipt as fulfilled
+   */
+  static async fulfillReceipt(receiptId: number): Promise<Receipt> {
+    return await apiClient.post<Receipt>(`/api/receipts/${receiptId}/fulfill`);
+  }
+
+  /**
+   * Mark receipt as delivered
+   */
+  static async markAsDelivered(receiptId: number): Promise<Receipt> {
+    return await apiClient.post<Receipt>(`/api/receipts/${receiptId}/deliver`);
+  }
 }
 
 export default ReceiptService;

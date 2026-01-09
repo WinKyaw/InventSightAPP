@@ -23,6 +23,10 @@ import AddItemToReceiptModal from "../../components/modals/AddItemToReceiptModal
 import { ReceiptDetailsModal } from "../../components/modals/ReceiptDetailsModal";
 import SmartScanner from "../../components/ui/SmartScanner";
 import { OCRScanner } from "../../components/ui/OCRScanner";
+import { PendingReceiptCard } from "../../components/ui/PendingReceiptCard";
+import { Chip } from "../../components/ui/Chip";
+import { ReceiptFilterModal, ReceiptFilters } from "../../components/modals/ReceiptFilterModal";
+import { EmployeePickerModal, Employee } from "../../components/modals/EmployeePickerModal";
 
 import { useReceipt } from "../../context/ReceiptContext";
 import { useItems } from "../../context/ItemsContext";
@@ -98,6 +102,30 @@ export default function ReceiptScreen() {
   // OCRScanner state
   const [showOCRScanner, setShowOCRScanner] = useState(false);
 
+  // Pending receipts state
+  const [pendingReceipts, setPendingReceipts] = useState<Receipt[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [pendingFilter, setPendingFilter] = useState<'all' | 'delivery' | 'pickup'>('all');
+
+  // Advanced filter state for History tab
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<ReceiptFilters>({
+    startDate: null,
+    endDate: null,
+    createdBy: null,
+    fulfilledBy: null,
+    deliveredBy: null,
+    status: [],
+    paymentMethod: [],
+    receiptType: [],
+    customerFilter: '',
+  });
+
+  // Employee picker state
+  const [showEmployeePicker, setShowEmployeePicker] = useState(false);
+  const [employeePickerType, setEmployeePickerType] = useState<'createdBy' | 'fulfilledBy' | 'deliveredBy'>('createdBy');
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
   // Scroll state and ref
   const scrollRef = useRef<ScrollView>(null);
   const [showScrollButtons, setShowScrollButtons] = useState(false);
@@ -161,6 +189,132 @@ export default function ReceiptScreen() {
 
   const handleRefreshReceipts = () => {
     loadReceipts(true);
+  };
+
+  // Load pending receipts
+  const loadPendingReceipts = async () => {
+    try {
+      setLoadingPending(true);
+      const pending = await ReceiptService.getPendingReceipts(pendingFilter);
+      setPendingReceipts(pending);
+    } catch (error: any) {
+      console.error('Failed to load pending receipts:', error);
+      Alert.alert('Error', 'Failed to load pending receipts');
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  // Effect to load pending receipts when tab changes or filter changes
+  useEffect(() => {
+    if (activeTab === 'create') {
+      loadPendingReceipts();
+    }
+  }, [activeTab, pendingFilter]);
+
+  // Handle fulfillment action
+  const handleFulfill = async (receiptId: number) => {
+    try {
+      await ReceiptService.fulfillReceipt(receiptId);
+      Alert.alert('Success', 'Receipt marked as fulfilled');
+      loadPendingReceipts(); // Reload pending receipts
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to fulfill receipt');
+    }
+  };
+
+  // Handle delivery action
+  const handleMarkDelivered = async (receiptId: number) => {
+    try {
+      await ReceiptService.markAsDelivered(receiptId);
+      Alert.alert('Success', 'Receipt marked as delivered');
+      loadPendingReceipts(); // Reload pending receipts
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to mark as delivered');
+    }
+  };
+
+  // Get pending counts for tabs
+  const pendingCount = pendingReceipts.length;
+  const deliveryCount = pendingReceipts.filter(r => r.receiptType === 'DELIVERY').length;
+  const pickupCount = pendingReceipts.filter(r => r.receiptType === 'PICKUP').length;
+
+  // Handle filter application
+  const handleApplyFilters = (filters: ReceiptFilters) => {
+    setActiveFilters(filters);
+    setShowFilterModal(false);
+    // Apply filters to receipts
+    loadReceiptsWithFilters(filters);
+  };
+
+  const loadReceiptsWithFilters = async (filters: ReceiptFilters) => {
+    try {
+      setLoadingReceipts(true);
+      setReceiptsError(null);
+      
+      const completedReceipts = await ReceiptService.getCompletedReceipts({
+        search: searchTerm,
+        startDate: filters.startDate?.toISOString(),
+        endDate: filters.endDate?.toISOString(),
+        createdBy: filters.createdBy?.id,
+        fulfilledBy: filters.fulfilledBy?.id,
+        deliveredBy: filters.deliveredBy?.id,
+        status: filters.status,
+        paymentMethod: filters.paymentMethod,
+        receiptType: filters.receiptType,
+        customerId: filters.customerFilter,
+      });
+      
+      setReceipts(completedReceipts);
+    } catch (error: any) {
+      setReceiptsError(error.message || 'Failed to load receipts');
+    } finally {
+      setLoadingReceipts(false);
+    }
+  };
+
+  const handleClearFilters = () => {
+    const emptyFilters: ReceiptFilters = {
+      startDate: null,
+      endDate: null,
+      createdBy: null,
+      fulfilledBy: null,
+      deliveredBy: null,
+      status: [],
+      paymentMethod: [],
+      receiptType: [],
+      customerFilter: '',
+    };
+    setActiveFilters(emptyFilters);
+    setStartDate(null);
+    setEndDate(null);
+    loadReceipts();
+  };
+
+  const hasActiveFilters = 
+    activeFilters.startDate !== null ||
+    activeFilters.endDate !== null ||
+    activeFilters.createdBy !== null ||
+    activeFilters.fulfilledBy !== null ||
+    activeFilters.deliveredBy !== null ||
+    (activeFilters.status && activeFilters.status.length > 0) ||
+    (activeFilters.paymentMethod && activeFilters.paymentMethod.length > 0) ||
+    (activeFilters.receiptType && activeFilters.receiptType.length > 0) ||
+    (activeFilters.customerFilter && activeFilters.customerFilter.trim() !== '');
+
+  const handleOpenEmployeePicker = (type: 'createdBy' | 'fulfilledBy' | 'deliveredBy') => {
+    setEmployeePickerType(type);
+    setShowFilterModal(false);
+    setShowEmployeePicker(true);
+  };
+
+  const handleSelectEmployee = (employee: Employee) => {
+    setActiveFilters({
+      ...activeFilters,
+      [employeePickerType]: { id: employee.id, name: employee.name },
+    });
+    setShowEmployeePicker(false);
+    setShowFilterModal(true);
   };
 
   // Filter and sort receipts
@@ -315,100 +469,100 @@ export default function ReceiptScreen() {
 
   const renderReceiptListTab = () => (
     <View style={styles.receiptContainer}>
-      <SearchBar
-        placeholder="Search receipts..."
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-      />
-
-      <View style={styles.dateFilterContainer}>
-        <View style={styles.dateFilterRow}>
-          <View style={styles.dateFilterField}>
-            <DatePicker
-              label="Start Date"
-              value={startDate}
-              onChange={setStartDate}
-              placeholder="Any date"
-            />
-          </View>
-          <View style={styles.dateFilterField}>
-            <DatePicker
-              label="End Date"
-              value={endDate}
-              onChange={setEndDate}
-              placeholder="Any date"
-              minimumDate={startDate || undefined}
-            />
-          </View>
-        </View>
-        {(startDate || endDate) && (
-          <TouchableOpacity
-            style={styles.clearDateFiltersButton}
-            onPress={() => {
-              setStartDate(null);
-              setEndDate(null);
-            }}
-          >
-            <Text style={styles.clearDateFiltersText}>Clear Filters</Text>
-          </TouchableOpacity>
-        )}
+      {/* Header */}
+      <View style={styles.historyHeader}>
+        <Text style={styles.historyTitle}>Receipt History</Text>
+        <Text style={styles.historySubtitle}>Completed transactions</Text>
       </View>
 
-      {/* GM+ Cashier Filter for History Tab */}
-      {(() => {
-        const shouldShowFilter = isGMPlus && cashierStats.length > 0;
+      {/* Search bar with filter icon */}
+      <View style={styles.searchWithFilterContainer}>
+        <View style={styles.searchBarWrapper}>
+          <SearchBar
+            placeholder="Search receipts..."
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            style={styles.searchBarInput}
+          />
+        </View>
         
-        if (__DEV__) {
-          console.log('🔍 Cashier Filter (History Tab) - isGMPlus:', isGMPlus, 'cashiers:', cashierStats.length);
-        }
-        
-        if (!shouldShowFilter) {
-          return null;
-        }
-        
-        return (
-          <View style={styles.cashierFilterContainer}>
-            <Text style={styles.cashierFilterLabel}>Filter by cashier:</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.cashierFilterScroll}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.cashierFilterButton,
-                  !selectedCashier && styles.cashierFilterButtonActive
-                ]}
-                onPress={() => setSelectedCashier(null)}
-              >
-                <Text style={[
-                  styles.cashierFilterButtonText,
-                  !selectedCashier && styles.cashierFilterButtonTextActive
-                ]}>
-                  All
-                </Text>
-              </TouchableOpacity>
-              {cashierStats.map((cashier) => (
-                <TouchableOpacity
-                  key={cashier.cashierId}
-                  style={[
-                    styles.cashierFilterButton,
-                    selectedCashier === cashier.cashierId && styles.cashierFilterButtonActive
-                  ]}
-                  onPress={() => setSelectedCashier(cashier.cashierId)}
-                >
-                  <Text style={[
-                    styles.cashierFilterButtonText,
-                    selectedCashier === cashier.cashierId && styles.cashierFilterButtonTextActive
-                  ]}>
-                    {cashier.cashierName}
-                  </Text>
-                </TouchableOpacity>
+        {/* Hamburger Filter Button */}
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <Ionicons name="options-outline" size={24} color="#333" />
+          {hasActiveFilters && <View style={styles.filterBadge} />}
+        </TouchableOpacity>
+      </View>
+
+      {/* Active Filters Display */}
+      {hasActiveFilters && (
+        <View style={styles.activeFiltersContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.activeFiltersRow}>
+              {(activeFilters.startDate || activeFilters.endDate) && (
+                <Chip 
+                  label={`${activeFilters.startDate ? activeFilters.startDate.toLocaleDateString() : 'Any'} - ${activeFilters.endDate ? activeFilters.endDate.toLocaleDateString() : 'Any'}`}
+                  onRemove={() => setActiveFilters({ ...activeFilters, startDate: null, endDate: null })}
+                />
+              )}
+              {activeFilters.createdBy && (
+                <Chip 
+                  label={`Created by: ${activeFilters.createdBy.name}`}
+                  onRemove={() => setActiveFilters({ ...activeFilters, createdBy: null })}
+                />
+              )}
+              {activeFilters.fulfilledBy && (
+                <Chip 
+                  label={`Fulfilled by: ${activeFilters.fulfilledBy.name}`}
+                  onRemove={() => setActiveFilters({ ...activeFilters, fulfilledBy: null })}
+                />
+              )}
+              {activeFilters.deliveredBy && (
+                <Chip 
+                  label={`Delivered by: ${activeFilters.deliveredBy.name}`}
+                  onRemove={() => setActiveFilters({ ...activeFilters, deliveredBy: null })}
+                />
+              )}
+              {activeFilters.status && activeFilters.status.map(status => (
+                <Chip 
+                  key={status}
+                  label={`Status: ${status}`}
+                  onRemove={() => setActiveFilters({ 
+                    ...activeFilters, 
+                    status: activeFilters.status?.filter(s => s !== status) 
+                  })}
+                />
               ))}
-            </ScrollView>
-          </View>
-        );
-      })()}
+              {activeFilters.paymentMethod && activeFilters.paymentMethod.map(method => (
+                <Chip 
+                  key={method}
+                  label={`Payment: ${method}`}
+                  onRemove={() => setActiveFilters({ 
+                    ...activeFilters, 
+                    paymentMethod: activeFilters.paymentMethod?.filter(m => m !== method) 
+                  })}
+                />
+              ))}
+              {activeFilters.receiptType && activeFilters.receiptType.map(type => (
+                <Chip 
+                  key={type}
+                  label={`Type: ${type.replace('_', ' ')}`}
+                  onRemove={() => setActiveFilters({ 
+                    ...activeFilters, 
+                    receiptType: activeFilters.receiptType?.filter(t => t !== type) 
+                  })}
+                />
+              ))}
+              
+              <TouchableOpacity onPress={handleClearFilters} style={styles.clearAllButton}>
+                <Text style={styles.clearAllText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      )}
 
       {/* Sort/Stats Header */}
       <View style={styles.employeeStats}>
@@ -459,18 +613,6 @@ export default function ReceiptScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled={true}
-          ListHeaderComponent={
-            isGMPlus && selectedCashier ? (
-              <View style={styles.filterBanner}>
-                <Text style={styles.filterBannerText}>
-                  Showing receipts by: {cashierStats.find(c => c.cashierId === selectedCashier)?.cashierName}
-                </Text>
-                <TouchableOpacity onPress={() => setSelectedCashier(null)}>
-                  <Text style={styles.clearFilterText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null
-          }
           ListEmptyComponent={() => (
             <View style={styles.emptyReceiptCard}>
               <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
@@ -916,111 +1058,80 @@ export default function ReceiptScreen() {
             </View>
           )}
 
-          {/* GM+ Cashier Filter */}
-          {(() => {
-            const shouldShowFilter = isGMPlus && cashierStats.length > 0;
-            
-            if (__DEV__) {
-              console.log('🔍 Cashier Filter (Create Tab) - isGMPlus:', isGMPlus, 'cashiers:', cashierStats.length);
-            }
-            
-            if (!shouldShowFilter) {
-              return null;
-            }
-            
-            return (
-              <View style={styles.cashierFilterContainer}>
-                <Text style={styles.cashierFilterLabel}>View receipts by cashier:</Text>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.cashierFilterScroll}
-                >
-                  <TouchableOpacity
-                    style={[
-                      styles.cashierFilterButton,
-                      !selectedCashier && styles.cashierFilterButtonActive
-                    ]}
-                    onPress={() => setSelectedCashier(null)}
-                  >
-                    <Text style={[
-                      styles.cashierFilterButtonText,
-                      !selectedCashier && styles.cashierFilterButtonTextActive
-                    ]}>
-                      All Cashiers
-                    </Text>
-                  </TouchableOpacity>
-                  {cashierStats.map((cashier) => (
-                    <TouchableOpacity
-                      key={cashier.cashierId}
-                      style={[
-                        styles.cashierFilterButton,
-                        selectedCashier === cashier.cashierId && styles.cashierFilterButtonActive
-                      ]}
-                      onPress={() => setSelectedCashier(cashier.cashierId)}
-                    >
-                      <Text style={[
-                        styles.cashierFilterButtonText,
-                        selectedCashier === cashier.cashierId && styles.cashierFilterButtonTextActive
-                      ]}>
-                        {cashier.cashierName} ({cashier.receiptCount})
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            );
-          })()}
-
-          <View style={styles.recentReceiptsSection}>
-            <Text style={styles.recentReceiptsTitle}>
-              Recent Receipts
-              {selectedCashier && cashierStats.find(c => c.cashierId === selectedCashier) && (
-                <Text style={styles.filterIndicator}>
-                  {' '}• {cashierStats.find(c => c.cashierId === selectedCashier)?.cashierName}
-                </Text>
-              )}
+          {/* Pending Receipts Section */}
+          <View style={styles.pendingSection}>
+            <Text style={styles.sectionTitle}>⏳ Pending Receipts</Text>
+            <Text style={styles.sectionSubtitle}>
+              Receipts awaiting fulfillment or delivery
             </Text>
-            {receipts.length === 0 ? (
-              <View style={styles.emptyRecentReceipts}>
-                <Text style={styles.emptyRecentReceiptsText}>
-                  No recent receipts
+            
+            {/* Tabs */}
+            <View style={styles.pendingTabs}>
+              <TouchableOpacity 
+                style={[styles.pendingTab, pendingFilter === 'all' && styles.activePendingTab]}
+                onPress={() => setPendingFilter('all')}
+              >
+                <Text style={[
+                  styles.pendingTabText,
+                  pendingFilter === 'all' && styles.activePendingTabText
+                ]}>
+                  All Pending ({pendingCount})
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.pendingTab, pendingFilter === 'delivery' && styles.activePendingTab]}
+                onPress={() => setPendingFilter('delivery')}
+              >
+                <Text style={[
+                  styles.pendingTabText,
+                  pendingFilter === 'delivery' && styles.activePendingTabText
+                ]}>
+                  🚚 Delivery ({deliveryCount})
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.pendingTab, pendingFilter === 'pickup' && styles.activePendingTab]}
+                onPress={() => setPendingFilter('pickup')}
+              >
+                <Text style={[
+                  styles.pendingTabText,
+                  pendingFilter === 'pickup' && styles.activePendingTabText
+                ]}>
+                  📦 Pickup ({pickupCount})
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Pending Receipt List */}
+            {loadingPending ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#F59E0B" />
+                <Text style={styles.loadingText}>Loading pending receipts...</Text>
+              </View>
+            ) : pendingReceipts.length === 0 ? (
+              <View style={styles.emptyPendingReceipts}>
+                <Ionicons name="checkmark-done-circle-outline" size={48} color="#10B981" />
+                <Text style={styles.emptyPendingTitle}>All Caught Up!</Text>
+                <Text style={styles.emptyPendingText}>
+                  No pending receipts at the moment
                 </Text>
               </View>
             ) : (
-              <View style={styles.recentReceiptsList}>
-                {receipts.slice(0, 3).map((receipt, index) => (
-                  <View key={receipt.id || index} style={styles.recentReceiptItem}>
-                    <View style={styles.recentReceiptInfo}>
-                      <Text style={styles.recentReceiptNumber}>
-                        #{receipt.receiptNumber}
-                      </Text>
-                      <Text style={styles.recentReceiptCustomer}>
-                        {receipt.customerName || "Walk-in Customer"}
-                      </Text>
-                    </View>
-                    <View style={styles.recentReceiptDetails}>
-                      <Text style={styles.recentReceiptTotal}>
-                        ${(receipt.totalAmount || receipt.total || 0).toFixed(2)}
-                      </Text>
-                      <Text style={styles.recentReceiptDate}>
-                        {receipt.createdAt
-                          ? new Date(receipt.createdAt).toLocaleDateString()
-                          : receipt.dateTime
-                          ? new Date(receipt.dateTime).toLocaleDateString()
-                          : "Today"}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-                <TouchableOpacity
-                  style={styles.viewAllReceiptsButton}
-                  onPress={() => setActiveTab("list")}
-                >
-                  <Text style={styles.viewAllReceiptsText}>View All Receipts</Text>
-                  <Ionicons name="arrow-forward" size={16} color="#F59E0B" />
-                </TouchableOpacity>
-              </View>
+              <FlatList
+                data={pendingReceipts}
+                renderItem={({ item }) => (
+                  <PendingReceiptCard 
+                    receipt={item}
+                    onFulfill={() => handleFulfill(item.id)}
+                    onDeliver={() => handleMarkDelivered(item.id)}
+                  />
+                )}
+                keyExtractor={(item) => item.id?.toString() || item.receiptNumber}
+                contentContainerStyle={styles.pendingListContainer}
+                scrollEnabled={false}
+              />
             )}
           </View>
 
@@ -1086,6 +1197,31 @@ export default function ReceiptScreen() {
         onUpdate={(updatedReceipt) => {
           setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
         }}
+      />
+
+      <ReceiptFilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filters={activeFilters}
+        onApply={handleApplyFilters}
+        onClear={handleClearFilters}
+        onOpenEmployeePicker={handleOpenEmployeePicker}
+      />
+
+      <EmployeePickerModal
+        visible={showEmployeePicker}
+        onClose={() => {
+          setShowEmployeePicker(false);
+          setShowFilterModal(true);
+        }}
+        onSelect={handleSelectEmployee}
+        title={
+          employeePickerType === 'createdBy' ? 'Select Creator' :
+          employeePickerType === 'fulfilledBy' ? 'Select Fulfiller' :
+          'Select Delivery Person'
+        }
+        employees={employees}
+        selectedEmployeeId={activeFilters[employeePickerType]?.id}
       />
     </SafeAreaView>
   );
@@ -1433,5 +1569,134 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#F59E0B",
+  },
+  // Pending Receipts Section Styles
+  pendingSection: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  pendingTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  pendingTab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  activePendingTab: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  pendingTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  activePendingTabText: {
+    color: '#F59E0B',
+  },
+  pendingListContainer: {
+    paddingBottom: 12,
+  },
+  emptyPendingReceipts: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyPendingTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#10B981',
+    marginTop: 12,
+  },
+  emptyPendingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  // History Tab New Styles
+  historyHeader: {
+    marginBottom: 16,
+  },
+  historyTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  historySubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  searchWithFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  searchBarWrapper: {
+    flex: 1,
+  },
+  searchBarInput: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  filterButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F59E0B',
+  },
+  activeFiltersContainer: {
+    marginBottom: 12,
+  },
+  activeFiltersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  clearAllButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  clearAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#DC2626',
   },
 });
