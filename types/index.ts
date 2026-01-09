@@ -84,4 +84,15 @@ export interface Receipt {
   customerEmail?: string;
   customerPhone?: string;
   notes?: string;
+  
+  // Receipt type and fulfillment fields
+  receiptType?: 'IN_STORE' | 'DELIVERY' | 'PICKUP';
+  fulfilledAt?: string;
+  fulfilledById?: string;
+  fulfilledByName?: string;
+  deliveredAt?: string;
+  deliveredById?: string;
+  deliveredByName?: string;
+  deliveryPerson?: string;
+  deliveryPersonName?: string;
 }
