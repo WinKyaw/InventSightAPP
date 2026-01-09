@@ -478,7 +478,6 @@ export default function ReceiptScreen() {
       {/* Search bar with filter icon */}
       <View style={styles.searchWithFilterContainer}>
         <View style={styles.searchBarWrapper}>
-          <Ionicons name="search" size={20} color="#999" style={styles.searchIconInBar} />
           <SearchBar
             placeholder="Search receipts..."
             value={searchTerm}
@@ -1656,18 +1655,10 @@ const styles = StyleSheet.create({
   },
   searchBarWrapper: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-  },
-  searchIconInBar: {
-    marginRight: 8,
   },
   searchBarInput: {
-    flex: 1,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   filterButton: {
     width: 48,
