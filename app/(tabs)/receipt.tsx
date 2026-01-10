@@ -33,6 +33,7 @@ import { useItems } from "../../context/ItemsContext";
 import { useAuth } from "../../context/AuthContext";
 import { Receipt, Item } from "../../types";
 import ReceiptService from "../../services/api/receiptService";
+import { EmployeeService } from "../../services/api/employeeService";
 
 type TabType = "create" | "list";
 
@@ -211,6 +212,29 @@ export default function ReceiptScreen() {
       loadPendingReceipts();
     }
   }, [activeTab, pendingFilter]);
+
+  // Load employees when filter modal or employee picker opens
+  useEffect(() => {
+    const loadEmployees = async () => {
+      if (showFilterModal || showEmployeePicker) {
+        try {
+          const employeeList = await EmployeeService.getAllEmployees();
+          // Map employees to the format expected by the modal
+          const mappedEmployees = employeeList.map(emp => ({
+            id: emp.id.toString(),
+            name: `${emp.firstName} ${emp.lastName}`,
+            role: emp.title,
+            username: `${emp.firstName} ${emp.lastName}`,
+          }));
+          setEmployees(mappedEmployees);
+        } catch (error: any) {
+          console.error('Failed to load employees:', error);
+        }
+      }
+    };
+    
+    loadEmployees();
+  }, [showFilterModal, showEmployeePicker]);
 
   // Handle fulfillment action
   const handleFulfill = async (receiptId: number) => {

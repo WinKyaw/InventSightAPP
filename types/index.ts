@@ -94,5 +94,6 @@ export interface Receipt {
   deliveredById?: string;
   deliveredByName?: string;
   deliveryPerson?: string;
+  deliveryPersonId?: string;
   deliveryPersonName?: string;
 }
