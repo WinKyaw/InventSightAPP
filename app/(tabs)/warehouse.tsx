@@ -132,6 +132,9 @@ export default function WarehouseScreen() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [warehouseProducts, setWarehouseProducts] = useState<any[]>([]); // ✅ Products in current warehouse
   const [allProducts, setAllProducts] = useState<any[]>([]); // ✅ All products for name lookups
+  
+  // Search state for Add Inventory modal
+  const [addInventorySearchQuery, setAddInventorySearchQuery] = useState('');
 
   // Withdraw Inventory modal state
   const [showWithdrawInventoryModal, setShowWithdrawInventoryModal] = useState(false);
@@ -208,6 +211,23 @@ export default function WarehouseScreen() {
       item.customerName?.toLowerCase().includes(query)
     );
   }, [sales, searchQuery]);
+
+  // Filter products for Add Inventory modal based on search query
+  const filteredProductsForAddInventory = useMemo(() => {
+    if (!addInventorySearchQuery.trim()) {
+      return products;
+    }
+
+    const query = addInventorySearchQuery.toLowerCase();
+    return products.filter(product => {
+      const matchesName = product.name?.toLowerCase().includes(query);
+      const matchesSku = product.sku?.toLowerCase().includes(query);
+      const matchesCategory = product.category?.toLowerCase().includes(query);
+      const matchesDescription = product.description?.toLowerCase().includes(query);
+      
+      return matchesName || matchesSku || matchesCategory || matchesDescription;
+    });
+  }, [products, addInventorySearchQuery]);
 
   // Load warehouses list
   const loadWarehouses = useCallback(async () => {
@@ -1583,36 +1603,79 @@ export default function WarehouseScreen() {
                   </Text>
                 </View>
               ) : (
-                <View style={styles.pickerContainer}>
-                  <ScrollView style={styles.productPicker} nestedScrollEnabled>
-                    {products.map((product) => (
+                <>
+                  {/* Search Input */}
+                  <View style={styles.searchInputContainer}>
+                    <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+                    <TextInput
+                      style={styles.modalSearchInput}
+                      placeholder="Search by name, SKU, category..."
+                      value={addInventorySearchQuery}
+                      onChangeText={setAddInventorySearchQuery}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    {addInventorySearchQuery.length > 0 && (
                       <TouchableOpacity
-                        key={product.id}
-                        style={[
-                          styles.productOption,
-                          newInventoryItem.productId === product.id.toString() && styles.productOptionSelected,
-                        ]}
-                        onPress={() => {
-                          setNewInventoryItem({
-                            ...newInventoryItem,
-                            productId: product.id.toString(),
-                            productName: product.name,
-                          });
-                        }}
+                        style={styles.clearSearchButton}
+                        onPress={() => setAddInventorySearchQuery('')}
                       >
-                        <Text style={[
-                          styles.productOptionText,
-                          newInventoryItem.productId === product.id.toString() && styles.productOptionTextSelected,
-                        ]}>
-                          {product.name} {product.sku ? `(${product.sku})` : ''}
-                        </Text>
-                        {newInventoryItem.productId === product.id.toString() && (
-                          <Ionicons name="checkmark-circle" size={20} color="#6366F1" />
-                        )}
+                        <Ionicons name="close-circle" size={20} color="#6B7280" />
                       </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
+                    )}
+                  </View>
+
+                  {/* Result Count */}
+                  {addInventorySearchQuery.length > 0 && (
+                    <Text style={styles.searchResultCount}>
+                      {filteredProductsForAddInventory.length} product(s) found
+                    </Text>
+                  )}
+
+                  {/* Product List */}
+                  {filteredProductsForAddInventory.length === 0 ? (
+                    <View style={styles.emptySearchContainer}>
+                      <Ionicons name="search-outline" size={48} color="#9CA3AF" />
+                      <Text style={styles.emptySearchText}>
+                        No products match your search
+                      </Text>
+                      <Text style={styles.emptySearchSubtext}>
+                        Try a different search term
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.pickerContainer}>
+                      <ScrollView style={styles.productPicker} nestedScrollEnabled>
+                        {filteredProductsForAddInventory.map((product) => (
+                          <TouchableOpacity
+                            key={product.id}
+                            style={[
+                              styles.productOption,
+                              newInventoryItem.productId === product.id.toString() && styles.productOptionSelected,
+                            ]}
+                            onPress={() => {
+                              setNewInventoryItem({
+                                ...newInventoryItem,
+                                productId: product.id.toString(),
+                                productName: product.name,
+                              });
+                            }}
+                          >
+                            <Text style={[
+                              styles.productOptionText,
+                              newInventoryItem.productId === product.id.toString() && styles.productOptionTextSelected,
+                            ]}>
+                              {product.name} {product.sku ? `(${product.sku})` : ''}
+                            </Text>
+                            {newInventoryItem.productId === product.id.toString() && (
+                              <Ionicons name="checkmark-circle" size={20} color="#6366F1" />
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </>
               )}
 
               <Text style={styles.inputLabel}>Quantity *</Text>
@@ -1652,6 +1715,7 @@ export default function WarehouseScreen() {
                       quantity: '',
                       notes: '',
                     });
+                    setAddInventorySearchQuery(''); // Clear search query
                     clearProductState(); // Clear products when closing modal
                   }}
                 >
@@ -2596,5 +2660,57 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  // Search styles for Add Inventory modal
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  modalSearchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  clearSearchButton: {
+    marginLeft: 8,
+  },
+  searchResultCount: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  emptySearchContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 8,
+  },
+  emptySearchText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  emptySearchSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
