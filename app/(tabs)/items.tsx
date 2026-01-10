@@ -10,6 +10,7 @@ import { AddItemModal } from '../../components/modals/AddItemModal';
 import { EditItemModal } from '../../components/modals/EditItemModal';
 import { StockManagementModal } from '../../components/modals/StockManagementModal';
 import { FilterSortModal } from '../../components/modals/FilterSortModal';
+import { RestockProductCard } from '../../components/items/RestockProductCard';
 import { productToItem } from '../../utils/productUtils';
 import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
@@ -126,6 +127,7 @@ export default function ItemsScreen() {
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'inventory' | 'restocks'>('inventory');
   const [restockHistory, setRestockHistory] = useState<RestockHistoryItem[]>([]);
+  const [restockSearchQuery, setRestockSearchQuery] = useState('');
 
   // State for multi-item restock
   const [selectedProducts, setSelectedProducts] = useState<Array<{
@@ -322,6 +324,24 @@ export default function ItemsScreen() {
   // Convert products to items for UI compatibility
   const items = (products ?? []).map(productToItem);
 
+  // Filter products for restock modal based on search query
+  const filteredRestockProducts = useMemo(() => {
+    if (!restockSearchQuery.trim()) {
+      return products;
+    }
+
+    const query = restockSearchQuery.toLowerCase();
+    
+    return products.filter(product => {
+      return (
+        product.name?.toLowerCase().includes(query) ||
+        product.sku?.toLowerCase().includes(query) ||
+        product.category?.toLowerCase().includes(query) ||
+        product.description?.toLowerCase().includes(query)
+      );
+    });
+  }, [products, restockSearchQuery]);
+
   const toggleItemExpansion = (id: number) => {
     const newExpanded = new Set(expandedItems);
     if (newExpanded.has(id)) {
@@ -403,13 +423,32 @@ export default function ItemsScreen() {
 
   // Update quantity for selected product
   const updateProductQuantity = (productId: number, quantity: string) => {
-    setSelectedProducts(prev =>
-      prev.map(p =>
-        p.productId === productId
-          ? { ...p, quantity }
-          : p
-      )
-    );
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    setSelectedProducts(prev => {
+      const existing = prev.find(p => p.productId === productId);
+      
+      if (quantity === '' || quantity === '0') {
+        // Remove product if quantity is empty or zero
+        return prev.filter(p => p.productId !== productId);
+      } else if (existing) {
+        // Update existing product quantity
+        return prev.map(p =>
+          p.productId === productId ? { ...p, quantity } : p
+        );
+      } else {
+        // Add new product to selection
+        return [
+          ...prev,
+          {
+            productId: product.id,
+            productName: product.name,
+            quantity,
+          },
+        ];
+      }
+    });
   };
 
   // Handle modal close
@@ -418,6 +457,7 @@ export default function ItemsScreen() {
     setShowRestockModal(false);
     setSelectedProducts([]);
     setGlobalNotes('');
+    setRestockSearchQuery('');
   };
 
   // Handle multi-item restock submission
@@ -857,53 +897,76 @@ export default function ItemsScreen() {
               </Text>
             </View>
 
+            {/* Search Bar */}
+            <View style={itemsStyles.searchBarContainer}>
+              <View style={itemsStyles.searchBarWrapper}>
+                <Ionicons name="search" size={20} color="#999" style={itemsStyles.searchBarIcon} />
+                <TextInput
+                  style={itemsStyles.searchBarInput}
+                  placeholder="Search by name, SKU, category..."
+                  value={restockSearchQuery}
+                  onChangeText={setRestockSearchQuery}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {restockSearchQuery.length > 0 && (
+                  <TouchableOpacity 
+                    style={itemsStyles.clearSearchButton}
+                    onPress={() => setRestockSearchQuery('')}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#999" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Result Count */}
+            {restockSearchQuery.length > 0 && (
+              <Text style={itemsStyles.resultCount}>
+                {filteredRestockProducts.length} product(s) found
+              </Text>
+            )}
+
             {/* Product Selection List */}
             <Text style={itemsStyles.sectionLabel}>Select Products *</Text>
             
-            <ScrollView style={itemsStyles.productListContainer} nestedScrollEnabled>
-              {products.map((product) => {
-                const isSelected = selectedProducts.some(p => p.productId === product.id);
-                const selectedProduct = selectedProducts.find(p => p.productId === product.id);
-                
-                return (
-                  <View key={product.id} style={itemsStyles.productRow}>
-                    {/* Checkbox */}
-                    <TouchableOpacity
-                      style={itemsStyles.checkbox}
-                      onPress={() => toggleProductSelection(product)}
-                    >
-                      <Ionicons
-                        name={isSelected ? 'checkbox' : 'square-outline'}
-                        size={24}
-                        color={isSelected ? Colors.primary : Colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-
-                    {/* Product Info */}
-                    <View style={itemsStyles.productInfo}>
-                      <Text style={itemsStyles.productName}>{product.name}</Text>
-                      <Text style={itemsStyles.productMeta}>
-                        Current Stock: {product.quantity} units
-                      </Text>
-                    </View>
-
-                    {/* Quantity Input (only if selected) */}
-                    {isSelected && (
-                      <View style={itemsStyles.quantityInputWrapper}>
-                        <Text style={itemsStyles.quantityLabel}>Qty:</Text>
-                        <TextInput
-                          style={itemsStyles.quantityInput}
-                          placeholder="0"
-                          keyboardType="number-pad"
-                          value={selectedProduct?.quantity || ''}
-                          onChangeText={(value) => updateProductQuantity(product.id, value)}
-                        />
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </ScrollView>
+            {loading ? (
+              <View style={itemsStyles.loadingContainer}>
+                <ActivityIndicator size="large" color="#E67E22" />
+                <Text style={itemsStyles.loadingText}>Loading products...</Text>
+              </View>
+            ) : filteredRestockProducts.length === 0 ? (
+              <View style={itemsStyles.emptyStateContainer}>
+                <Ionicons name="cube-outline" size={64} color="#CCC" />
+                <Text style={itemsStyles.emptyStateText}>
+                  {restockSearchQuery 
+                    ? 'No products match your search' 
+                    : 'No products available for this store'}
+                </Text>
+                {restockSearchQuery && (
+                  <Text style={itemsStyles.emptyStateSubtext}>
+                    Try a different search term
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <ScrollView style={itemsStyles.productListContainer} nestedScrollEnabled>
+                {filteredRestockProducts.map((product) => {
+                  const selectedProduct = selectedProducts.find(p => p.productId === product.id);
+                  const quantity = selectedProduct?.quantity || '';
+                  
+                  return (
+                    <RestockProductCard
+                      key={product.id}
+                      product={product}
+                      quantity={quantity}
+                      onQuantityChange={(qty) => updateProductQuantity(product.id, qty)}
+                      searchQuery={restockSearchQuery}
+                    />
+                  );
+                })}
+              </ScrollView>
+            )}
 
             {/* Global Notes (applies to all) */}
             <Text style={itemsStyles.sectionLabel}>Notes (Optional)</Text>
@@ -1442,6 +1505,67 @@ const itemsStyles = StyleSheet.create({
     fontSize: 14,
     color: Colors.primary,
     fontWeight: '500',
+  },
+
+  // Search bar styles for restock modal
+  searchBarContainer: {
+    marginBottom: 16,
+  },
+  searchBarWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  searchBarIcon: {
+    marginRight: 8,
+  },
+  searchBarInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+  },
+  clearSearchButton: {
+    padding: 4,
+  },
+  resultCount: {
+    marginBottom: 12,
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+
+  // Loading and empty state styles
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
 
   // Section label
