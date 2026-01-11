@@ -42,6 +42,11 @@ interface RestockHistoryResponse {
   totalPages: number;
 }
 
+interface RestockApiResponse {
+  success: boolean;
+  message?: string;
+}
+
 export default function ItemsScreen() {
   // ✅ SECURITY FIX: Add authentication check
   const { isAuthenticated, isInitialized, user } = useAuth();
@@ -484,7 +489,7 @@ export default function ItemsScreen() {
 
       // Create array of promises for parallel API calls
       const restockPromises = selectedProducts.map(async (item) => {
-        const response = await apiClient.post<{ success: boolean; message?: string }>('/api/store-inventory/add', {
+        const response = await apiClient.post<RestockApiResponse>('/api/store-inventory/add', {
           storeId: currentStore.id,
           productId: item.productId,
           quantity: parseInt(item.quantity.trim(), 10),
@@ -1789,7 +1794,7 @@ const itemsStyles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   
-  // Empty state (for restocks tab)
+  // Empty state (shared across inventory and restocks tabs)
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
