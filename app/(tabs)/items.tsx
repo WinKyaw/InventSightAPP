@@ -484,13 +484,13 @@ export default function ItemsScreen() {
 
       // Create array of promises for parallel API calls
       const restockPromises = selectedProducts.map(async (item) => {
-        const response = await apiClient.post('/api/store-inventory/add', {
+        const response = await apiClient.post<any>('/api/store-inventory/add', {
           storeId: currentStore.id,
           productId: item.productId,
           quantity: parseInt(item.quantity.trim(), 10),
           notes: globalNotes,
         });
-        return response.data;
+        return response;
       });
 
       // Execute all restocks in parallel
@@ -1789,16 +1789,11 @@ const itemsStyles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   
-  // Empty state
+  // Empty state (for restocks tab)
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginTop: 12,
   },
 
   // Store Selector Modal Styles
