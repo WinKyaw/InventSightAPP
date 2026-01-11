@@ -484,7 +484,7 @@ export default function ItemsScreen() {
 
       // Create array of promises for parallel API calls
       const restockPromises = selectedProducts.map(async (item) => {
-        const response = await apiClient.post<any>('/api/store-inventory/add', {
+        const response = await apiClient.post<{ success: boolean; message?: string }>('/api/store-inventory/add', {
           storeId: currentStore.id,
           productId: item.productId,
           quantity: parseInt(item.quantity.trim(), 10),
