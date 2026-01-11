@@ -117,6 +117,7 @@ export default function ItemsScreen() {
     setSelectedCategoryId,
     setSortBy,
     setSortOrder,
+    setCurrentStoreId,  // ✅ FIX: Get setCurrentStoreId from context
     clearFilters
   } = useItemsApi();
 
@@ -170,6 +171,16 @@ export default function ItemsScreen() {
   useEffect(() => {
     loadStores();
   }, [loadStores]);
+
+  // ✅ FIX: Sync currentStore with context storeId
+  useEffect(() => {
+    if (currentStore?.id) {
+      console.log('🔄 Syncing store ID to context:', currentStore.id);
+      setCurrentStoreId(currentStore.id);
+    } else {
+      setCurrentStoreId(null);
+    }
+  }, [currentStore?.id, setCurrentStoreId]);
 
   // Handler to create store
   const handleCreateStore = async () => {
