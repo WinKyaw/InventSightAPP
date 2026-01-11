@@ -79,8 +79,8 @@ export class ProductService {
   /**
    * Get all products with pagination with caching and deduplication
    */
-  static async getAllProducts(page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<ProductsListResponse> {
-    const cacheKey = `products:all:${page}:${limit}:${sortBy}:${sortOrder}`;
+  static async getAllProducts(page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc', storeId?: string): Promise<ProductsListResponse> {
+    const cacheKey = `products:all:${page}:${limit}:${sortBy}:${sortOrder}:${storeId || 'all'}`;
     
     // Check cache first
     const cached = responseCache.get<ProductsListResponse>(cacheKey);
@@ -92,7 +92,14 @@ export class ProductService {
     return requestDeduplicator.execute(cacheKey, async () => {
       // Retry with exponential backoff on rate limit
       return retryWithBackoff(async () => {
-        const fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.PRODUCTS.ALL}?page=${page - 1}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+        let fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.PRODUCTS.ALL}?page=${page - 1}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+        
+        // ✅ FIX: Add storeId parameter if provided
+        if (storeId) {
+          fullUrl += `&storeId=${storeId}`;
+          console.log(`📦 Loading products for store: ${storeId}`);
+        }
+        
         const response = await apiClient.get<any>(fullUrl);
 
         // Map backend response to frontend interface

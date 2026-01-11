@@ -286,9 +286,10 @@ export default function ItemsScreen() {
 
       console.log('📦 Items screen focused - loading products and categories');
       loadedRef.current = true;
-      loadProducts();
+      // ✅ FIX: Pass currentStore.id when loading products
+      loadProducts(1, false, currentStore?.id);
       loadCategories();
-    }, [loadProducts, loadCategories, loading])
+    }, [loadProducts, loadCategories, loading, currentStore?.id])
   );
 
   // ✅ FIX: Reload products when store changes
@@ -317,8 +318,8 @@ export default function ItemsScreen() {
         // Clear product cache to ensure fresh data
         CacheManager.invalidateProducts();
         
-        // Reload products for the new store
-        await loadProducts(1, true);
+        // ✅ FIX: Pass currentStore.id when reloading products for new store
+        await loadProducts(1, true, currentStore.id);
       } catch (error) {
         console.error('❌ Failed to activate store:', error);
         Alert.alert('Error', 'Failed to switch stores. Please try again.');
@@ -402,7 +403,8 @@ export default function ItemsScreen() {
 
   const handleLoadMore = () => {
     if (hasMore && !loading) {
-      loadProducts(currentPage + 1);
+      // ✅ FIX: Pass currentStore.id when loading more products
+      loadProducts(currentPage + 1, false, currentStore?.id);
     }
   };
 
@@ -513,7 +515,8 @@ export default function ItemsScreen() {
       handleCloseRestockModal();
 
       // Refresh product list
-      loadProducts();
+      // ✅ FIX: Pass currentStore.id when refreshing products after restock
+      loadProducts(1, true, currentStore?.id);
     } catch (error) {
       console.error('❌ Multi-item restock failed:', error);
       Alert.alert('Error', 'Failed to restock items. Please try again.');

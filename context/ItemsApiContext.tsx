@@ -35,7 +35,7 @@ interface ItemsApiContextType {
   sortOrder: 'asc' | 'desc';
   
   // Actions
-  loadProducts: (page?: number, refresh?: boolean) => Promise<void>;
+  loadProducts: (page?: number, refresh?: boolean, storeId?: string) => Promise<void>;
   searchProducts: (query: string, filters?: Partial<SearchProductsParams>) => Promise<void>;
   createProduct: (productData: CreateProductRequest) => Promise<Product | null>;
   updateProduct: (id: number, updates: UpdateProductRequest) => Promise<Product | null>;
@@ -92,7 +92,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
   const loadProductsRef = useRef<Promise<void> | null>(null);
 
   // Load products with pagination
-  const loadProducts = useCallback(async (page = 1, refresh = false): Promise<void> => {
+  const loadProducts = useCallback(async (page = 1, refresh = false, storeId?: string): Promise<void> => {
     // Deduplicate concurrent requests
     if (loadProductsRef.current) {
       console.log('⏭️ Products: Request already in progress');
@@ -139,8 +139,8 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
             hasMore: page * DEFAULT_PAGE_SIZE < searchResponse.totalCount
           };
         } else {
-          // Otherwise use regular getAllProducts
-          response = await ProductService.getAllProducts(page, DEFAULT_PAGE_SIZE, sortBy, sortOrder);
+          // ✅ FIX: Pass storeId to getAllProducts
+          response = await ProductService.getAllProducts(page, DEFAULT_PAGE_SIZE, sortBy, sortOrder, storeId);
           console.log(JSON.stringify(response));
         }
 
