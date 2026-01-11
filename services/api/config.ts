@@ -316,6 +316,7 @@ export interface SearchProductsParams {
   limit?: number;
   sortBy?: 'name' | 'price' | 'quantity' | 'createdAt' | 'updatedAt';
   sortOrder?: 'asc' | 'desc';
+  storeId?: string;  // ✅ FIX: Add storeId parameter
 }
 
 export interface ProductSearchResponse {
