@@ -488,6 +488,7 @@ export default function ItemsScreen() {
       console.log('📦 Restocking multiple items:', selectedProducts);
 
       // Create array of promises for parallel API calls
+      // Note: apiClient.post already unwraps response.data, so response is directly the RestockApiResponse
       const restockPromises = selectedProducts.map(async (item) => {
         const response = await apiClient.post<RestockApiResponse>('/api/store-inventory/add', {
           storeId: currentStore.id,
