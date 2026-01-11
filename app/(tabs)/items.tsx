@@ -42,6 +42,11 @@ interface RestockHistoryResponse {
   totalPages: number;
 }
 
+interface RestockApiResponse {
+  success: boolean;
+  message?: string;
+}
+
 export default function ItemsScreen() {
   // ✅ SECURITY FIX: Add authentication check
   const { isAuthenticated, isInitialized, user } = useAuth();
@@ -483,14 +488,15 @@ export default function ItemsScreen() {
       console.log('📦 Restocking multiple items:', selectedProducts);
 
       // Create array of promises for parallel API calls
+      // Note: apiClient.post already unwraps response.data, so response is directly the RestockApiResponse
       const restockPromises = selectedProducts.map(async (item) => {
-        const response = await apiClient.post('/api/store-inventory/add', {
+        const response = await apiClient.post<RestockApiResponse>('/api/store-inventory/add', {
           storeId: currentStore.id,
           productId: item.productId,
           quantity: parseInt(item.quantity.trim(), 10),
           notes: globalNotes,
         });
-        return response.data;
+        return response;
       });
 
       // Execute all restocks in parallel
@@ -1789,16 +1795,11 @@ const itemsStyles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   
-  // Empty state
+  // Empty state (shared across inventory and restocks tabs)
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginTop: 12,
   },
 
   // Store Selector Modal Styles
