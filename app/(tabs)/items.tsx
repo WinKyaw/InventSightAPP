@@ -5,6 +5,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useItemsApi } from '../../context/ItemsApiContext';
 import { useAuth } from '../../context/AuthContext';
+import { useStore } from '../../context/StoreContext';
 import { Header } from '../../components/shared/Header';
 import { AddItemModal } from '../../components/modals/AddItemModal';
 import { EditItemModal } from '../../components/modals/EditItemModal';
@@ -75,9 +76,9 @@ export default function ItemsScreen() {
     canDelete: false,
   });
 
-  // Store management state
+  // Store management state - Use shared context for currentStore
+  const { currentStore, setCurrentStore } = useStore();
   const [stores, setStores] = useState<Store[]>([]);
-  const [currentStore, setCurrentStore] = useState<Store | null>(null);
   const [showStoreSelector, setShowStoreSelector] = useState(false);
   const [showAddStoreModal, setShowAddStoreModal] = useState(false);
   
