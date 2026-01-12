@@ -33,9 +33,10 @@ interface ItemsApiContextType {
   selectedCategoryId: number | null;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
+  currentStoreId: string | null;  // ✅ FIX: Add currentStoreId to context
   
   // Actions
-  loadProducts: (page?: number, refresh?: boolean) => Promise<void>;
+  loadProducts: (page?: number, refresh?: boolean, storeId?: string) => Promise<void>;
   searchProducts: (query: string, filters?: Partial<SearchProductsParams>) => Promise<void>;
   createProduct: (productData: CreateProductRequest) => Promise<Product | null>;
   updateProduct: (id: number, updates: UpdateProductRequest) => Promise<Product | null>;
@@ -49,6 +50,7 @@ interface ItemsApiContextType {
   setSelectedCategoryId: (categoryId: number | null) => void;
   setSortBy: (sortBy: string) => void;
   setSortOrder: (order: 'asc' | 'desc') => void;
+  setCurrentStoreId: (storeId: string | null) => void;  // ✅ FIX: Add setter for storeId
   clearFilters: () => void;
   
   // Utility functions
@@ -87,12 +89,13 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState(DEFAULT_SORT);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(DEFAULT_SORT_ORDER);
+  const [currentStoreId, setCurrentStoreId] = useState<string | null>(null);  // ✅ FIX: Add storeId state
 
   // ✅ REQUEST DEDUPLICATION: Track in-progress requests to prevent rate limiting
   const loadProductsRef = useRef<Promise<void> | null>(null);
 
   // Load products with pagination
-  const loadProducts = useCallback(async (page = 1, refresh = false): Promise<void> => {
+  const loadProducts = useCallback(async (page = 1, refresh = false, storeId?: string): Promise<void> => {
     // Deduplicate concurrent requests
     if (loadProductsRef.current) {
       console.log('⏭️ Products: Request already in progress');
@@ -104,6 +107,9 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       console.warn('Cannot load products - not authenticated');
       return;
     }
+
+    // ✅ FIX: Use provided storeId or fall back to currentStoreId from context
+    const effectiveStoreId = storeId || currentStoreId || undefined;
 
     loadProductsRef.current = (async () => {
       console.log("loading products...")
@@ -126,7 +132,8 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
             page,
             limit: DEFAULT_PAGE_SIZE,
             sortBy: sortBy as any,
-            sortOrder
+            sortOrder,
+            storeId: effectiveStoreId,  // ✅ FIX: Use effective storeId
           };
           
           const searchResponse = await ProductService.searchProducts(searchParams);
@@ -139,8 +146,8 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
             hasMore: page * DEFAULT_PAGE_SIZE < searchResponse.totalCount
           };
         } else {
-          // Otherwise use regular getAllProducts
-          response = await ProductService.getAllProducts(page, DEFAULT_PAGE_SIZE, sortBy, sortOrder);
+          // ✅ FIX: Pass effective storeId to getAllProducts
+          response = await ProductService.getAllProducts(page, DEFAULT_PAGE_SIZE, sortBy, sortOrder, effectiveStoreId);
           console.log(JSON.stringify(response));
         }
 
@@ -168,7 +175,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
     })();
 
     await loadProductsRef.current;
-  }, [searchQuery, selectedCategoryId, sortBy, sortOrder, canMakeApiCalls]);
+  }, [searchQuery, selectedCategoryId, sortBy, sortOrder, canMakeApiCalls, currentStoreId]);  // ✅ FIX: Add currentStoreId to dependencies
 
   // Search products
   const searchProducts = useCallback(async (query: string, filters: Partial<SearchProductsParams> = {}) => {
@@ -389,6 +396,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       selectedCategoryId,
       sortBy,
       sortOrder,
+      currentStoreId,  // ✅ FIX: Add currentStoreId to provider value
       
       // Actions
       loadProducts,
@@ -405,6 +413,7 @@ export function ItemsApiProvider({ children }: { children: ReactNode }) {
       setSelectedCategoryId,
       setSortBy,
       setSortOrder,
+      setCurrentStoreId,  // ✅ FIX: Add setCurrentStoreId to provider value
       clearFilters,
       
       // Utility functions
