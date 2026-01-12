@@ -77,6 +77,7 @@ export default function ReceiptScreen() {
     selectedCashier,
     setSelectedCashier,
     cashierStats,
+    clearReceipt,
   } = useReceipt();
 
   const { items, addItem } = useItems();
@@ -325,21 +326,16 @@ export default function ReceiptScreen() {
 
       await ReceiptService.createReceipt(receiptData);
       
+      // Clear the receipt form
+      clearReceipt();
+      
+      // Reload pending receipts to show the new one
+      loadPendingReceipts();
+      
       Alert.alert(
         'Success',
         'Receipt created and saved as pending. You can complete payment later.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset form
-              setCustomerName('');
-              removeItemFromReceipt; // This will be handled by clearReceipt or manual removal
-              // Reload pending receipts to show the new one
-              loadPendingReceipts();
-            },
-          },
-        ]
+        [{ text: 'OK' }]
       );
     } catch (error: any) {
       console.error('❌ Error creating receipt:', error);
