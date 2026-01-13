@@ -1027,16 +1027,6 @@ export default function ReceiptScreen() {
             )}
           </View>
 
-          {/* Store Assignment Warning - OLD, keep as fallback for API errors */}
-          {!user?.activeStoreId && currentStore && (
-            <View style={styles.warningContainer}>
-              <Ionicons name="information-circle" size={16} color="#F59E0B" />
-              <Text style={styles.warningText}>
-                User has no active store assigned in backend. Using selected store from context.
-              </Text>
-            </View>
-          )}
-
           <TouchableOpacity
             style={styles.addItemToReceiptButton}
             onPress={() => setShowAddToReceipt(true)}
