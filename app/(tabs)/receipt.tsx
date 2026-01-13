@@ -21,6 +21,7 @@ import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import AddItemToReceiptModal from "../../components/modals/AddItemToReceiptModal";
 import { ReceiptDetailsModal } from "../../components/modals/ReceiptDetailsModal";
+import { PaymentModal } from "../../components/receipt/PaymentModal";
 import SmartScanner from "../../components/ui/SmartScanner";
 import { OCRScanner } from "../../components/ui/OCRScanner";
 import { PendingReceiptCard } from "../../components/ui/PendingReceiptCard";
@@ -31,6 +32,7 @@ import { EmployeePickerModal, Employee } from "../../components/modals/EmployeeP
 import { useReceipt } from "../../context/ReceiptContext";
 import { useItems } from "../../context/ItemsContext";
 import { useAuth } from "../../context/AuthContext";
+import { useStore } from "../../context/StoreContext";
 import { Receipt, Item } from "../../types";
 import ReceiptService from "../../services/api/receiptService";
 import { EmployeeService } from "../../services/api/employeeService";
@@ -41,6 +43,7 @@ export default function ReceiptScreen() {
   // ✅ SECURITY FIX: Add authentication check
   const { isAuthenticated, isInitialized, user } = useAuth();
   const router = useRouter();
+  const { currentStore, isStoreReady } = useStore(); // ✅ Get store from shared context
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
@@ -74,6 +77,7 @@ export default function ReceiptScreen() {
     selectedCashier,
     setSelectedCashier,
     cashierStats,
+    clearReceipt,
   } = useReceipt();
 
   const { items, addItem } = useItems();
@@ -84,6 +88,8 @@ export default function ReceiptScreen() {
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [showReceiptDetails, setShowReceiptDetails] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedReceiptForPayment, setSelectedReceiptForPayment] = useState<Receipt | null>(null);
 
   // Receipt listing state
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -138,6 +144,15 @@ export default function ReceiptScreen() {
                    userRoleUpper === 'CEO' || 
                    userRoleUpper === 'FOUNDER' ||
                    userRoleUpper === 'ADMIN';
+
+  // ✅ Check if store is available
+  useEffect(() => {
+    if (!isStoreReady) {
+      console.warn('⚠️ No store selected for receipt');
+    } else {
+      console.log(`✅ Receipt page using store: ${currentStore?.name || currentStore?.storeName}`);
+    }
+  }, [currentStore, isStoreReady]);
 
   // ✅ Debug logging for GM+ status (only in development)
   useEffect(() => {
@@ -255,6 +270,76 @@ export default function ReceiptScreen() {
       loadPendingReceipts(); // Reload pending receipts
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to mark as delivered');
+    }
+  };
+
+  // Handle payment action
+  const handlePayNow = (receipt: Receipt) => {
+    console.log('💳 Opening payment modal for receipt:', receipt.id);
+    setSelectedReceiptForPayment(receipt);
+    setShowPaymentModal(true);
+  };
+
+  // Custom handler for creating PENDING receipts (no payment method yet)
+  const handleCreatePendingReceipt = async () => {
+    // ✅ Check if store is selected
+    if (!currentStore) {
+      Alert.alert(
+        'No Store Selected',
+        'Please go to Items page and select a store before creating a receipt.',
+        [
+          {
+            text: 'Go to Items',
+            onPress: () => router.push('/(tabs)/items'),
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+      return;
+    }
+
+    if (receiptItems.length === 0) {
+      Alert.alert('Error', 'Please add items to the receipt');
+      return;
+    }
+
+    try {
+      console.log(`📝 Creating PENDING receipt for store: ${currentStore.storeName || currentStore.name}`);
+
+      const subtotal = calculateTotal();
+      const tax = calculateTax(subtotal);
+
+      // ✅ Create receipt with shared store, no payment method, PENDING status
+      const receiptData = {
+        storeId: currentStore.id, // ✅ Use store from shared context
+        customerName: customerName || 'Walk-in Customer',
+        items: receiptItems.map(item => ({
+          productId: item.id.toString(),
+          quantity: item.quantity,
+        })),
+        status: 'PENDING', // ✅ No payment yet - just save as pending
+        // ❌ NO paymentMethod here! It will be added when user clicks "Pay Now"
+      };
+
+      await ReceiptService.createReceipt(receiptData);
+      
+      // Clear the receipt form
+      clearReceipt();
+      
+      // Reload pending receipts to show the new one
+      loadPendingReceipts();
+      
+      Alert.alert(
+        'Success',
+        'Receipt created and saved as pending. You can complete payment later.',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('❌ Error creating receipt:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to create receipt');
     }
   };
 
@@ -905,6 +990,13 @@ export default function ReceiptScreen() {
               </View>
               <Text style={styles.receiptInfoValue}>{user?.name || 'Unknown'}</Text>
             </View>
+            <View style={styles.receiptInfoRow}>
+              <View style={styles.receiptInfoItem}>
+                <Ionicons name="storefront-outline" size={16} color="#F59E0B" />
+                <Text style={styles.receiptInfoLabel}>Store</Text>
+              </View>
+              <Text style={styles.receiptInfoValue}>{currentStore?.storeName || currentStore?.name || 'No store selected'}</Text>
+            </View>
             <View style={styles.customerInputSection}>
               <Text style={styles.customerInputLabel}>
                 Customer Name (Optional)
@@ -924,51 +1016,23 @@ export default function ReceiptScreen() {
               ) : null}
             </View>
 
-            <View style={styles.paymentMethodSection}>
-              <Text style={styles.paymentMethodLabel}>Payment Method</Text>
-              <View style={styles.paymentMethodButtons}>
-                {['CASH', 'CARD', 'MOBILE', 'OTHER'].map((method) => (
-                  <TouchableOpacity
-                    key={method}
-                    style={[
-                      styles.paymentMethodButton,
-                      paymentMethod === method && styles.paymentMethodButtonActive,
-                    ]}
-                    onPress={() => setPaymentMethod(method)}
-                  >
-                    <Ionicons
-                      name={
-                        method === 'CASH' 
-                          ? 'cash-outline' 
-                          : method === 'CARD' 
-                          ? 'card-outline' 
-                          : method === 'MOBILE'
-                          ? 'phone-portrait-outline'
-                          : 'wallet-outline'
-                      }
-                      size={20}
-                      color={paymentMethod === method ? '#F59E0B' : '#6B7280'}
-                    />
-                    <Text
-                      style={[
-                        styles.paymentMethodButtonText,
-                        paymentMethod === method && styles.paymentMethodButtonTextActive,
-                      ]}
-                    >
-                      {method}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+            {/* ✅ Store Warning (if no store selected) */}
+            {!currentStore && (
+              <View style={styles.warningContainer}>
+                <Ionicons name="warning" size={16} color="#F59E0B" />
+                <Text style={styles.warningText}>
+                  No store selected. Please go to Items page and select a store before creating receipts.
+                </Text>
               </View>
-            </View>
+            )}
           </View>
 
-          {/* Store Assignment Warning */}
-          {!user?.activeStoreId && (
+          {/* Store Assignment Warning - OLD, keep as fallback for API errors */}
+          {!user?.activeStoreId && currentStore && (
             <View style={styles.warningContainer}>
               <Ionicons name="information-circle" size={16} color="#F59E0B" />
               <Text style={styles.warningText}>
-                No store assigned. Contact admin if receipt creation fails.
+                User has no active store assigned in backend. Using selected store from context.
               </Text>
             </View>
           )}
@@ -1057,9 +1121,9 @@ export default function ReceiptScreen() {
                 </View>
               </View>
               <Button
-                title={submitting ? "Processing..." : "Complete Transaction"}
-                onPress={handleSubmitReceipt}
-                disabled={submitting || receiptItems.length === 0}
+                title={submitting ? "Processing..." : "Save as Pending Receipt"}
+                onPress={handleCreatePendingReceipt}
+                disabled={submitting || receiptItems.length === 0 || !currentStore}
                 color="#10B981"
                 style={styles.submitReceiptButton}
               />
@@ -1150,6 +1214,7 @@ export default function ReceiptScreen() {
                     receipt={item}
                     onFulfill={() => handleFulfill(item.id)}
                     onDeliver={() => handleMarkDelivered(item.id)}
+                    onPayNow={() => handlePayNow(item)}
                   />
                 )}
                 keyExtractor={(item) => item.id?.toString() || item.receiptNumber}
@@ -1246,6 +1311,18 @@ export default function ReceiptScreen() {
         }
         employees={employees}
         selectedEmployeeId={activeFilters[employeePickerType]?.id}
+      />
+
+      <PaymentModal
+        visible={showPaymentModal}
+        receipt={selectedReceiptForPayment}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedReceiptForPayment(null);
+        }}
+        onSuccess={() => {
+          loadPendingReceipts(); // Reload pending receipts after payment
+        }}
       />
     </SafeAreaView>
   );

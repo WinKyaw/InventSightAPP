@@ -7,6 +7,7 @@ interface PendingReceiptCardProps {
   receipt: Receipt;
   onFulfill?: () => void;
   onDeliver?: () => void;
+  onPayNow?: () => void;
 }
 
 const formatRelativeTime = (dateString?: string): string => {
@@ -29,6 +30,7 @@ export const PendingReceiptCard: React.FC<PendingReceiptCardProps> = ({
   receipt,
   onFulfill,
   onDeliver,
+  onPayNow,
 }) => {
   return (
     <View style={styles.pendingCard}>
@@ -73,6 +75,17 @@ export const PendingReceiptCard: React.FC<PendingReceiptCardProps> = ({
       
       {/* Action Buttons */}
       <View style={styles.actions}>
+        {/* Pay Now button - only show if payment method is missing */}
+        {!receipt.paymentMethod && onPayNow && (
+          <TouchableOpacity 
+            style={styles.payNowButton}
+            onPress={onPayNow}
+          >
+            <Ionicons name="card-outline" size={16} color="#E67E22" />
+            <Text style={styles.payNowButtonText}>Pay Now</Text>
+          </TouchableOpacity>
+        )}
+        
         {!receipt.fulfilledAt && onFulfill && (
           <TouchableOpacity 
             style={styles.fulfillButton}
@@ -169,6 +182,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 12,
+  },
+  payNowButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF8F0',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E67E22',
+  },
+  payNowButtonText: {
+    color: '#E67E22',
+    fontWeight: '600',
+    marginLeft: 6,
+    fontSize: 14,
   },
   fulfillButton: {
     flex: 1,

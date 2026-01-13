@@ -1,6 +1,7 @@
 import '../constants/translations/i18n.config';
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
+import { StoreProvider } from '../context/StoreContext';
 import { ItemsApiProvider } from '../context/ItemsApiContext';
 import { EmployeesProvider } from '../context/EmployeesContext';
 import { ReceiptProvider } from '../context/ReceiptContext';
@@ -18,30 +19,32 @@ export default function RootLayout() {
     <ErrorBoundary>
       <AuthErrorBoundary>
         <AuthProvider>
-          <OfflineProvider>
-            <ActivityTrackerWrapper>
-              <ItemsProvider>
-                <NavigationProvider>
-                  <ItemsApiProvider>
-                    <EmployeesProvider>
-                      <ReportsProvider>
-                        <ReceiptProvider>
-                          <CalendarProvider>
-                            <Stack screenOptions={{ headerShown: false }}>
-                              <Stack.Screen name="index" options={{ headerShown: false }} />
-                              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                              <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
-                            </Stack>
-                          </CalendarProvider>
-                        </ReceiptProvider>
-                      </ReportsProvider>
-                    </EmployeesProvider>
-                  </ItemsApiProvider>
-                </NavigationProvider>
-              </ItemsProvider>
-            </ActivityTrackerWrapper>
-          </OfflineProvider>
+          <StoreProvider>
+            <OfflineProvider>
+              <ActivityTrackerWrapper>
+                <ItemsProvider>
+                  <NavigationProvider>
+                    <ItemsApiProvider>
+                      <EmployeesProvider>
+                        <ReportsProvider>
+                          <ReceiptProvider>
+                            <CalendarProvider>
+                              <Stack screenOptions={{ headerShown: false }}>
+                                <Stack.Screen name="index" options={{ headerShown: false }} />
+                                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                                <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+                              </Stack>
+                            </CalendarProvider>
+                          </ReceiptProvider>
+                        </ReportsProvider>
+                      </EmployeesProvider>
+                    </ItemsApiProvider>
+                  </NavigationProvider>
+                </ItemsProvider>
+              </ActivityTrackerWrapper>
+            </OfflineProvider>
+          </StoreProvider>
         </AuthProvider>
       </AuthErrorBoundary>
     </ErrorBoundary>
