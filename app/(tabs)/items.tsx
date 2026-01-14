@@ -132,9 +132,10 @@ export default function ItemsScreen() {
 
   // Restock modal state
   const [showRestockModal, setShowRestockModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'restocks'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'restocks' | 'lowstock'>('inventory');
   const [restockHistory, setRestockHistory] = useState<RestockHistoryItem[]>([]);
   const [restockSearchQuery, setRestockSearchQuery] = useState('');
+  const [lowStockItems, setLowStockItems] = useState<Product[]>([]);
 
   // State for multi-item restock
   const [selectedProducts, setSelectedProducts] = useState<Array<{
@@ -557,6 +558,48 @@ export default function ItemsScreen() {
     }
   };
 
+  // Load low stock items
+  const loadLowStockItems = async () => {
+    if (!currentStore?.id) {
+      console.log('⚠️ No store selected for low stock');
+      return;
+    }
+
+    try {
+      console.log('⚠️ Loading low stock items for store:', currentStore.id);
+      
+      const response = await apiClient.get('/api/products', {
+        params: {
+          storeId: currentStore.id,
+          page: 0,
+          size: 100,
+        }
+      });
+
+      const allProducts = response.products || [];
+      
+      // Filter products where quantity < lowStockThreshold
+      const lowStock = allProducts.filter((product: Product) => {
+        const threshold = product.lowStockThreshold || 10; // Default threshold
+        return product.quantity < threshold;
+      });
+
+      console.log(`⚠️ Found ${lowStock.length} low stock items`);
+      setLowStockItems(lowStock);
+      
+    } catch (error) {
+      console.error('❌ Error loading low stock items:', error);
+      setLowStockItems([]);
+    }
+  };
+
+  // Load low stock items when tab changes or store changes
+  useEffect(() => {
+    if (activeTab === 'lowstock') {
+      loadLowStockItems();
+    }
+  }, [activeTab, currentStore?.id]);
+
   // Get category names for the filter modal
   const categoryNames = ['All', ...categories.map(cat => cat.name)];
   const selectedCategoryName = selectedCategoryId 
@@ -708,6 +751,29 @@ export default function ItemsScreen() {
             Restocks
           </Text>
         </TouchableOpacity>
+
+        {/* ✅ NEW: Low Stock Tab */}
+        <TouchableOpacity
+          style={[itemsStyles.tab, activeTab === 'lowstock' && itemsStyles.activeTab]}
+          onPress={() => {
+            setActiveTab('lowstock');
+            loadLowStockItems();
+          }}
+        >
+          <Ionicons 
+            name="warning" 
+            size={20} 
+            color={activeTab === 'lowstock' ? '#FF9800' : Colors.textSecondary} 
+          />
+          <Text style={[itemsStyles.tabText, activeTab === 'lowstock' && itemsStyles.activeTabText]}>
+            Low Stock
+          </Text>
+          {lowStockItems.length > 0 && (
+            <View style={itemsStyles.badge}>
+              <Text style={itemsStyles.badgeText}>{lowStockItems.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {activeTab === 'inventory' ? (
@@ -845,7 +911,7 @@ export default function ItemsScreen() {
           )}
         </View>
       </ScrollView>
-      ) : (
+      ) : activeTab === 'restocks' ? (
         /* Restock History Tab */
         <FlatList
           data={restockHistory}
@@ -887,6 +953,34 @@ export default function ItemsScreen() {
           }
           contentContainerStyle={{ padding: 16 }}
         />
+      ) : (
+        /* Low Stock Tab */
+        <View style={itemsStyles.lowStockContainer}>
+          {lowStockItems.length === 0 ? (
+            <View style={itemsStyles.emptyState}>
+              <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
+              <Text style={itemsStyles.emptyStateText}>All items well stocked!</Text>
+              <Text style={{ fontSize: 14, color: Colors.textSecondary, marginTop: 8 }}>
+                No low stock alerts at this time
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={lowStockItems}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => <LowStockCard product={item} />}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={loadLowStockItems}
+                  colors={['#10B981']}
+                  tintColor="#10B981"
+                />
+              }
+              contentContainerStyle={{ padding: 16 }}
+            />
+          )}
+        </View>
       )}
 
       {/* Restock Modal */}
@@ -1308,6 +1402,69 @@ export default function ItemsScreen() {
     </SafeAreaView>
   );
 }
+
+// Low Stock Card Component
+interface LowStockCardProps {
+  product: Product;
+}
+
+const LowStockCard: React.FC<LowStockCardProps> = ({ product }) => {
+  const threshold = product.lowStockThreshold || 10;
+  const percentRemaining = (product.quantity / threshold) * 100;
+  const isUrgent = percentRemaining < 25;
+
+  return (
+    <View style={[itemsStyles.lowStockCard, isUrgent && itemsStyles.urgentCard]}>
+      <View style={itemsStyles.cardHeader}>
+        <View style={itemsStyles.productInfo}>
+          <Text style={itemsStyles.productName}>{product.name}</Text>
+          {product.sku && (
+            <Text style={itemsStyles.sku}>SKU: {product.sku}</Text>
+          )}
+        </View>
+        
+        <View style={[itemsStyles.urgencyBadge, isUrgent && itemsStyles.urgentBadge]}>
+          <Ionicons 
+            name={isUrgent ? "alert-circle" : "warning"} 
+            size={16} 
+            color={isUrgent ? "#F44336" : "#FF9800"} 
+          />
+          <Text style={[itemsStyles.urgencyText, isUrgent && itemsStyles.urgentText]}>
+            {isUrgent ? "URGENT" : "Low"}
+          </Text>
+        </View>
+      </View>
+
+      <View style={itemsStyles.stockInfo}>
+        <View style={itemsStyles.stockRow}>
+          <Text style={itemsStyles.label}>Current Stock:</Text>
+          <Text style={[itemsStyles.stockValue, isUrgent && itemsStyles.urgentValue]}>
+            {product.quantity} units
+          </Text>
+        </View>
+        
+        <View style={itemsStyles.stockRow}>
+          <Text style={itemsStyles.label}>Threshold:</Text>
+          <Text style={itemsStyles.thresholdValue}>{threshold} units</Text>
+        </View>
+
+        {/* Progress bar */}
+        <View style={itemsStyles.progressContainer}>
+          <View style={itemsStyles.progressBg}>
+            <View 
+              style={[
+                itemsStyles.progressBar, 
+                { width: `${Math.min(percentRemaining, 100)}%` },
+                isUrgent && itemsStyles.urgentProgress
+              ]} 
+            />
+          </View>
+          <Text style={itemsStyles.percentText}>{Math.round(percentRemaining)}%</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
 
 // Custom styles for items page
 const itemsStyles = StyleSheet.create({
@@ -1890,5 +2047,120 @@ const itemsStyles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: Colors.text,
+  },
+
+  // Low Stock Tab Styles
+  lowStockContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  badge: {
+    backgroundColor: '#FF9800',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  lowStockCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  urgentCard: {
+    borderLeftColor: '#F44336',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  urgencyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  urgentBadge: {
+    backgroundColor: '#FFEBEE',
+  },
+  urgencyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF9800',
+  },
+  urgentText: {
+    color: '#F44336',
+  },
+  sku: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  stockInfo: {
+    gap: 8,
+  },
+  stockRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stockValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF9800',
+  },
+  urgentValue: {
+    color: '#F44336',
+  },
+  thresholdValue: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
+  },
+  progressBg: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#FF9800',
+    borderRadius: 4,
+  },
+  urgentProgress: {
+    backgroundColor: '#F44336',
+  },
+  percentText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    minWidth: 40,
+    textAlign: 'right',
   },
 });
