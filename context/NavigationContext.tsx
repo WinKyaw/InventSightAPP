@@ -72,6 +72,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       color: '#6366F1'
     },
     {
+      key: 'customers',
+      title: 'Customers',
+      icon: 'people',
+      screen: '/(tabs)/customers',
+      color: '#3B82F6'
+    },
+    {
       key: 'setting',
       title: 'Settings',
       icon: 'settings',
