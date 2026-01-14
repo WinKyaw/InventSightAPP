@@ -34,7 +34,7 @@ export default function TabsLayout() {
   const [selectedNavItems, setSelectedNavItems] = useState(FALLBACK_NAV_ITEMS);
 
   // All possible tab screens that can be hidden
-  const allTabScreens = ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting', 'item-setup'];
+  const allTabScreens = ['items', 'receipt', 'employees', 'calendar', 'reports', 'warehouse', 'setting', 'item-setup', 'customers'];
   
   // Get keys of currently selected tabs to avoid duplicates
   const selectedTabKeys = selectedNavItems.map(item => item.key);

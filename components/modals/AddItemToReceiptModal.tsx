@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useItems } from '../../context/ItemsContext';
 import { useReceipt } from '../../context/ReceiptContext';
+import { useStore } from '../../context/StoreContext';
 import { ProductService } from '../../services/api/productService';
 import SearchBar from '../ui/SearchBar';
 import { Item } from '../../constants/types';
@@ -34,6 +35,7 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
 }) => {
   const { items } = useItems();
   const { addItemToReceipt, receiptItems, useApiIntegration } = useReceipt();
+  const { currentStore } = useStore(); // ✅ Get current store
   const [searchQuery, setSearchQuery] = useState('');
   const [allProducts, setAllProducts] = useState<Item[]>([]);
   const [searchResults, setSearchResults] = useState<Item[]>([]);
@@ -47,11 +49,24 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
     
     if (useApiIntegration) {
       const loadAllProducts = async () => {
+        if (!currentStore?.id) {
+          console.warn('⚠️ No store selected for receipt products');
+          Alert.alert(
+            'No Store Selected',
+            'Please select a store from the Items page before browsing products for receipts.',
+            [{ text: 'OK' }]
+          );
+          setAllProducts([]); // Show empty state instead of local items
+          setIsLoadingInitial(false);
+          return;
+        }
+
         try {
           setIsLoadingInitial(true);
-          console.log('📦 Loading all products from API...');
+          console.log(`📦 Loading products for receipt - Store: ${currentStore.id}`);
           
-          const results = await ProductService.getAllProducts(1, INITIAL_PRODUCTS_LIMIT);
+          // ✅ FIX: Pass storeId parameter
+          const results = await ProductService.getAllProducts(1, INITIAL_PRODUCTS_LIMIT, 'name', 'asc', currentStore.id);
           
           // Convert Product[] to Item[] format
           const items: Item[] = results.products.map((product) => ({
@@ -91,7 +106,7 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
     setSearchQuery('');
     setSearchResults([]);
     setHasSearched(false);
-  }, [visible, useApiIntegration, items]);
+  }, [visible, useApiIntegration, items, currentStore?.id]);
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
@@ -102,12 +117,24 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
     }
 
     const timeoutId = setTimeout(async () => {
+      if (!currentStore?.id) {
+        console.warn('⚠️ No store selected for receipt product search');
+        setSearchResults([]);
+        setHasSearched(true);
+        setIsSearching(false);
+        return;
+      }
+
       try {
         setIsSearching(true);
+        console.log(`🔍 Searching products for receipt - Store: ${currentStore.id}`);
+        
+        // ✅ FIX: Pass storeId parameter
         const results = await ProductService.searchProducts({
           query: searchQuery.trim(),
           page: 0,
           limit: 50,
+          storeId: currentStore.id,
         });
         
         // Convert Product[] to Item[] format
@@ -140,7 +167,7 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
     }, SEARCH_DEBOUNCE_DELAY);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, useApiIntegration]);
+  }, [searchQuery, useApiIntegration, currentStore?.id]);
 
   // ✅ Filter items: prioritize search results, then all products
   const filteredItems = useMemo(() => {
