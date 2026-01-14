@@ -40,40 +40,42 @@ export function WarehouseInventoryList({
         onPress={() => onItemPress?.(item)}
         disabled={!onItemPress}
       >
+        {/* ✅ FIXED: Single-line layout with inline quantity */}
         <View style={styles.itemHeader}>
-          <View style={styles.itemTitleRow}>
-            <Text style={styles.itemName}>{item.productName}</Text>
-            {isLowStock && (
-              <View style={styles.lowStockBadge}>
-                <Ionicons name="warning" size={12} color="#fff" style={styles.lowStockIcon} />
-                <Text style={styles.lowStockText}>Low</Text>
-              </View>
-            )}
+          <Text style={styles.itemName}>{item.productName}</Text>
+          <View style={styles.quantityBadge}>
+            <Text style={styles.quantityLabel}>Available:</Text>
+            <Text style={[styles.quantityValue, isLowStock && styles.lowStockValue]}>
+              {item.availableQuantity}
+            </Text>
           </View>
-          {item.sku && (
-            <Text style={styles.itemSku}>SKU: {item.sku}</Text>
-          )}
         </View>
 
-        <View style={styles.itemDetails}>
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Available</Text>
-              <Text style={[styles.detailValue, isLowStock && styles.lowStockValue]}>
-                {item.availableQuantity}
-              </Text>
-            </View>
-            
+        {/* ✅ Show SKU and Price on second line if needed */}
+        {(item.sku || item.price !== undefined) && (
+          <View style={styles.itemMeta}>
+            {item.sku && (
+              <Text style={styles.metaText}>SKU: {item.sku}</Text>
+            )}
             {item.price !== undefined && (
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Price</Text>
-                <Text style={styles.detailValue}>
+              <>
+                {item.sku && <Text style={styles.metaText}> • </Text>}
+                <Text style={styles.metaText}>
                   {item.currency || '$'}{item.price.toFixed(2)}
                 </Text>
-              </View>
+              </>
+            )}
+            {isLowStock && (
+              <>
+                <Text style={styles.metaText}> • </Text>
+                <View style={styles.lowStockBadge}>
+                  <Ionicons name="warning" size={12} color="#fff" style={styles.lowStockIcon} />
+                  <Text style={styles.lowStockText}>Low Stock</Text>
+                </View>
+              </>
             )}
           </View>
-        </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -174,9 +176,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   itemHeader: {
-    marginBottom: 12,
-  },
-  itemTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -187,9 +186,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
     flex: 1,
+    marginRight: 12,
   },
-  itemSku: {
-    fontSize: 14,
+  quantityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  quantityLabel: {
+    fontSize: 12,
+    color: '#1976D2',
+    fontWeight: '500',
+    marginRight: 4,
+  },
+  quantityValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1976D2',
+  },
+  lowStockValue: {
+    color: Colors.warning,
+  },
+  itemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  metaText: {
+    fontSize: 12,
     color: Colors.textSecondary,
   },
   lowStockBadge: {
@@ -207,31 +235,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-  },
-  itemDetails: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingTop: 12,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  detailItem: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  lowStockValue: {
-    color: Colors.warning,
   },
   separator: {
     height: 12,
