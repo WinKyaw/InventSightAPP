@@ -51,7 +51,12 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
       const loadAllProducts = async () => {
         if (!currentStore?.id) {
           console.warn('⚠️ No store selected for receipt products');
-          setAllProducts(items); // Fallback to local items
+          Alert.alert(
+            'No Store Selected',
+            'Please select a store from the Items page before browsing products for receipts.',
+            [{ text: 'OK' }]
+          );
+          setAllProducts([]); // Show empty state instead of local items
           setIsLoadingInitial(false);
           return;
         }

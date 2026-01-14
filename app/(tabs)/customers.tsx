@@ -306,7 +306,7 @@ export default function CustomersScreen() {
       )}
 
       {/* Search */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { marginTop: currentStore ? 12 : 16 }]}>
         <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
@@ -489,7 +489,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFF',
     margin: 16,
-    marginTop: currentStore ? 12 : 16,
     padding: 12,
     borderRadius: 12,
     shadowColor: '#000',
