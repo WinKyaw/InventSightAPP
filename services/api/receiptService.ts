@@ -30,9 +30,10 @@ export interface CreateReceiptItem {
 // ✅ Updated to match backend API expectations
 export interface CreateReceiptRequest {
   items: CreateReceiptItem[];  // Required: Array of items to purchase
-  paymentMethod: string;        // Required: Payment method (e.g., 'CASH', 'CARD', 'MOBILE', 'OTHER')
+  paymentMethod?: string;       // Optional: Payment method (e.g., 'CASH', 'CARD', 'MOBILE', 'OTHER') - not needed for PENDING receipts
   customerName?: string;        // Optional: Customer name (omit for walk-in customers)
   storeId?: string;             // Optional: Store ID (backend may require this or derive from user context)
+  status?: string;              // Optional: Receipt status (default: 'COMPLETED', can be 'PENDING' for save-and-pay-later)
 }
 
 // Legacy interface for local storage (includes calculated fields)
