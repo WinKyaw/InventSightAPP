@@ -33,4 +33,10 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     List<Sale> findByProcessedByIdAndStoreIdAndCreatedAtBetween(
         UUID userId, UUID storeId, LocalDateTime startDate, LocalDateTime endDate
     );
+    
+    // Find by store and status
+    List<Sale> findByStoreIdAndStatus(UUID storeId, String status);
+    
+    // Find by user, store, and status
+    List<Sale> findByProcessedByIdAndStoreIdAndStatus(UUID userId, UUID storeId, String status);
 }

@@ -307,18 +307,29 @@ export class ReceiptService {
    * Get pending receipts (not completed)
    */
   static async getPendingReceipts(filter?: 'all' | 'delivery' | 'pickup'): Promise<Receipt[]> {
-    const params = new URLSearchParams({
-      status: 'PENDING,PROCESSING',
-    });
-    
-    if (filter === 'delivery') {
-      params.append('receiptType', 'DELIVERY');
-    } else if (filter === 'pickup') {
-      params.append('receiptType', 'PICKUP');
+    try {
+      const params = new URLSearchParams({
+        status: 'PENDING',
+      });
+      
+      if (filter === 'delivery') {
+        params.append('receiptType', 'DELIVERY');
+      } else if (filter === 'pickup') {
+        params.append('receiptType', 'PICKUP');
+      }
+      
+      console.log('📋 Fetching pending receipts with params:', params.toString());
+      
+      const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
+      const receipts = Array.isArray(response) ? response : [];
+      
+      console.log(`✅ Loaded ${receipts.length} pending receipts`);
+      
+      return receipts;
+    } catch (error: any) {
+      console.error('❌ Error loading pending receipts:', error);
+      return [];
     }
-    
-    const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
-    return Array.isArray(response) ? response : [];
   }
 
   /**

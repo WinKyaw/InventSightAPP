@@ -111,4 +111,28 @@ public class SaleService {
         return saleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Sale not found with ID: " + id));
     }
+    
+    /**
+     * Get receipts by status (e.g., PENDING, PROCESSING, COMPLETED)
+     * GM+ sees all, regular users see only their own
+     */
+    public List<Sale> getReceiptsByStatus(UUID userId, UUID storeId, String status) {
+        User user = userService.getUserById(userId);
+        
+        // Check if user is GM+
+        boolean isGMPlus = user.getRole() == UserRole.GENERAL_MANAGER || 
+                           user.getRole() == UserRole.CEO || 
+                           user.getRole() == UserRole.FOUNDER ||
+                           user.getRole() == UserRole.ADMIN;
+        
+        if (isGMPlus) {
+            // GM+ can see all receipts for the store with this status
+            System.out.println("🔓 GM+ user " + user.getUsername() + " accessing all receipts with status: " + status);
+            return saleRepository.findByStoreIdAndStatus(storeId, status);
+        } else {
+            // Regular users only see their own receipts with this status
+            System.out.println("🔒 Regular user " + user.getUsername() + " accessing own receipts with status: " + status);
+            return saleRepository.findByProcessedByIdAndStoreIdAndStatus(userId, storeId, status);
+        }
+    }
 }

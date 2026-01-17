@@ -52,6 +52,7 @@ public class ReceiptController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) UUID cashierId,  // Filter by specific cashier (GM+ only)
+            @RequestParam(required = false) String status,    // Filter by status (PENDING, PROCESSING, COMPLETED)
             @RequestParam(defaultValue = "10") int limit,
             Authentication authentication) {
         try {
@@ -60,6 +61,7 @@ public class ReceiptController {
             
             System.out.println("📄 InventSight - Getting receipts for user: " + username);
             System.out.println("📄 CashierId filter: " + (cashierId != null ? cashierId : "None (all receipts)"));
+            System.out.println("📄 Status filter: " + (status != null ? status : "None (all statuses)"));
             System.out.println("📄 Is GM+: " + isGMPlus(user));
             
             // Get user's active store
@@ -70,8 +72,13 @@ public class ReceiptController {
             
             List<Sale> receipts;
             
+            // If status filter is provided, use status-based filtering
+            if (status != null && !status.isEmpty()) {
+                System.out.println("🔍 Filtering by status: " + status);
+                receipts = saleService.getReceiptsByStatus(user.getId(), activeStore.getId(), status);
+            }
             // If user is GM+
-            if (isGMPlus(user)) {
+            else if (isGMPlus(user)) {
                 if (cashierId != null) {
                     // Filter by specific cashier
                     System.out.println("🔍 GM+ filtering by cashier: " + cashierId);
