@@ -51,11 +51,8 @@ const AddItemToReceiptModal: React.FC<AddItemToReceiptModalProps> = ({
       const loadAllProducts = async () => {
         if (!currentStore?.id) {
           console.warn('⚠️ No store selected for receipt products');
-          Alert.alert(
-            'No Store Selected',
-            'Please select a store from the Items page before browsing products for receipts.',
-            [{ text: 'OK' }]
-          );
+          // ✅ FIX: Don't show error alert - just use empty state
+          // User already sees warning in main receipt screen
           setAllProducts([]); // Show empty state instead of local items
           setIsLoadingInitial(false);
           return;

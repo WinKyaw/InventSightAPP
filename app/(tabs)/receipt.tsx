@@ -37,6 +37,7 @@ import { useStore } from "../../context/StoreContext";
 import { Receipt, Item } from "../../types";
 import ReceiptService from "../../services/api/receiptService";
 import { EmployeeService } from "../../services/api/employeeService";
+import apiClient from "../../services/api/apiClient";
 
 type TabType = "create" | "list";
 
@@ -1493,113 +1494,124 @@ export default function ReceiptScreen() {
         onRequestClose={() => setSelectedPendingReceipt(null)}
       >
         <SafeAreaView style={styles.modalContainer}>
+          {/* Header */}
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Receipt Actions</Text>
+            <Text style={styles.modalTitle}>Receipt Details</Text>
             <TouchableOpacity onPress={() => setSelectedPendingReceipt(null)}>
               <Ionicons name="close" size={28} color="#333" />
             </TouchableOpacity>
           </View>
 
           {selectedPendingReceipt && (
-            <View style={styles.modalContent}>
-              {/* Receipt Summary */}
-              <View style={styles.receiptSummary}>
-                <Text style={styles.summaryId}>
-                  #{selectedPendingReceipt.receiptNumber}
-                </Text>
-                <Text style={styles.summaryCustomer}>
-                  {selectedPendingReceipt.customerName || 'Walk-in Customer'}
-                </Text>
-                <Text style={styles.summaryTotal}>
-                  ${(selectedPendingReceipt.totalAmount || selectedPendingReceipt.total || 0).toFixed(2)}
-                </Text>
-                <Text style={styles.summaryItems}>
-                  {selectedPendingReceipt.items?.length || 0} items
-                </Text>
-              </View>
+            <>
+              <ScrollView style={styles.modalScrollContent}>
+                {/* Receipt Info Card */}
+                <View style={styles.receiptInfoCardModal}>
+                  <Text style={styles.receiptIdModal}>
+                    #{selectedPendingReceipt.receiptNumber}
+                  </Text>
+                  
+                  <View style={styles.infoRowModal}>
+                    <Ionicons name="calendar" size={16} color="#666" />
+                    <Text style={styles.infoTextModal}>
+                      {formatDate(selectedPendingReceipt.createdAt || selectedPendingReceipt.dateTime)}
+                    </Text>
+                  </View>
 
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                {/* Pay Now */}
+                  <View style={styles.infoRowModal}>
+                    <Ionicons name="person" size={16} color="#666" />
+                    <Text style={styles.infoTextModal}>
+                      {selectedPendingReceipt.customerName || 'Walk-in Customer'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRowModal}>
+                    <Ionicons name="card" size={16} color="#666" />
+                    <Text style={styles.infoTextModal}>
+                      Payment: {selectedPendingReceipt.paymentMethod || 'Not Paid'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.statusRowModal}>
+                    <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    <Text style={styles.statusTextModal}>
+                      Status: {selectedPendingReceipt.status}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* ✅ FIX: Show Items Immediately */}
+                <View style={styles.itemsSectionModal}>
+                  <Text style={styles.sectionTitleModal}>Items</Text>
+                  
+                  {selectedPendingReceipt.items?.map((item: any, index: number) => (
+                    <View key={index} style={styles.itemRowModal}>
+                      <View style={styles.itemDetailsModal}>
+                        <Text style={styles.itemNameModal}>{item.product?.name || item.name || 'Unknown Item'}</Text>
+                        <Text style={styles.itemPriceModal}>
+                          ${(item.unitPrice || item.price || 0).toFixed(2)} × {item.quantity}
+                        </Text>
+                      </View>
+                      <Text style={styles.itemTotalModal}>
+                        ${(item.totalPrice || (item.unitPrice || item.price || 0) * item.quantity).toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  {/* Totals */}
+                  <View style={styles.totalsSectionModal}>
+                    <View style={styles.totalRowModal}>
+                      <Text style={styles.totalLabelModal}>Subtotal:</Text>
+                      <Text style={styles.totalValueModal}>
+                        ${(selectedPendingReceipt.subtotal || 0).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.totalRowModal}>
+                      <Text style={styles.totalLabelModal}>Tax:</Text>
+                      <Text style={styles.totalValueModal}>
+                        ${(selectedPendingReceipt.tax || selectedPendingReceipt.taxAmount || 0).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.totalRowModal, styles.grandTotalRowModal]}>
+                      <Text style={styles.grandTotalLabelModal}>Total:</Text>
+                      <Text style={styles.grandTotalValueModal}>
+                        ${(selectedPendingReceipt.totalAmount || selectedPendingReceipt.total || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+
+              {/* ✅ FIX: Buttons at bottom, side-by-side */}
+              <View style={styles.bottomActions}>
+                {/* Pay Now - only show if not paid */}
                 {!selectedPendingReceipt.paymentMethod && (
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.payButton]}
+                    style={[styles.actionBtn, styles.payBtn]}
                     onPress={() => handlePayNow(selectedPendingReceipt)}
                   >
-                    <Ionicons name="card" size={24} color="#FFF" />
-                    <Text style={styles.actionButtonText}>Pay Now</Text>
-                    <Text style={styles.actionButtonSubtext}>
-                      Complete payment and close receipt
-                    </Text>
+                    <Ionicons name="card" size={20} color="#FFF" />
+                    <Text style={styles.actionBtnText}>Pay Now</Text>
                   </TouchableOpacity>
                 )}
 
-                {/* Mark as Fulfilled */}
+                {/* Mark as Fulfilled - only show if not fulfilled */}
                 {!selectedPendingReceipt.fulfilledAt && (
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.fulfillButton]}
+                    style={[styles.actionBtn, styles.fulfillBtn]}
                     onPress={() => {
                       setSelectedPendingReceipt(null);
                       handleFulfill(selectedPendingReceipt.id);
                     }}
                   >
-                    <Ionicons name="checkmark-circle" size={24} color="#FFF" />
-                    <Text style={styles.actionButtonText}>Mark as Fulfilled</Text>
-                    <Text style={styles.actionButtonSubtext}>
-                      Order completed and delivered
-                    </Text>
+                    <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                    <Text style={styles.actionBtnText}>Mark as Fulfilled</Text>
                   </TouchableOpacity>
                 )}
-
-                {/* Ready for Pickup */}
-                {selectedPendingReceipt.receiptType === 'PICKUP' && !selectedPendingReceipt.fulfilledAt && (
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.pickupButton]}
-                    onPress={() => handleReadyForPickup(selectedPendingReceipt)}
-                  >
-                    <Ionicons name="cube" size={24} color="#FFF" />
-                    <Text style={styles.actionButtonText}>Ready for Pickup</Text>
-                    <Text style={styles.actionButtonSubtext}>
-                      Notify customer order is ready
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Mark as Delivered (for delivery type) */}
-                {selectedPendingReceipt.receiptType === 'DELIVERY' && 
-                 selectedPendingReceipt.fulfilledAt && 
-                 !selectedPendingReceipt.deliveredAt && (
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.deliverButton]}
-                    onPress={() => {
-                      setSelectedPendingReceipt(null);
-                      handleMarkDelivered(selectedPendingReceipt.id);
-                    }}
-                  >
-                    <Ionicons name="car" size={24} color="#FFF" />
-                    <Text style={styles.actionButtonText}>Mark as Delivered</Text>
-                    <Text style={styles.actionButtonSubtext}>
-                      Confirm delivery to customer
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* View Details */}
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.viewButton]}
-                  onPress={() => {
-                    setSelectedReceipt(selectedPendingReceipt);
-                    setSelectedPendingReceipt(null);
-                    setShowReceiptDetails(true);
-                  }}
-                >
-                  <Ionicons name="eye" size={24} color="#1976D2" />
-                  <Text style={[styles.actionButtonText, styles.viewButtonText]}>
-                    View Details
-                  </Text>
-                </TouchableOpacity>
               </View>
-            </View>
+            </>
           )}
         </SafeAreaView>
       </Modal>
@@ -2217,6 +2229,150 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  modalScrollContent: {
+    flex: 1,
+    padding: 16,
+  },
+  receiptInfoCardModal: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  receiptIdModal: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  infoRowModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  infoTextModal: {
+    fontSize: 14,
+    color: '#666',
+  },
+  statusRowModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  statusTextModal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  itemsSectionModal: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 80, // Space for bottom buttons
+  },
+  sectionTitleModal: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  itemRowModal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  itemDetailsModal: {
+    flex: 1,
+  },
+  itemNameModal: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  itemPriceModal: {
+    fontSize: 14,
+    color: '#666',
+  },
+  itemTotalModal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  totalsSectionModal: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 2,
+    borderTopColor: '#E0E0E0',
+  },
+  totalRowModal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  totalLabelModal: {
+    fontSize: 14,
+    color: '#666',
+  },
+  totalValueModal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  grandTotalRowModal: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  grandTotalLabelModal: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  grandTotalValueModal: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#10B981',
+  },
+  
+  // ✅ FIX: Bottom actions side-by-side
+  bottomActions: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+  },
+  payBtn: {
+    backgroundColor: '#F59E0B',
+  },
+  fulfillBtn: {
+    backgroundColor: '#10B981',
+  },
+  actionBtnText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFF',
   },
   modalContent: {
     padding: 16,

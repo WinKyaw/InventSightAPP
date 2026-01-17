@@ -41,11 +41,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       setLoading(true);
       console.log(`💳 Completing payment for receipt ${receipt.id} with method: ${selectedMethod}`);
 
+      // ✅ FIX: Set status to PAID (not FULFILLED) - payment doesn't mean fulfillment
       await apiClient.put(`/api/receipts/${receipt.id}/complete`, {
         paymentMethod: selectedMethod,
+        status: 'PAID', // ✅ Mark as PAID, not FULFILLED
       });
 
-      Alert.alert('Success', 'Payment completed successfully');
+      Alert.alert('Success', 'Payment completed - receipt marked as PAID');
       onSuccess();
       onClose();
     } catch (error: any) {
