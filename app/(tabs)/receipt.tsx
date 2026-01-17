@@ -208,12 +208,12 @@ export default function ReceiptScreen() {
   };
 
   // ✅ DRY: Centralized function to refresh both receipt lists
-  const refreshReceiptLists = useCallback(() => {
+  const refreshReceiptLists = () => {
     loadPendingReceipts();
     if (activeTab === 'list') {
       loadReceipts();
     }
-  }, [activeTab]);
+  };
 
   // Load pending receipts
   const loadPendingReceipts = async () => {

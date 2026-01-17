@@ -87,6 +87,14 @@ type BackendReceiptResponse = BackendPaginatedResponse | BackendLegacyResponse |
 export class ReceiptService {
   /**
    * Helper to extract receipts array from different backend response formats
+   * 
+   * Handles multiple response formats for backward compatibility:
+   * 1. Paginated response: { content: Receipt[], totalElements, totalPages, number }
+   * 2. Legacy response: { receipts: Receipt[], totalCount, totalRevenue }
+   * 3. Array response: Receipt[] (direct array)
+   * 
+   * @param response - Backend response in any supported format
+   * @returns Array of receipts, or empty array if format is unrecognized
    */
   private static extractReceiptsFromResponse(response: BackendReceiptResponse): Receipt[] {
     if ('content' in response && Array.isArray(response.content)) {
