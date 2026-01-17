@@ -13,6 +13,11 @@ const RECEIPT_ENDPOINTS = {
   GET_CASHIERS: '/api/receipts/cashiers',
 };
 
+// Pagination constants
+const DEFAULT_PENDING_PAGE = 0;
+const DEFAULT_PENDING_PAGE_SIZE = 50;
+const DEFAULT_SORT_ORDER = 'createdAt,desc';
+
 // Cashier statistics interface for GM+ users
 export interface CashierStats {
   cashierId: string;
@@ -81,6 +86,28 @@ type BackendReceiptResponse = BackendPaginatedResponse | BackendLegacyResponse |
  */
 export class ReceiptService {
   /**
+   * Helper to extract receipts array from different backend response formats
+   * 
+   * Handles multiple response formats for backward compatibility:
+   * 1. Paginated response: { content: Receipt[], totalElements, totalPages, number }
+   * 2. Legacy response: { receipts: Receipt[], totalCount, totalRevenue }
+   * 3. Array response: Receipt[] (direct array)
+   * 
+   * @param response - Backend response in any supported format
+   * @returns Array of receipts, or empty array if format is unrecognized
+   */
+  private static extractReceiptsFromResponse(response: BackendReceiptResponse): Receipt[] {
+    if ('content' in response && Array.isArray(response.content)) {
+      return response.content;
+    } else if ('receipts' in response && Array.isArray(response.receipts)) {
+      return response.receipts;
+    } else if (Array.isArray(response)) {
+      return response;
+    }
+    return [];
+  }
+
+  /**
    * Create a new receipt/transaction
    */
   static async createReceipt(receiptData: CreateReceiptRequest): Promise<Receipt> {
@@ -90,7 +117,7 @@ export class ReceiptService {
   /**
    * Get all receipts with pagination and optional cashier filter
    */
-  static async getAllReceipts(page = 0, size = 20, cashierId?: string): Promise<ReceiptResponse> {
+  static async getAllReceipts(page = 0, size = 20, cashierId?: string, status?: string): Promise<ReceiptResponse> {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('size', size.toString());
@@ -101,6 +128,14 @@ export class ReceiptService {
       params.append('cashierId', cashierId);
       if (__DEV__) {
         console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+      }
+    }
+    
+    // Add status filter if provided
+    if (status) {
+      params.append('status', status);
+      if (__DEV__) {
+        console.log('🔍 ReceiptService: Filtering by status:', status);
       }
     }
 
@@ -145,7 +180,7 @@ export class ReceiptService {
   /**
    * Get receipts with full pagination info and optional cashier filter
    */
-  static async getReceiptsPaginated(page = 0, size = 20, cashierId?: string): Promise<PaginatedReceiptResponse> {
+  static async getReceiptsPaginated(page = 0, size = 20, cashierId?: string, status?: string): Promise<PaginatedReceiptResponse> {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('size', size.toString());
@@ -156,6 +191,14 @@ export class ReceiptService {
       params.append('cashierId', cashierId);
       if (__DEV__) {
         console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+      }
+    }
+    
+    // Add status filter if provided
+    if (status) {
+      params.append('status', status);
+      if (__DEV__) {
+        console.log('🔍 ReceiptService: Filtering by status:', status);
       }
     }
 
@@ -311,15 +354,17 @@ export class ReceiptService {
     try {
       const params = new URLSearchParams({
         status: 'PENDING',
+        page: DEFAULT_PENDING_PAGE.toString(),
+        size: DEFAULT_PENDING_PAGE_SIZE.toString(),
+        sort: DEFAULT_SORT_ORDER
       });
-      
-      // Note: receiptType filtering is done client-side since backend doesn't have this field yet
-      // Future enhancement: add receiptType column to database and filter server-side
       
       console.log('📋 Fetching pending receipts with params:', params.toString());
       
-      const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
-      let receipts = Array.isArray(response) ? response : [];
+      const response = await apiClient.get<BackendReceiptResponse>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
+      
+      // Handle different response formats using shared helper
+      let receipts = this.extractReceiptsFromResponse(response);
       
       // Client-side filtering by receiptType if needed
       if (filter === 'delivery') {
