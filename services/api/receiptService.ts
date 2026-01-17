@@ -13,6 +13,10 @@ const RECEIPT_ENDPOINTS = {
   GET_CASHIERS: '/api/receipts/cashiers',
 };
 
+// Pagination constants
+const DEFAULT_PENDING_PAGE_SIZE = 50;
+const DEFAULT_SORT_ORDER = 'createdAt,desc';
+
 // Cashier statistics interface for GM+ users
 export interface CashierStats {
   cashierId: string;
@@ -328,8 +332,8 @@ export class ReceiptService {
       const params = new URLSearchParams({
         status: 'PENDING',
         page: '0',
-        size: '50',
-        sort: 'createdAt,desc'
+        size: DEFAULT_PENDING_PAGE_SIZE.toString(),
+        sort: DEFAULT_SORT_ORDER
       });
       
       console.log('📋 Fetching pending receipts with params:', params.toString());

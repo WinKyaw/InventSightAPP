@@ -207,6 +207,14 @@ export default function ReceiptScreen() {
     loadReceipts(true);
   };
 
+  // ✅ DRY: Centralized function to refresh both receipt lists
+  const refreshReceiptLists = useCallback(() => {
+    loadPendingReceipts();
+    if (activeTab === 'list') {
+      loadReceipts();
+    }
+  }, [activeTab]);
+
   // Load pending receipts
   const loadPendingReceipts = async () => {
     try {
@@ -256,11 +264,7 @@ export default function ReceiptScreen() {
     try {
       await ReceiptService.fulfillReceipt(receiptId);
       Alert.alert('Success', 'Receipt marked as fulfilled');
-      // Reload both pending and completed receipts
-      loadPendingReceipts();
-      if (activeTab === 'list') {
-        loadReceipts();
-      }
+      refreshReceiptLists();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to fulfill receipt');
     }
@@ -271,11 +275,7 @@ export default function ReceiptScreen() {
     try {
       await ReceiptService.markAsDelivered(receiptId);
       Alert.alert('Success', 'Receipt marked as delivered');
-      // Reload both pending and completed receipts
-      loadPendingReceipts();
-      if (activeTab === 'list') {
-        loadReceipts();
-      }
+      refreshReceiptLists();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to mark as delivered');
     }
@@ -513,19 +513,19 @@ export default function ReceiptScreen() {
   };
 
   // ✅ FIX: Calculate total quantity across all items
-  const getTotalItemQuantity = (receipt: Receipt): number => {
+  const getTotalItemQuantity = useCallback((receipt: Receipt): number => {
     if (!receipt.items || receipt.items.length === 0) return 0;
     
     return receipt.items.reduce((total, item) => {
       return total + (item.quantity || 0);
     }, 0);
-  };
+  }, []);
 
   // ✅ FIX: Get correct tax value from receipt
-  const getReceiptTax = (receipt: Receipt): number => {
+  const getReceiptTax = useCallback((receipt: Receipt): number => {
     // Try different possible field names
     return receipt.tax || receipt.taxAmount || 0;
-  };
+  }, []);
 
   // Scroll handlers
   const scrollToTop = () => {
@@ -1334,11 +1334,7 @@ export default function ReceiptScreen() {
           setSelectedReceiptForPayment(null);
         }}
         onSuccess={() => {
-          // Reload both pending and completed receipts after payment
-          loadPendingReceipts();
-          if (activeTab === 'list') {
-            loadReceipts();
-          }
+          refreshReceiptLists();
         }}
       />
     </SafeAreaView>
