@@ -72,12 +72,70 @@ public class ReceiptController {
             
             List<Sale> receipts;
             
-            // If status filter is provided, use status-based filtering
+            // If status filter is provided
             if (status != null && !status.isEmpty()) {
                 System.out.println("🔍 Filtering by status: " + status);
-                receipts = saleService.getReceiptsByStatus(user.getId(), activeStore.getId(), status);
+                
+                // Get receipts by status, respecting user permissions
+                if (isGMPlus(user)) {
+                    if (cashierId != null) {
+                        // GM+ filtering by both status and cashier
+                        System.out.println("🔍 GM+ filtering by status and cashier: " + cashierId);
+                        List<Sale> allReceipts = saleService.getReceiptsByStatus(cashierId, activeStore.getId(), status);
+                        
+                        // Apply date filter if provided
+                        if (start != null || end != null) {
+                            receipts = allReceipts.stream()
+                                .filter(sale -> {
+                                    LocalDateTime saleDate = sale.getCreatedAt();
+                                    if (start != null && saleDate.isBefore(start)) return false;
+                                    if (end != null && saleDate.isAfter(end)) return false;
+                                    return true;
+                                })
+                                .collect(Collectors.toList());
+                        } else {
+                            receipts = allReceipts;
+                        }
+                    } else {
+                        // GM+ filtering by status only (all cashiers)
+                        System.out.println("🔍 GM+ filtering by status (all cashiers)");
+                        List<Sale> allReceipts = saleService.getReceiptsByStatus(user.getId(), activeStore.getId(), status);
+                        
+                        // Apply date filter if provided
+                        if (start != null || end != null) {
+                            receipts = allReceipts.stream()
+                                .filter(sale -> {
+                                    LocalDateTime saleDate = sale.getCreatedAt();
+                                    if (start != null && saleDate.isBefore(start)) return false;
+                                    if (end != null && saleDate.isAfter(end)) return false;
+                                    return true;
+                                })
+                                .collect(Collectors.toList());
+                        } else {
+                            receipts = allReceipts;
+                        }
+                    }
+                } else {
+                    // Regular user filtering by status
+                    System.out.println("🔒 Regular user filtering by status");
+                    List<Sale> allReceipts = saleService.getReceiptsByStatus(user.getId(), activeStore.getId(), status);
+                    
+                    // Apply date filter if provided
+                    if (start != null || end != null) {
+                        receipts = allReceipts.stream()
+                            .filter(sale -> {
+                                LocalDateTime saleDate = sale.getCreatedAt();
+                                if (start != null && saleDate.isBefore(start)) return false;
+                                if (end != null && saleDate.isAfter(end)) return false;
+                                return true;
+                            })
+                            .collect(Collectors.toList());
+                    } else {
+                        receipts = allReceipts;
+                    }
+                }
             }
-            // If user is GM+
+            // If user is GM+ (no status filter)
             else if (isGMPlus(user)) {
                 if (cashierId != null) {
                     // Filter by specific cashier
