@@ -30,9 +30,10 @@ export interface CreateReceiptItem {
 // ✅ Updated to match backend API expectations
 export interface CreateReceiptRequest {
   items: CreateReceiptItem[];  // Required: Array of items to purchase
-  paymentMethod: string;        // Required: Payment method (e.g., 'CASH', 'CARD', 'MOBILE', 'OTHER')
+  paymentMethod?: string;       // Optional: Payment method (e.g., 'CASH', 'CARD', 'MOBILE', 'OTHER') - not needed for PENDING receipts
   customerName?: string;        // Optional: Customer name (omit for walk-in customers)
   storeId?: string;             // Optional: Store ID (backend may require this or derive from user context)
+  status?: string;              // Optional: Receipt status (default: 'COMPLETED', can be 'PENDING' for save-and-pay-later)
 }
 
 // Legacy interface for local storage (includes calculated fields)
@@ -307,18 +308,33 @@ export class ReceiptService {
    * Get pending receipts (not completed)
    */
   static async getPendingReceipts(filter?: 'all' | 'delivery' | 'pickup'): Promise<Receipt[]> {
-    const params = new URLSearchParams({
-      status: 'PENDING,PROCESSING',
-    });
-    
-    if (filter === 'delivery') {
-      params.append('receiptType', 'DELIVERY');
-    } else if (filter === 'pickup') {
-      params.append('receiptType', 'PICKUP');
+    try {
+      const params = new URLSearchParams({
+        status: 'PENDING',
+      });
+      
+      // Note: receiptType filtering is done client-side since backend doesn't have this field yet
+      // Future enhancement: add receiptType column to database and filter server-side
+      
+      console.log('📋 Fetching pending receipts with params:', params.toString());
+      
+      const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
+      let receipts = Array.isArray(response) ? response : [];
+      
+      // Client-side filtering by receiptType if needed
+      if (filter === 'delivery') {
+        receipts = receipts.filter(r => r.receiptType === 'DELIVERY');
+      } else if (filter === 'pickup') {
+        receipts = receipts.filter(r => r.receiptType === 'PICKUP');
+      }
+      
+      console.log(`✅ Loaded ${receipts.length} pending receipts (filter: ${filter || 'all'})`);
+      
+      return receipts;
+    } catch (error: any) {
+      console.error('❌ Error loading pending receipts:', error);
+      return [];
     }
-    
-    const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
-    return Array.isArray(response) ? response : [];
   }
 
   /**

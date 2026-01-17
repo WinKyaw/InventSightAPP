@@ -52,6 +52,7 @@ public class ReceiptController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) UUID cashierId,  // Filter by specific cashier (GM+ only)
+            @RequestParam(required = false) String status,    // Filter by status (PENDING, PROCESSING, COMPLETED)
             @RequestParam(defaultValue = "10") int limit,
             Authentication authentication) {
         try {
@@ -60,6 +61,7 @@ public class ReceiptController {
             
             System.out.println("📄 InventSight - Getting receipts for user: " + username);
             System.out.println("📄 CashierId filter: " + (cashierId != null ? cashierId : "None (all receipts)"));
+            System.out.println("📄 Status filter: " + (status != null ? status : "None (all statuses)"));
             System.out.println("📄 Is GM+: " + isGMPlus(user));
             
             // Get user's active store
@@ -70,8 +72,23 @@ public class ReceiptController {
             
             List<Sale> receipts;
             
-            // If user is GM+
-            if (isGMPlus(user)) {
+            // If status filter is provided
+            if (status != null && !status.isEmpty()) {
+                System.out.println("🔍 Filtering by status: " + status);
+                
+                // Get receipts by status, respecting user permissions and cashier filter
+                List<Sale> allReceipts = saleService.getReceiptsByStatus(
+                    user.getId(),      // requesting user for permission check
+                    activeStore.getId(), 
+                    status, 
+                    cashierId          // optional cashier filter (GM+ only)
+                );
+                
+                // Apply date filter if provided
+                receipts = filterReceiptsByDateRange(allReceipts, start, end);
+            }
+            // If user is GM+ (no status filter)
+            else if (isGMPlus(user)) {
                 if (cashierId != null) {
                     // Filter by specific cashier
                     System.out.println("🔍 GM+ filtering by cashier: " + cashierId);
@@ -178,5 +195,23 @@ public class ReceiptController {
                user.getRole() == UserRole.CEO || 
                user.getRole() == UserRole.FOUNDER ||
                user.getRole() == UserRole.ADMIN;
+    }
+    
+    /**
+     * Filter receipts by date range
+     */
+    private List<Sale> filterReceiptsByDateRange(List<Sale> receipts, LocalDateTime start, LocalDateTime end) {
+        if (start == null && end == null) {
+            return receipts;
+        }
+        
+        return receipts.stream()
+            .filter(sale -> {
+                LocalDateTime saleDate = sale.getCreatedAt();
+                if (start != null && saleDate.isBefore(start)) return false;
+                if (end != null && saleDate.isAfter(end)) return false;
+                return true;
+            })
+            .collect(Collectors.toList());
     }
 }

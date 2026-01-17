@@ -111,4 +111,42 @@ public class SaleService {
         return saleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Sale not found with ID: " + id));
     }
+    
+    /**
+     * Get receipts by status (e.g., PENDING, PROCESSING, COMPLETED)
+     * GM+ can see all or filter by specific cashier, regular users see only their own
+     * 
+     * @param requestingUserId The ID of the user making the request (for permission check)
+     * @param storeId The store to filter by
+     * @param status The receipt status to filter by
+     * @param filterByCashierId Optional cashier ID to filter by (GM+ only)
+     */
+    public List<Sale> getReceiptsByStatus(UUID requestingUserId, UUID storeId, String status, UUID filterByCashierId) {
+        User requestingUser = userService.getUserById(requestingUserId);
+        
+        // Check if requesting user is GM+
+        boolean isGMPlus = requestingUser.getRole() == UserRole.GENERAL_MANAGER || 
+                           requestingUser.getRole() == UserRole.CEO || 
+                           requestingUser.getRole() == UserRole.FOUNDER ||
+                           requestingUser.getRole() == UserRole.ADMIN;
+        
+        if (isGMPlus) {
+            if (filterByCashierId != null) {
+                // GM+ filtering by specific cashier
+                System.out.println("🔓 GM+ user " + requestingUser.getUsername() + 
+                    " accessing receipts for cashier " + filterByCashierId + " with status: " + status);
+                return saleRepository.findByProcessedByIdAndStoreIdAndStatus(filterByCashierId, storeId, status);
+            } else {
+                // GM+ seeing all receipts for the store with this status
+                System.out.println("🔓 GM+ user " + requestingUser.getUsername() + 
+                    " accessing all receipts with status: " + status);
+                return saleRepository.findByStoreIdAndStatus(storeId, status);
+            }
+        } else {
+            // Regular users only see their own receipts with this status
+            System.out.println("🔒 Regular user " + requestingUser.getUsername() + 
+                " accessing own receipts with status: " + status);
+            return saleRepository.findByProcessedByIdAndStoreIdAndStatus(requestingUserId, storeId, status);
+        }
+    }
 }
