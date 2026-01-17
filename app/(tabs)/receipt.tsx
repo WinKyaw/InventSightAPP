@@ -9,6 +9,7 @@ import {
   Alert,
   StatusBar,
   StyleSheet,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -137,6 +138,17 @@ export default function ReceiptScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [showScrollButtons, setShowScrollButtons] = useState(false);
 
+  // State for pending receipt action modal
+  const [selectedPendingReceipt, setSelectedPendingReceipt] = useState<Receipt | null>(null);
+
+  // Customer autocomplete state
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState({ name: '', phone: '', email: '' });
+
   // Check if user is GM+ (case-insensitive)
   const userRoleUpper = user?.role?.toUpperCase();
   const isGMPlus = userRoleUpper === 'OWNER' ||
@@ -236,6 +248,81 @@ export default function ReceiptScreen() {
     }
   }, [activeTab, pendingFilter]);
 
+  // Load customers for autocomplete
+  useEffect(() => {
+    loadCustomers();
+  }, [currentStore?.id]);
+
+  const loadCustomers = async () => {
+    if (!currentStore?.id) return;
+    
+    try {
+      const response = await apiClient.get('/api/customers', {
+        params: { storeId: currentStore.id }
+      });
+      const customerList = response.data?.customers || response.data || [];
+      setCustomers(customerList);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+      // Fail silently - customer autocomplete is optional
+    }
+  };
+
+  // Filter customers as user types
+  useEffect(() => {
+    if (!customerSearchQuery.trim()) {
+      setFilteredCustomers([]);
+      setShowCustomerDropdown(false);
+      return;
+    }
+
+    const query = customerSearchQuery.toLowerCase();
+    const filtered = customers.filter((c: any) =>
+      c.name?.toLowerCase().includes(query) ||
+      c.phone?.toLowerCase().includes(query) ||
+      c.email?.toLowerCase().includes(query)
+    );
+
+    setFilteredCustomers(filtered);
+    setShowCustomerDropdown(filtered.length > 0);
+  }, [customerSearchQuery, customers]);
+
+  // Handle customer selection
+  const handleSelectCustomer = (customer: any) => {
+    setCustomerName(customer.name);
+    setCustomerSearchQuery(customer.name);
+    setShowCustomerDropdown(false);
+  };
+
+  // Handle adding new customer inline
+  const handleAddNewCustomer = async () => {
+    if (!newCustomerForm.name.trim()) {
+      Alert.alert('Error', 'Customer name is required');
+      return;
+    }
+
+    try {
+      await apiClient.post('/api/customers', {
+        ...newCustomerForm,
+        storeId: currentStore?.id,
+      });
+      Alert.alert('Success', 'Customer added successfully');
+      setShowAddCustomerModal(false);
+      setNewCustomerForm({ name: '', phone: '', email: '' });
+      loadCustomers();
+    } catch (error: any) {
+      console.error('Error adding customer:', error);
+      if (error.response?.status === 404) {
+        Alert.alert(
+          'Feature Not Available',
+          'Customer management is not yet implemented on the backend.'
+        );
+      } else {
+        Alert.alert('Error', 'Failed to add customer');
+      }
+    }
+  };
+
   // Load employees when filter modal or employee picker opens
   useEffect(() => {
     const loadEmployees = async () => {
@@ -286,6 +373,20 @@ export default function ReceiptScreen() {
     console.log('💳 Opening payment modal for receipt:', receipt.id);
     setSelectedReceiptForPayment(receipt);
     setShowPaymentModal(true);
+    setSelectedPendingReceipt(null); // Close action modal
+  };
+
+  // Handle Ready for Pickup action
+  const handleReadyForPickup = async (receipt: Receipt) => {
+    try {
+      await apiClient.put(`/api/receipts/${receipt.id}/ready-for-pickup`);
+      Alert.alert('Success', 'Customer notified - order ready for pickup');
+      setSelectedPendingReceipt(null);
+      loadPendingReceipts();
+    } catch (error) {
+      console.error('Error marking ready for pickup:', error);
+      Alert.alert('Error', 'Failed to update status');
+    }
   };
 
   // Custom handler for creating PENDING receipts (no payment method yet)
@@ -1027,12 +1128,68 @@ export default function ReceiptScreen() {
                 Customer Name (Optional)
               </Text>
               <Input
-                placeholder="Enter customer name or leave blank for walk-in"
-                value={customerName}
-                onChangeText={setCustomerName}
+                placeholder="Type to search or enter new customer"
+                value={customerSearchQuery || customerName}
+                onChangeText={(text) => {
+                  setCustomerSearchQuery(text);
+                  setCustomerName(text);
+                }}
+                onFocus={() => {
+                  if (customerSearchQuery && filteredCustomers.length > 0) {
+                    setShowCustomerDropdown(true);
+                  }
+                }}
                 style={styles.customerInput}
                 maxLength={50}
               />
+              
+              {/* Customer Dropdown */}
+              {showCustomerDropdown && (
+                <View style={styles.customerDropdown}>
+                  <FlatList
+                    data={filteredCustomers}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.customerOption}
+                        onPress={() => handleSelectCustomer(item)}
+                      >
+                        <View style={styles.customerAvatar}>
+                          <Text style={styles.customerAvatarText}>
+                            {item.name.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        
+                        <View style={styles.customerDetails}>
+                          <Text style={styles.customerOptionName}>{item.name}</Text>
+                          {item.phone && (
+                            <Text style={styles.customerOptionPhone}>{item.phone}</Text>
+                          )}
+                        </View>
+                        
+                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                      </TouchableOpacity>
+                    )}
+                    style={styles.dropdownList}
+                  />
+                  
+                  {/* Add new customer option */}
+                  <TouchableOpacity
+                    style={styles.addNewCustomer}
+                    onPress={() => {
+                      setNewCustomerForm({ ...newCustomerForm, name: customerSearchQuery });
+                      setShowAddCustomerModal(true);
+                      setShowCustomerDropdown(false);
+                    }}
+                  >
+                    <Ionicons name="add-circle" size={20} color="#1976D2" />
+                    <Text style={styles.addNewCustomerText}>
+                      Add "{customerSearchQuery}" as new customer
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              
               {customerNameError ? (
                 <View style={styles.fieldErrorContainer}>
                   <Ionicons name="alert-circle" size={16} color="#EF4444" />
@@ -1227,9 +1384,7 @@ export default function ReceiptScreen() {
                 renderItem={({ item }) => (
                   <PendingReceiptCard 
                     receipt={item}
-                    onFulfill={() => handleFulfill(item.id)}
-                    onDeliver={() => handleMarkDelivered(item.id)}
-                    onPayNow={() => handlePayNow(item)}
+                    onPress={() => setSelectedPendingReceipt(item)}
                   />
                 )}
                 keyExtractor={(item) => item.id?.toString() || item.receiptNumber}
@@ -1238,16 +1393,6 @@ export default function ReceiptScreen() {
               />
             )}
           </View>
-
-          {receiptItems.length === 0 && (
-            <View style={styles.emptyReceiptCard}>
-              <Ionicons name="receipt-outline" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyReceiptTitle}>No Items Added</Text>
-              <Text style={styles.emptyReceiptText}>
-                Tap "Add Items to Receipt" to start creating a transaction, or use "Smart Scan" to quickly scan barcodes and recognize text
-              </Text>
-            </View>
-          )}
         </ScrollView>
 
         {/* Scroll Buttons */}
@@ -1339,6 +1484,178 @@ export default function ReceiptScreen() {
           refreshReceiptLists();
         }}
       />
+
+      {/* Pending Receipt Action Modal */}
+      <Modal
+        visible={selectedPendingReceipt !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSelectedPendingReceipt(null)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Receipt Actions</Text>
+            <TouchableOpacity onPress={() => setSelectedPendingReceipt(null)}>
+              <Ionicons name="close" size={28} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          {selectedPendingReceipt && (
+            <View style={styles.modalContent}>
+              {/* Receipt Summary */}
+              <View style={styles.receiptSummary}>
+                <Text style={styles.summaryId}>
+                  #{selectedPendingReceipt.receiptNumber}
+                </Text>
+                <Text style={styles.summaryCustomer}>
+                  {selectedPendingReceipt.customerName || 'Walk-in Customer'}
+                </Text>
+                <Text style={styles.summaryTotal}>
+                  ${(selectedPendingReceipt.totalAmount || selectedPendingReceipt.total || 0).toFixed(2)}
+                </Text>
+                <Text style={styles.summaryItems}>
+                  {selectedPendingReceipt.items?.length || 0} items
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtons}>
+                {/* Pay Now */}
+                {!selectedPendingReceipt.paymentMethod && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.payButton]}
+                    onPress={() => handlePayNow(selectedPendingReceipt)}
+                  >
+                    <Ionicons name="card" size={24} color="#FFF" />
+                    <Text style={styles.actionButtonText}>Pay Now</Text>
+                    <Text style={styles.actionButtonSubtext}>
+                      Complete payment and close receipt
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Mark as Fulfilled */}
+                {!selectedPendingReceipt.fulfilledAt && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.fulfillButton]}
+                    onPress={() => {
+                      setSelectedPendingReceipt(null);
+                      handleFulfill(selectedPendingReceipt.id);
+                    }}
+                  >
+                    <Ionicons name="checkmark-circle" size={24} color="#FFF" />
+                    <Text style={styles.actionButtonText}>Mark as Fulfilled</Text>
+                    <Text style={styles.actionButtonSubtext}>
+                      Order completed and delivered
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Ready for Pickup */}
+                {selectedPendingReceipt.receiptType === 'PICKUP' && !selectedPendingReceipt.fulfilledAt && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.pickupButton]}
+                    onPress={() => handleReadyForPickup(selectedPendingReceipt)}
+                  >
+                    <Ionicons name="cube" size={24} color="#FFF" />
+                    <Text style={styles.actionButtonText}>Ready for Pickup</Text>
+                    <Text style={styles.actionButtonSubtext}>
+                      Notify customer order is ready
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Mark as Delivered (for delivery type) */}
+                {selectedPendingReceipt.receiptType === 'DELIVERY' && 
+                 selectedPendingReceipt.fulfilledAt && 
+                 !selectedPendingReceipt.deliveredAt && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.deliverButton]}
+                    onPress={() => {
+                      setSelectedPendingReceipt(null);
+                      handleMarkDelivered(selectedPendingReceipt.id);
+                    }}
+                  >
+                    <Ionicons name="car" size={24} color="#FFF" />
+                    <Text style={styles.actionButtonText}>Mark as Delivered</Text>
+                    <Text style={styles.actionButtonSubtext}>
+                      Confirm delivery to customer
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* View Details */}
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.viewButton]}
+                  onPress={() => {
+                    setSelectedReceipt(selectedPendingReceipt);
+                    setSelectedPendingReceipt(null);
+                    setShowReceiptDetails(true);
+                  }}
+                >
+                  <Ionicons name="eye" size={24} color="#1976D2" />
+                  <Text style={[styles.actionButtonText, styles.viewButtonText]}>
+                    View Details
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* Add Customer Modal */}
+      <Modal
+        visible={showAddCustomerModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddCustomerModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Add New Customer</Text>
+            <TouchableOpacity onPress={() => setShowAddCustomerModal(false)}>
+              <Ionicons name="close" size={28} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalContent}>
+            <Text style={styles.label}>Name *</Text>
+            <Input
+              placeholder="Customer name"
+              value={newCustomerForm.name}
+              onChangeText={(text) => setNewCustomerForm({ ...newCustomerForm, name: text })}
+              style={styles.input}
+            />
+
+            <Text style={styles.label}>Phone</Text>
+            <Input
+              placeholder="Phone number"
+              value={newCustomerForm.phone}
+              onChangeText={(text) => setNewCustomerForm({ ...newCustomerForm, phone: text })}
+              style={styles.input}
+              keyboardType="phone-pad"
+            />
+
+            <Text style={styles.label}>Email</Text>
+            <Input
+              placeholder="Email address"
+              value={newCustomerForm.email}
+              onChangeText={(text) => setNewCustomerForm({ ...newCustomerForm, email: text })}
+              style={styles.input}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <TouchableOpacity 
+              style={styles.saveCustomerButton}
+              onPress={handleAddNewCustomer}
+            >
+              <Text style={styles.saveCustomerButtonText}>Add Customer</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1814,5 +2131,189 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#DC2626',
+  },
+  // Customer Autocomplete Styles
+  customerDropdown: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    maxHeight: 250,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  dropdownList: {
+    maxHeight: 200,
+  },
+  customerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+    gap: 12,
+  },
+  customerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1976D2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customerAvatarText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  customerDetails: {
+    flex: 1,
+  },
+  customerOptionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  customerOptionPhone: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  addNewCustomer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 8,
+    backgroundColor: '#F0F9FF',
+  },
+  addNewCustomerText: {
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: '600',
+  },
+  // Action Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalContent: {
+    padding: 16,
+  },
+  receiptSummary: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  summaryId: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  summaryCustomer: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  summaryTotal: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#10B981',
+    marginBottom: 4,
+  },
+  summaryItems: {
+    fontSize: 12,
+    color: '#999',
+  },
+  actionButtons: {
+    gap: 12,
+  },
+  actionButton: {
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  payButton: {
+    backgroundColor: '#F59E0B',
+  },
+  fulfillButton: {
+    backgroundColor: '#10B981',
+  },
+  pickupButton: {
+    backgroundColor: '#6366F1',
+  },
+  deliverButton: {
+    backgroundColor: '#3B82F6',
+  },
+  viewButton: {
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#1976D2',
+  },
+  actionButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  actionButtonSubtext: {
+    fontSize: 12,
+    color: '#FFF',
+    opacity: 0.9,
+  },
+  viewButtonText: {
+    color: '#1976D2',
+  },
+  // Add Customer Modal Styles
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+  },
+  saveCustomerButton: {
+    backgroundColor: '#3B82F6',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  saveCustomerButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
