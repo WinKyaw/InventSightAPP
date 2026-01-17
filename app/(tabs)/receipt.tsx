@@ -1544,19 +1544,25 @@ export default function ReceiptScreen() {
                 <View style={styles.itemsSectionModal}>
                   <Text style={styles.sectionTitleModal}>Items</Text>
                   
-                  {selectedPendingReceipt.items?.map((item: any, index: number) => (
-                    <View key={index} style={styles.itemRowModal}>
-                      <View style={styles.itemDetailsModal}>
-                        <Text style={styles.itemNameModal}>{item.product?.name || item.name || 'Unknown Item'}</Text>
-                        <Text style={styles.itemPriceModal}>
-                          ${(item.unitPrice || item.price || 0).toFixed(2)} × {item.quantity}
+                  {selectedPendingReceipt.items?.map((item: any, index: number) => {
+                    const quantity = item.quantity || 0;
+                    const unitPrice = item.unitPrice || item.price || 0;
+                    const totalPrice = item.totalPrice || (unitPrice * quantity);
+                    
+                    return (
+                      <View key={index} style={styles.itemRowModal}>
+                        <View style={styles.itemDetailsModal}>
+                          <Text style={styles.itemNameModal}>{item.product?.name || item.name || 'Unknown Item'}</Text>
+                          <Text style={styles.itemPriceModal}>
+                            ${unitPrice.toFixed(2)} × {quantity}
+                          </Text>
+                        </View>
+                        <Text style={styles.itemTotalModal}>
+                          ${totalPrice.toFixed(2)}
                         </Text>
                       </View>
-                      <Text style={styles.itemTotalModal}>
-                        ${(item.totalPrice || (item.unitPrice || item.price || 0) * item.quantity).toFixed(2)}
-                      </Text>
-                    </View>
-                  ))}
+                    );
+                  })}
 
                   {/* Totals */}
                   <View style={styles.totalsSectionModal}>
@@ -1671,6 +1677,9 @@ export default function ReceiptScreen() {
     </SafeAreaView>
   );
 }
+
+// ✅ Constants for styling
+const BOTTOM_ACTION_BAR_HEIGHT = 80;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
@@ -2274,7 +2283,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 80, // Space for bottom buttons
+    marginBottom: BOTTOM_ACTION_BAR_HEIGHT, // Space for bottom buttons
   },
   sectionTitleModal: {
     fontSize: 18,
