@@ -29,6 +29,7 @@ import { PendingReceiptCard } from "../../components/ui/PendingReceiptCard";
 import { Chip } from "../../components/ui/Chip";
 import { ReceiptFilterModal, ReceiptFilters } from "../../components/modals/ReceiptFilterModal";
 import { EmployeePickerModal, Employee } from "../../components/modals/EmployeePickerModal";
+import TakeOrderModal from "../../components/modals/TakeOrderModal";
 
 import { useReceipt } from "../../context/ReceiptContext";
 import { useItems } from "../../context/ItemsContext";
@@ -39,7 +40,7 @@ import ReceiptService from "../../services/api/receiptService";
 import { EmployeeService } from "../../services/api/employeeService";
 import apiClient from "../../services/api/apiClient";
 
-type TabType = "create" | "list";
+type TabType = "create" | "pending" | "history";
 
 export default function ReceiptScreen() {
   // ✅ SECURITY FIX: Add authentication check
@@ -86,6 +87,7 @@ export default function ReceiptScreen() {
 
   const [activeTab, setActiveTab] = useState<TabType>("create");
   const [showAddToReceipt, setShowAddToReceipt] = useState(false);
+  const [showTakeOrderModal, setShowTakeOrderModal] = useState(false);
   const [customerNameError, setCustomerNameError] = useState("");
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
@@ -179,7 +181,7 @@ export default function ReceiptScreen() {
   }, [user?.role, isGMPlus, cashierStats?.length, selectedCashier]);
 
   useEffect(() => {
-    if (activeTab === "list") {
+    if (activeTab === "history") {
       loadReceipts();
     }
   }, [activeTab]);
@@ -190,7 +192,7 @@ export default function ReceiptScreen() {
 
   // Reload receipts when cashier filter changes
   useEffect(() => {
-    if (activeTab === "list") {
+    if (activeTab === "history") {
       loadReceipts();
     }
   }, [selectedCashier]);
@@ -223,7 +225,7 @@ export default function ReceiptScreen() {
   // ✅ DRY: Centralized function to refresh both receipt lists
   const refreshReceiptLists = () => {
     loadPendingReceipts();
-    if (activeTab === 'list') {
+    if (activeTab === 'history') {
       loadReceipts();
     }
   };
@@ -244,7 +246,7 @@ export default function ReceiptScreen() {
 
   // Effect to load pending receipts when tab changes or filter changes
   useEffect(() => {
-    if (activeTab === 'create') {
+    if (activeTab === 'pending') {
       loadPendingReceipts();
     }
   }, [activeTab, pendingFilter]);
@@ -703,6 +705,105 @@ export default function ReceiptScreen() {
     }
   };
 
+  // Render Create Tab Content
+  const renderCreateTab = () => (
+    <View style={styles.createContent}>
+      {/* Main Action Button */}
+      <TouchableOpacity
+        style={styles.takeOrderButton}
+        onPress={() => setShowTakeOrderModal(true)}
+      >
+        <Ionicons name="cart" size={28} color="#FFF" />
+        <Text style={styles.takeOrderText}>Take Order</Text>
+      </TouchableOpacity>
+
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <TouchableOpacity 
+          style={styles.quickActionButton}
+          onPress={() => setShowOCRScanner(true)}
+        >
+          <Ionicons name="scan" size={24} color="#6366F1" />
+          <Text style={styles.quickActionText}>Smart Scan</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.quickActionButton}
+          onPress={() => setShowAddToReceipt(true)}
+        >
+          <Ionicons name="search" size={24} color="#10B981" />
+          <Text style={styles.quickActionText}>Browse Items</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Render Pending Tab Content
+  const renderPendingTab = () => (
+    <View style={styles.pendingContent}>
+      {/* Filter Tabs */}
+      <View style={styles.filterTabs}>
+        <TouchableOpacity
+          style={[styles.filterTab, pendingFilter === 'all' && styles.filterTabActive]}
+          onPress={() => setPendingFilter('all')}
+        >
+          <Text style={[styles.filterTabText, pendingFilter === 'all' && styles.filterTabTextActive]}>
+            All Pending ({pendingCount})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterTab, pendingFilter === 'delivery' && styles.filterTabActive]}
+          onPress={() => setPendingFilter('delivery')}
+        >
+          <Ionicons name="bicycle" size={16} color={pendingFilter === 'delivery' ? '#E67E22' : '#666'} />
+          <Text style={[styles.filterTabText, pendingFilter === 'delivery' && styles.filterTabTextActive]}>
+            Delivery ({deliveryCount})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterTab, pendingFilter === 'pickup' && styles.filterTabActive]}
+          onPress={() => setPendingFilter('pickup')}
+        >
+          <Ionicons name="cube" size={16} color={pendingFilter === 'pickup' ? '#E67E22' : '#666'} />
+          <Text style={[styles.filterTabText, pendingFilter === 'pickup' && styles.filterTabTextActive]}>
+            Pickup ({pickupCount})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Pending Receipts List */}
+      {loadingPending ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F59E0B" />
+          <Text style={styles.loadingText}>Loading pending receipts...</Text>
+        </View>
+      ) : pendingReceipts.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="checkmark-done-circle" size={64} color="#10B981" />
+          <Text style={styles.emptyText}>All Caught Up!</Text>
+          <Text style={styles.emptySubtext}>No pending receipts at the moment</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={pendingReceipts}
+          keyExtractor={(item) => item.id?.toString() || item.receiptNumber}
+          renderItem={({ item }) => (
+            <PendingReceiptCard 
+              receipt={item}
+              onPress={() => setSelectedPendingReceipt(item)}
+            />
+          )}
+          scrollEnabled={false}
+        />
+      )}
+    </View>
+  );
+
+  // Render History Tab Content (reuse existing renderReceiptListTab logic)
+  const renderHistoryTab = () => renderReceiptListTab();
+
   const renderReceiptListTab = () => (
     <View style={styles.receiptContainer}>
       {/* Header */}
@@ -1026,398 +1127,100 @@ export default function ReceiptScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#F59E0B" barStyle="light-content" />
-      <Header
-        title={activeTab === "create" ? "Create Receipt" : "Receipt History"}
-        subtitle={
-          activeTab === "create"
-            ? "Point of Sale Transaction"
-            : "View and search receipts"
-        }
-        backgroundColor="#F59E0B"
-      />
+      <StatusBar backgroundColor="#E67E22" barStyle="light-content" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerLabel}>Create Receipt</Text>
+            <Text style={styles.storeName}>{currentStore?.storeName || currentStore?.name || 'My Store'}</Text>
+          </View>
+          
+          <View style={styles.headerRight}>
+            <View style={styles.metadataRow}>
+              <Ionicons name="person" size={14} color="#FFF" />
+              <Text style={styles.metadataText}>{user?.name || 'Unknown'}</Text>
+            </View>
+            <View style={styles.metadataRow}>
+              <Ionicons name="calendar" size={14} color="#FFF" />
+              <Text style={styles.metadataText}>
+                {new Date().toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
 
-      {/* Tab Navigation */}
-      <View style={styles.employeeStats}>
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[
-            styles.employeeStatCard,
-            activeTab === "create" && { backgroundColor: "#FEF3C7" },
-          ]}
-          onPress={() => setActiveTab("create")}
+          style={[styles.tab, activeTab === 'create' && styles.activeTab]}
+          onPress={() => setActiveTab('create')}
         >
-          <Ionicons
-            name="add-circle-outline"
-            size={20}
-            color={activeTab === "create" ? "#F59E0B" : "#6B7280"}
+          <Ionicons 
+            name={activeTab === 'create' ? 'add-circle' : 'add-circle-outline'} 
+            size={20} 
+            color={activeTab === 'create' ? '#1976D2' : '#666'} 
           />
-          <Text
-            style={[
-              styles.employeeStatLabel,
-              activeTab === "create" && { color: "#F59E0B" },
-            ]}
-          >
+          <Text style={[styles.tabText, activeTab === 'create' && styles.activeTabText]}>
             Create
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={[
-            styles.employeeStatCard,
-            activeTab === "list" && { backgroundColor: "#FEF3C7" },
-          ]}
-          onPress={() => setActiveTab("list")}
+          style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+          onPress={() => setActiveTab('pending')}
         >
-          <Ionicons
-            name="list-outline"
-            size={20}
-            color={activeTab === "list" ? "#F59E0B" : "#6B7280"}
+          <Ionicons 
+            name={activeTab === 'pending' ? 'time' : 'time-outline'} 
+            size={20} 
+            color={activeTab === 'pending' ? '#1976D2' : '#666'} 
           />
-          <Text
-            style={[
-              styles.employeeStatLabel,
-              activeTab === "list" && { color: "#F59E0B" },
-            ]}
-          >
+          <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
+            Pending
+          </Text>
+          {pendingCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{pendingCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'history' && styles.activeTab]}
+          onPress={() => setActiveTab('history')}
+        >
+          <Ionicons 
+            name={activeTab === 'history' ? 'list' : 'list-outline'} 
+            size={20} 
+            color={activeTab === 'history' ? '#1976D2' : '#666'} 
+          />
+          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
             History
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Tab Content */}
-      {activeTab === "create" ? (
-        <View style={{ flex: 1 }}>
-          <ScrollView 
-            ref={scrollRef}
-            style={styles.receiptContainer} 
-            contentContainerStyle={styles.scrollViewContent}
-            // ✅ Enable nested scrolling
-            nestedScrollEnabled={true}
-            // ✅ Track scroll position
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            // ✅ Show scroll indicator
-            showsVerticalScrollIndicator={true}
-            // ✅ Improve scroll performance
-            removeClippedSubviews={true}
-            // ✅ Enable momentum scrolling
-            decelerationRate="normal"
-          >
-          <View style={styles.receiptInfoCard}>
-            <View style={styles.receiptInfoRow}>
-              <View style={styles.receiptInfoItem}>
-                <Ionicons name="calendar-outline" size={16} color="#F59E0B" />
-                <Text style={styles.receiptInfoLabel}>Date & Time (UTC)</Text>
-              </View>
-              <Text style={styles.receiptInfoValue}>{getCurrentDateTime()}</Text>
-            </View>
-            <View style={styles.receiptInfoRow}>
-              <View style={styles.receiptInfoItem}>
-                <Ionicons name="person-outline" size={16} color="#F59E0B" />
-                <Text style={styles.receiptInfoLabel}>Cashier</Text>
-              </View>
-              <Text style={styles.receiptInfoValue}>{user?.name || 'Unknown'}</Text>
-            </View>
-            <View style={styles.receiptInfoRow}>
-              <View style={styles.receiptInfoItem}>
-                <Ionicons name="storefront-outline" size={16} color="#F59E0B" />
-                <Text style={styles.receiptInfoLabel}>Store</Text>
-              </View>
-              <Text style={styles.receiptInfoValue}>{currentStore?.storeName || currentStore?.name || 'No store selected'}</Text>
-            </View>
-            <View style={styles.customerInputSection}>
-              <Text style={styles.customerInputLabel}>
-                Customer Name (Optional)
-              </Text>
-              <Input
-                placeholder="Type to search or enter new customer"
-                value={customerSearchQuery || customerName}
-                onChangeText={(text) => {
-                  setCustomerSearchQuery(text);
-                  setCustomerName(text);
-                }}
-                onFocus={() => {
-                  if (customerSearchQuery && filteredCustomers.length > 0) {
-                    setShowCustomerDropdown(true);
-                  }
-                }}
-                style={styles.customerInput}
-                maxLength={50}
-              />
-              
-              {/* Customer Dropdown */}
-              {showCustomerDropdown && (
-                <View style={styles.customerDropdown}>
-                  <FlatList
-                    data={filteredCustomers}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={styles.customerOption}
-                        onPress={() => handleSelectCustomer(item)}
-                      >
-                        <View style={styles.customerAvatar}>
-                          <Text style={styles.customerAvatarText}>
-                            {item.name.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                        
-                        <View style={styles.customerDetails}>
-                          <Text style={styles.customerOptionName}>{item.name}</Text>
-                          {item.phone && (
-                            <Text style={styles.customerOptionPhone}>{item.phone}</Text>
-                          )}
-                        </View>
-                        
-                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                      </TouchableOpacity>
-                    )}
-                    style={styles.dropdownList}
-                  />
-                  
-                  {/* Add new customer option */}
-                  <TouchableOpacity
-                    style={styles.addNewCustomer}
-                    onPress={() => {
-                      setNewCustomerForm({ ...newCustomerForm, name: customerSearchQuery });
-                      setShowAddCustomerModal(true);
-                      setShowCustomerDropdown(false);
-                    }}
-                  >
-                    <Ionicons name="add-circle" size={20} color="#1976D2" />
-                    <Text style={styles.addNewCustomerText}>
-                      Add "{customerSearchQuery}" as new customer
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              
-              {customerNameError ? (
-                <View style={styles.fieldErrorContainer}>
-                  <Ionicons name="alert-circle" size={16} color="#EF4444" />
-                  <Text style={styles.fieldErrorText}>{customerNameError}</Text>
-                </View>
-              ) : null}
-            </View>
+      <ScrollView style={styles.content}>
+        {activeTab === 'create' && renderCreateTab()}
+        {activeTab === 'pending' && renderPendingTab()}
+        {activeTab === 'history' && renderHistoryTab()}
+      </ScrollView>
 
-            {/* ✅ Store Warning (if no store selected) */}
-            {!currentStore && (
-              <View style={styles.warningContainer}>
-                <Ionicons name="warning" size={16} color="#F59E0B" />
-                <Text style={styles.warningText}>
-                  No store selected. Please go to Items page and select a store before creating receipts.
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={styles.addItemToReceiptButton}
-            onPress={() => setShowAddToReceipt(true)}
-          >
-            <Ionicons name="add-circle-outline" size={24} color="white" />
-            <Text style={styles.addItemToReceiptText}>Add Items to Receipt</Text>
-          </TouchableOpacity>
-
-          {/* SmartScanner Option */}
-          <View style={styles.scannerOptionsContainer}>
-            <TouchableOpacity
-              style={styles.scannerOptionButton}
-              onPress={() => setShowOCRScanner(true)}
-            >
-              <Ionicons name="scan" size={20} color="#3B82F6" />
-              <Text style={styles.scannerOptionText}>Smart Scan</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.scannerOptionButton}
-              onPress={() => setShowAddToReceipt(true)}
-            >
-              <Ionicons name="search" size={20} color="#10B981" />
-              <Text style={[styles.scannerOptionText, { color: "#10B981" }]}>Browse Items</Text>
-            </TouchableOpacity>
-          </View>
-
-          {receiptItems.length > 0 && (
-            <View style={styles.receiptItemsCard}>
-              <Text style={styles.receiptItemsTitle}>Items in Receipt</Text>
-              {receiptItems.map((item, index) => (
-                <View key={`${item.id}-${index}`} style={styles.receiptItem}>
-                  <View style={styles.receiptItemInfo}>
-                    <Text style={styles.receiptItemName}>{item.name}</Text>
-                    <Text style={styles.receiptItemPrice}>
-                      ${item.price.toFixed(2)} each
-                    </Text>
-                  </View>
-                  <View style={styles.receiptItemControls}>
-                    <View style={styles.quantityControls}>
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() =>
-                          updateReceiptItemQuantity(item.id, item.quantity - 1)
-                        }
-                      >
-                        <Ionicons name="remove" size={16} color="#F59E0B" />
-                      </TouchableOpacity>
-                      <Text style={styles.quantityText}>{item.quantity}</Text>
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() =>
-                          updateReceiptItemQuantity(item.id, item.quantity + 1)
-                        }
-                      >
-                        <Ionicons name="add" size={16} color="#F59E0B" />
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={styles.receiptItemTotal}>
-                      ${(item.price * item.quantity).toFixed(2)}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.removeItemButton}
-                      onPress={() => removeItemFromReceipt(item.id)}
-                    >
-                      <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-              <View style={styles.receiptTotals}>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Subtotal:</Text>
-                  <Text style={styles.totalValue}>${subtotal.toFixed(2)}</Text>
-                </View>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Tax (8%):</Text>
-                  <Text style={styles.totalValue}>${tax.toFixed(2)}</Text>
-                </View>
-                <View style={[styles.totalRow, styles.grandTotalRow]}>
-                  <Text style={styles.grandTotalLabel}>Total:</Text>
-                  <Text style={styles.grandTotalValue}>${total.toFixed(2)}</Text>
-                </View>
-              </View>
-              <Button
-                title={submitting ? "Processing..." : "Save as Pending Receipt"}
-                onPress={handleCreatePendingReceipt}
-                disabled={submitting || receiptItems.length === 0 || !currentStore}
-                color="#10B981"
-                style={styles.submitReceiptButton}
-              />
-              {__DEV__ && (
-                <TouchableOpacity
-                  style={styles.apiToggleButton}
-                  onPress={() => setUseApiIntegration(!useApiIntegration)}
-                >
-                  <Text style={styles.apiToggleText}>
-                    API Integration: {useApiIntegration ? "ON" : "OFF"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {error && (
-                <View style={styles.errorContainer}>
-                  <Ionicons name="alert-circle" size={16} color="#EF4444" />
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Pending Receipts Section */}
-          <View style={styles.pendingSection}>
-            <Text style={styles.sectionTitle}>⏳ Pending Receipts</Text>
-            <Text style={styles.sectionSubtitle}>
-              Receipts awaiting fulfillment or delivery
-            </Text>
-            
-            {/* Tabs */}
-            <View style={styles.pendingTabs}>
-              <TouchableOpacity 
-                style={[styles.pendingTab, pendingFilter === 'all' && styles.activePendingTab]}
-                onPress={() => setPendingFilter('all')}
-              >
-                <Text style={[
-                  styles.pendingTabText,
-                  pendingFilter === 'all' && styles.activePendingTabText
-                ]}>
-                  All Pending ({pendingCount})
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.pendingTab, pendingFilter === 'delivery' && styles.activePendingTab]}
-                onPress={() => setPendingFilter('delivery')}
-              >
-                <Text style={[
-                  styles.pendingTabText,
-                  pendingFilter === 'delivery' && styles.activePendingTabText
-                ]}>
-                  🚚 Delivery ({deliveryCount})
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.pendingTab, pendingFilter === 'pickup' && styles.activePendingTab]}
-                onPress={() => setPendingFilter('pickup')}
-              >
-                <Text style={[
-                  styles.pendingTabText,
-                  pendingFilter === 'pickup' && styles.activePendingTabText
-                ]}>
-                  📦 Pickup ({pickupCount})
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Pending Receipt List */}
-            {loadingPending ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#F59E0B" />
-                <Text style={styles.loadingText}>Loading pending receipts...</Text>
-              </View>
-            ) : pendingReceipts.length === 0 ? (
-              <View style={styles.emptyPendingReceipts}>
-                <Ionicons name="checkmark-done-circle-outline" size={48} color="#10B981" />
-                <Text style={styles.emptyPendingTitle}>All Caught Up!</Text>
-                <Text style={styles.emptyPendingText}>
-                  No pending receipts at the moment
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={pendingReceipts}
-                renderItem={({ item }) => (
-                  <PendingReceiptCard 
-                    receipt={item}
-                    onPress={() => setSelectedPendingReceipt(item)}
-                  />
-                )}
-                keyExtractor={(item) => item.id?.toString() || item.receiptNumber}
-                contentContainerStyle={styles.pendingListContainer}
-                scrollEnabled={false}
-              />
-            )}
-          </View>
-        </ScrollView>
-
-        {/* Scroll Buttons */}
-        {showScrollButtons && (
-          <View style={styles.scrollButtonsContainer}>
-            <TouchableOpacity
-              style={styles.scrollButton}
-              onPress={scrollToTop}
-            >
-              <Text style={styles.scrollButtonText}>↑</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.scrollButton, { marginTop: 8 }]}
-              onPress={scrollToBottom}
-            >
-              <Text style={styles.scrollButtonText}>↓</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        </View>
-      ) : (
-        renderReceiptListTab()
-      )}
+      {/* Modals */}
+      <TakeOrderModal
+        visible={showTakeOrderModal}
+        onClose={() => setShowTakeOrderModal(false)}
+        onSuccess={() => {
+          loadPendingReceipts();
+          setActiveTab('pending'); // Switch to pending tab after order creation
+        }}
+      />
 
       <AddItemToReceiptModal
         visible={showAddToReceipt}
@@ -1683,6 +1486,188 @@ const BOTTOM_ACTION_BAR_HEIGHT = 80;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
+  
+  // Header Styles
+  header: {
+    backgroundColor: '#E67E22',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerLabel: {
+    fontSize: 12,
+    color: '#FFF',
+    opacity: 0.9,
+    marginBottom: 2,
+  },
+  storeName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metadataText: {
+    fontSize: 12,
+    color: '#FFF',
+  },
+  
+  // Tab Styles
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#1976D2',
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#1976D2',
+    fontWeight: '700',
+  },
+  badge: {
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  content: {
+    flex: 1,
+  },
+  
+  // Create Tab Content Styles
+  createContent: {
+    padding: 16,
+    gap: 16,
+  },
+  takeOrderButton: {
+    backgroundColor: '#E67E22',
+    padding: 24,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  takeOrderText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  
+  // Pending Tab Content Styles
+  pendingContent: {
+    padding: 16,
+  },
+  filterTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  filterTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  filterTabActive: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#E67E22',
+  },
+  filterTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterTabTextActive: {
+    color: '#E67E22',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#10B981',
+    marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  
   receiptContainer: { flex: 1, padding: 16 },
   employeeStats: { flexDirection: "row", marginBottom: 12 },
   employeeStatCard: {
