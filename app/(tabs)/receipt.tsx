@@ -188,12 +188,12 @@ export default function ReceiptScreen() {
       else setLoadingReceipts(true);
       setReceiptsError(null);
       
-      // Pass selectedCashier to filter receipts
-      const response = await ReceiptService.getAllReceipts(0, 20, selectedCashier || undefined);
+      // ✅ FIX: Only fetch COMPLETED receipts for history tab
+      const response = await ReceiptService.getAllReceipts(0, 20, selectedCashier || undefined, 'COMPLETED');
       setReceipts(response.receipts || []);
       
       if (__DEV__) {
-        console.log('📄 Loaded receipts with filter - cashier:', selectedCashier || 'All', 'count:', response.receipts?.length || 0);
+        console.log('📄 Loaded COMPLETED receipts with filter - cashier:', selectedCashier || 'All', 'count:', response.receipts?.length || 0);
       }
     } catch (error: any) {
       setReceiptsError(error.message || "Failed to load receipts");
@@ -256,7 +256,11 @@ export default function ReceiptScreen() {
     try {
       await ReceiptService.fulfillReceipt(receiptId);
       Alert.alert('Success', 'Receipt marked as fulfilled');
-      loadPendingReceipts(); // Reload pending receipts
+      // Reload both pending and completed receipts
+      loadPendingReceipts();
+      if (activeTab === 'list') {
+        loadReceipts();
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to fulfill receipt');
     }
@@ -267,7 +271,11 @@ export default function ReceiptScreen() {
     try {
       await ReceiptService.markAsDelivered(receiptId);
       Alert.alert('Success', 'Receipt marked as delivered');
-      loadPendingReceipts(); // Reload pending receipts
+      // Reload both pending and completed receipts
+      loadPendingReceipts();
+      if (activeTab === 'list') {
+        loadReceipts();
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to mark as delivered');
     }
@@ -504,6 +512,21 @@ export default function ReceiptScreen() {
     });
   };
 
+  // ✅ FIX: Calculate total quantity across all items
+  const getTotalItemQuantity = (receipt: Receipt): number => {
+    if (!receipt.items || receipt.items.length === 0) return 0;
+    
+    return receipt.items.reduce((total, item) => {
+      return total + (item.quantity || 0);
+    }, 0);
+  };
+
+  // ✅ FIX: Get correct tax value from receipt
+  const getReceiptTax = (receipt: Receipt): number => {
+    // Try different possible field names
+    return receipt.tax || receipt.taxAmount || 0;
+  };
+
   // Scroll handlers
   const scrollToTop = () => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -541,7 +564,7 @@ export default function ReceiptScreen() {
         
         <Text style={styles.receiptItemPrice}>{item.customerName || "Walk-in Customer"}</Text>
         <Text style={styles.receiptItemPrice}>
-          {item.items?.length || 0} items • Tax: ${item.tax?.toFixed(2) || "0.00"}
+          {getTotalItemQuantity(item)} items • Tax: ${getReceiptTax(item).toFixed(2)}
           {item.paymentMethod ? ` • ${item.paymentMethod}` : ''}
         </Text>
       </View>
@@ -1311,7 +1334,11 @@ export default function ReceiptScreen() {
           setSelectedReceiptForPayment(null);
         }}
         onSuccess={() => {
-          loadPendingReceipts(); // Reload pending receipts after payment
+          // Reload both pending and completed receipts after payment
+          loadPendingReceipts();
+          if (activeTab === 'list') {
+            loadReceipts();
+          }
         }}
       />
     </SafeAreaView>

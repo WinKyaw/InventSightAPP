@@ -90,7 +90,7 @@ export class ReceiptService {
   /**
    * Get all receipts with pagination and optional cashier filter
    */
-  static async getAllReceipts(page = 0, size = 20, cashierId?: string): Promise<ReceiptResponse> {
+  static async getAllReceipts(page = 0, size = 20, cashierId?: string, status?: string): Promise<ReceiptResponse> {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('size', size.toString());
@@ -101,6 +101,14 @@ export class ReceiptService {
       params.append('cashierId', cashierId);
       if (__DEV__) {
         console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+      }
+    }
+    
+    // Add status filter if provided
+    if (status) {
+      params.append('status', status);
+      if (__DEV__) {
+        console.log('🔍 ReceiptService: Filtering by status:', status);
       }
     }
 
@@ -145,7 +153,7 @@ export class ReceiptService {
   /**
    * Get receipts with full pagination info and optional cashier filter
    */
-  static async getReceiptsPaginated(page = 0, size = 20, cashierId?: string): Promise<PaginatedReceiptResponse> {
+  static async getReceiptsPaginated(page = 0, size = 20, cashierId?: string, status?: string): Promise<PaginatedReceiptResponse> {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('size', size.toString());
@@ -156,6 +164,14 @@ export class ReceiptService {
       params.append('cashierId', cashierId);
       if (__DEV__) {
         console.log('🔍 ReceiptService: Filtering by cashier:', cashierId);
+      }
+    }
+    
+    // Add status filter if provided
+    if (status) {
+      params.append('status', status);
+      if (__DEV__) {
+        console.log('🔍 ReceiptService: Filtering by status:', status);
       }
     }
 
@@ -311,15 +327,25 @@ export class ReceiptService {
     try {
       const params = new URLSearchParams({
         status: 'PENDING',
+        page: '0',
+        size: '50',
+        sort: 'createdAt,desc'
       });
-      
-      // Note: receiptType filtering is done client-side since backend doesn't have this field yet
-      // Future enhancement: add receiptType column to database and filter server-side
       
       console.log('📋 Fetching pending receipts with params:', params.toString());
       
-      const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
-      let receipts = Array.isArray(response) ? response : [];
+      const response = await apiClient.get<BackendReceiptResponse>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
+      
+      // Handle different response formats
+      let receipts: Receipt[] = [];
+      
+      if ('content' in response && Array.isArray(response.content)) {
+        receipts = response.content;
+      } else if ('receipts' in response && Array.isArray(response.receipts)) {
+        receipts = response.receipts;
+      } else if (Array.isArray(response)) {
+        receipts = response;
+      }
       
       // Client-side filtering by receiptType if needed
       if (filter === 'delivery') {
