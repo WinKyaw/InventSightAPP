@@ -312,18 +312,22 @@ export class ReceiptService {
         status: 'PENDING',
       });
       
-      if (filter === 'delivery') {
-        params.append('receiptType', 'DELIVERY');
-      } else if (filter === 'pickup') {
-        params.append('receiptType', 'PICKUP');
-      }
+      // Note: receiptType filtering is done client-side since backend doesn't have this field yet
+      // Future enhancement: add receiptType column to database and filter server-side
       
       console.log('📋 Fetching pending receipts with params:', params.toString());
       
       const response = await apiClient.get<Receipt[]>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
-      const receipts = Array.isArray(response) ? response : [];
+      let receipts = Array.isArray(response) ? response : [];
       
-      console.log(`✅ Loaded ${receipts.length} pending receipts`);
+      // Client-side filtering by receiptType if needed
+      if (filter === 'delivery') {
+        receipts = receipts.filter(r => r.receiptType === 'DELIVERY');
+      } else if (filter === 'pickup') {
+        receipts = receipts.filter(r => r.receiptType === 'PICKUP');
+      }
+      
+      console.log(`✅ Loaded ${receipts.length} pending receipts (filter: ${filter || 'all'})`);
       
       return receipts;
     } catch (error: any) {
