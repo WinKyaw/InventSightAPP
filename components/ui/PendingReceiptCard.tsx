@@ -5,9 +5,7 @@ import { Receipt } from '../../types';
 
 interface PendingReceiptCardProps {
   receipt: Receipt;
-  onFulfill?: () => void;
-  onDeliver?: () => void;
-  onPayNow?: () => void;
+  onPress: () => void;
 }
 
 const formatRelativeTime = (dateString?: string): string => {
@@ -28,12 +26,10 @@ const formatRelativeTime = (dateString?: string): string => {
 
 export const PendingReceiptCard: React.FC<PendingReceiptCardProps> = ({
   receipt,
-  onFulfill,
-  onDeliver,
-  onPayNow,
+  onPress,
 }) => {
   return (
-    <View style={styles.pendingCard}>
+    <TouchableOpacity style={styles.pendingCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.cardHeader}>
         <Text style={styles.receiptNumber}>#{receipt.receiptNumber}</Text>
         <View style={styles.badge}>
@@ -72,41 +68,7 @@ export const PendingReceiptCard: React.FC<PendingReceiptCardProps> = ({
           🚚 Assigned to: {receipt.deliveryPersonName}
         </Text>
       )}
-      
-      {/* Action Buttons */}
-      <View style={styles.actions}>
-        {/* Pay Now button - only show if payment method is missing */}
-        {!receipt.paymentMethod && onPayNow && (
-          <TouchableOpacity 
-            style={styles.payNowButton}
-            onPress={onPayNow}
-          >
-            <Ionicons name="card-outline" size={16} color="#E67E22" />
-            <Text style={styles.payNowButtonText}>Pay Now</Text>
-          </TouchableOpacity>
-        )}
-        
-        {!receipt.fulfilledAt && onFulfill && (
-          <TouchableOpacity 
-            style={styles.fulfillButton}
-            onPress={onFulfill}
-          >
-            <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
-            <Text style={styles.fulfillButtonText}>Mark as Fulfilled</Text>
-          </TouchableOpacity>
-        )}
-        
-        {receipt.receiptType === 'DELIVERY' && receipt.fulfilledAt && !receipt.deliveredAt && onDeliver && (
-          <TouchableOpacity 
-            style={styles.deliverButton}
-            onPress={onDeliver}
-          >
-            <Ionicons name="car-outline" size={16} color="#3B82F6" />
-            <Text style={styles.deliverButtonText}>Mark as Delivered</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -177,64 +139,5 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     marginTop: 4,
     marginBottom: 8,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
-  payNowButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF8F0',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E67E22',
-  },
-  payNowButtonText: {
-    color: '#E67E22',
-    fontWeight: '600',
-    marginLeft: 6,
-    fontSize: 14,
-  },
-  fulfillButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#D1FAE5',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#10B981',
-  },
-  fulfillButtonText: {
-    color: '#10B981',
-    fontWeight: '600',
-    marginLeft: 6,
-    fontSize: 14,
-  },
-  deliverButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#DBEAFE',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-  },
-  deliverButtonText: {
-    color: '#3B82F6',
-    fontWeight: '600',
-    marginLeft: 6,
-    fontSize: 14,
   },
 });
