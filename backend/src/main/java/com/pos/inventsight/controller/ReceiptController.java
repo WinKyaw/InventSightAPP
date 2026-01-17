@@ -76,64 +76,16 @@ public class ReceiptController {
             if (status != null && !status.isEmpty()) {
                 System.out.println("🔍 Filtering by status: " + status);
                 
-                // Get receipts by status, respecting user permissions
-                if (isGMPlus(user)) {
-                    if (cashierId != null) {
-                        // GM+ filtering by both status and cashier
-                        System.out.println("🔍 GM+ filtering by status and cashier: " + cashierId);
-                        List<Sale> allReceipts = saleService.getReceiptsByStatus(cashierId, activeStore.getId(), status);
-                        
-                        // Apply date filter if provided
-                        if (start != null || end != null) {
-                            receipts = allReceipts.stream()
-                                .filter(sale -> {
-                                    LocalDateTime saleDate = sale.getCreatedAt();
-                                    if (start != null && saleDate.isBefore(start)) return false;
-                                    if (end != null && saleDate.isAfter(end)) return false;
-                                    return true;
-                                })
-                                .collect(Collectors.toList());
-                        } else {
-                            receipts = allReceipts;
-                        }
-                    } else {
-                        // GM+ filtering by status only (all cashiers)
-                        System.out.println("🔍 GM+ filtering by status (all cashiers)");
-                        List<Sale> allReceipts = saleService.getReceiptsByStatus(user.getId(), activeStore.getId(), status);
-                        
-                        // Apply date filter if provided
-                        if (start != null || end != null) {
-                            receipts = allReceipts.stream()
-                                .filter(sale -> {
-                                    LocalDateTime saleDate = sale.getCreatedAt();
-                                    if (start != null && saleDate.isBefore(start)) return false;
-                                    if (end != null && saleDate.isAfter(end)) return false;
-                                    return true;
-                                })
-                                .collect(Collectors.toList());
-                        } else {
-                            receipts = allReceipts;
-                        }
-                    }
-                } else {
-                    // Regular user filtering by status
-                    System.out.println("🔒 Regular user filtering by status");
-                    List<Sale> allReceipts = saleService.getReceiptsByStatus(user.getId(), activeStore.getId(), status);
-                    
-                    // Apply date filter if provided
-                    if (start != null || end != null) {
-                        receipts = allReceipts.stream()
-                            .filter(sale -> {
-                                LocalDateTime saleDate = sale.getCreatedAt();
-                                if (start != null && saleDate.isBefore(start)) return false;
-                                if (end != null && saleDate.isAfter(end)) return false;
-                                return true;
-                            })
-                            .collect(Collectors.toList());
-                    } else {
-                        receipts = allReceipts;
-                    }
-                }
+                // Get receipts by status, respecting user permissions and cashier filter
+                List<Sale> allReceipts = saleService.getReceiptsByStatus(
+                    user.getId(),      // requesting user for permission check
+                    activeStore.getId(), 
+                    status, 
+                    cashierId          // optional cashier filter (GM+ only)
+                );
+                
+                // Apply date filter if provided
+                receipts = filterReceiptsByDateRange(allReceipts, start, end);
             }
             // If user is GM+ (no status filter)
             else if (isGMPlus(user)) {
@@ -243,5 +195,23 @@ public class ReceiptController {
                user.getRole() == UserRole.CEO || 
                user.getRole() == UserRole.FOUNDER ||
                user.getRole() == UserRole.ADMIN;
+    }
+    
+    /**
+     * Filter receipts by date range
+     */
+    private List<Sale> filterReceiptsByDateRange(List<Sale> receipts, LocalDateTime start, LocalDateTime end) {
+        if (start == null && end == null) {
+            return receipts;
+        }
+        
+        return receipts.stream()
+            .filter(sale -> {
+                LocalDateTime saleDate = sale.getCreatedAt();
+                if (start != null && saleDate.isBefore(start)) return false;
+                if (end != null && saleDate.isAfter(end)) return false;
+                return true;
+            })
+            .collect(Collectors.toList());
     }
 }

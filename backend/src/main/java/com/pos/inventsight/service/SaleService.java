@@ -114,25 +114,39 @@ public class SaleService {
     
     /**
      * Get receipts by status (e.g., PENDING, PROCESSING, COMPLETED)
-     * GM+ sees all, regular users see only their own
+     * GM+ can see all or filter by specific cashier, regular users see only their own
+     * 
+     * @param requestingUserId The ID of the user making the request (for permission check)
+     * @param storeId The store to filter by
+     * @param status The receipt status to filter by
+     * @param filterByCashierId Optional cashier ID to filter by (GM+ only)
      */
-    public List<Sale> getReceiptsByStatus(UUID userId, UUID storeId, String status) {
-        User user = userService.getUserById(userId);
+    public List<Sale> getReceiptsByStatus(UUID requestingUserId, UUID storeId, String status, UUID filterByCashierId) {
+        User requestingUser = userService.getUserById(requestingUserId);
         
-        // Check if user is GM+
-        boolean isGMPlus = user.getRole() == UserRole.GENERAL_MANAGER || 
-                           user.getRole() == UserRole.CEO || 
-                           user.getRole() == UserRole.FOUNDER ||
-                           user.getRole() == UserRole.ADMIN;
+        // Check if requesting user is GM+
+        boolean isGMPlus = requestingUser.getRole() == UserRole.GENERAL_MANAGER || 
+                           requestingUser.getRole() == UserRole.CEO || 
+                           requestingUser.getRole() == UserRole.FOUNDER ||
+                           requestingUser.getRole() == UserRole.ADMIN;
         
         if (isGMPlus) {
-            // GM+ can see all receipts for the store with this status
-            System.out.println("🔓 GM+ user " + user.getUsername() + " accessing all receipts with status: " + status);
-            return saleRepository.findByStoreIdAndStatus(storeId, status);
+            if (filterByCashierId != null) {
+                // GM+ filtering by specific cashier
+                System.out.println("🔓 GM+ user " + requestingUser.getUsername() + 
+                    " accessing receipts for cashier " + filterByCashierId + " with status: " + status);
+                return saleRepository.findByProcessedByIdAndStoreIdAndStatus(filterByCashierId, storeId, status);
+            } else {
+                // GM+ seeing all receipts for the store with this status
+                System.out.println("🔓 GM+ user " + requestingUser.getUsername() + 
+                    " accessing all receipts with status: " + status);
+                return saleRepository.findByStoreIdAndStatus(storeId, status);
+            }
         } else {
             // Regular users only see their own receipts with this status
-            System.out.println("🔒 Regular user " + user.getUsername() + " accessing own receipts with status: " + status);
-            return saleRepository.findByProcessedByIdAndStoreIdAndStatus(userId, storeId, status);
+            System.out.println("🔒 Regular user " + requestingUser.getUsername() + 
+                " accessing own receipts with status: " + status);
+            return saleRepository.findByProcessedByIdAndStoreIdAndStatus(requestingUserId, storeId, status);
         }
     }
 }
