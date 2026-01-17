@@ -432,12 +432,9 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                       <Text style={styles.productPrice}>${item.sellingPrice.toFixed(2)}</Text>
                       <Text style={styles.productStock}>Stock: {item.quantity}</Text>
                     </View>
-                    <TouchableOpacity
-                      style={styles.addButton}
-                      onPress={() => handleAddItem(item)}
-                    >
+                    <View style={styles.addButton}>
                       <Ionicons name="add-circle" size={32} color="#1976D2" />
-                    </TouchableOpacity>
+                    </View>
                   </TouchableOpacity>
                 )}
                 scrollEnabled={false}
