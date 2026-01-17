@@ -14,6 +14,7 @@ const RECEIPT_ENDPOINTS = {
 };
 
 // Pagination constants
+const DEFAULT_PENDING_PAGE = 0;
 const DEFAULT_PENDING_PAGE_SIZE = 50;
 const DEFAULT_SORT_ORDER = 'createdAt,desc';
 
@@ -84,6 +85,20 @@ type BackendReceiptResponse = BackendPaginatedResponse | BackendLegacyResponse |
  * Receipt API Client - Simple HTTP client for receipt operations
  */
 export class ReceiptService {
+  /**
+   * Helper to extract receipts array from different backend response formats
+   */
+  private static extractReceiptsFromResponse(response: BackendReceiptResponse): Receipt[] {
+    if ('content' in response && Array.isArray(response.content)) {
+      return response.content;
+    } else if ('receipts' in response && Array.isArray(response.receipts)) {
+      return response.receipts;
+    } else if (Array.isArray(response)) {
+      return response;
+    }
+    return [];
+  }
+
   /**
    * Create a new receipt/transaction
    */
@@ -331,7 +346,7 @@ export class ReceiptService {
     try {
       const params = new URLSearchParams({
         status: 'PENDING',
-        page: '0',
+        page: DEFAULT_PENDING_PAGE.toString(),
         size: DEFAULT_PENDING_PAGE_SIZE.toString(),
         sort: DEFAULT_SORT_ORDER
       });
@@ -340,16 +355,8 @@ export class ReceiptService {
       
       const response = await apiClient.get<BackendReceiptResponse>(`${RECEIPT_ENDPOINTS.GET_ALL}?${params.toString()}`);
       
-      // Handle different response formats
-      let receipts: Receipt[] = [];
-      
-      if ('content' in response && Array.isArray(response.content)) {
-        receipts = response.content;
-      } else if ('receipts' in response && Array.isArray(response.receipts)) {
-        receipts = response.receipts;
-      } else if (Array.isArray(response)) {
-        receipts = response;
-      }
+      // Handle different response formats using shared helper
+      let receipts = this.extractReceiptsFromResponse(response);
       
       // Client-side filtering by receiptType if needed
       if (filter === 'delivery') {

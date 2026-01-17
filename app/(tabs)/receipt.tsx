@@ -523,8 +523,10 @@ export default function ReceiptScreen() {
 
   // ✅ FIX: Get correct tax value from receipt
   const getReceiptTax = useCallback((receipt: Receipt): number => {
-    // Try different possible field names
-    return receipt.tax || receipt.taxAmount || 0;
+    // Use explicit null/undefined checks to handle tax value of 0 correctly
+    if (receipt.tax != null) return receipt.tax;
+    if (receipt.taxAmount != null) return receipt.taxAmount;
+    return 0;
   }, []);
 
   // Scroll handlers
