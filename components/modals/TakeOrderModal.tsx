@@ -54,20 +54,22 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [customerError, setCustomerError] = useState<string | null>(null);
   
   const [orderType, setOrderType] = useState<OrderType>('hold');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(false);
 
-  // Load customers
+  // Load customers and products when modal opens
   useEffect(() => {
-    if (visible) {
+    if (visible && currentStore?.id) {
       loadCustomers();
       loadProducts();
     }
-  }, [visible]);
+  }, [visible, currentStore?.id]);
 
   // Filter customers as user types
   useEffect(() => {
@@ -97,24 +99,51 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
       });
       const customerList = response.data?.customers || response.data || [];
       setCustomers(customerList);
-    } catch (error) {
+      setCustomerError(null);
+    } catch (error: any) {
+      console.error('❌ API Error:', error.response?.status, '-', error.config?.url);
       console.error('Error loading customers:', error);
-      // Fail silently - customer autocomplete is optional
+      
+      // ✅ Don't block - just log and allow manual entry
+      setCustomerError('Could not load customer list. You can still enter names manually.');
+      setCustomers([]); // Empty array as fallback
+      
+      // Don't show alert - just log
+      console.log('ℹ️ Customer autocomplete unavailable, manual entry enabled');
     }
   };
 
   const loadProducts = async () => {
-    if (!currentStore?.id) return;
+    if (!currentStore?.id) {
+      console.log('⚠️ No store selected, cannot load items');
+      return;
+    }
     
+    setLoadingItems(true);
     try {
+      console.log(`📦 Loading items for store: ${currentStore.id}`);
+      
       const response = await apiClient.get('/api/products', {
-        params: { storeId: currentStore.id }
+        params: { 
+          storeId: currentStore.id,
+          page: 0,
+          size: 100,
+          // Only show items in stock
+          inStock: true
+        }
       });
+      
       const productList = response.data?.products || response.data || [];
+      console.log(`✅ Loaded ${productList.length} items`);
       setProducts(productList);
-    } catch (error) {
-      console.error('Error loading products:', error);
-      Alert.alert('Error', 'Failed to load products');
+    } catch (error: any) {
+      console.error('❌ Error loading items:', error);
+      Alert.alert(
+        'Error Loading Items',
+        error.response?.data?.message || 'Failed to load available items'
+      );
+    } finally {
+      setLoadingItems(false);
     }
   };
 
@@ -224,6 +253,17 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
           {/* Customer Selection */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Customer (Optional)</Text>
+            
+            {/* ✅ Customer Error Warning Banner */}
+            {customerError && (
+              <View style={styles.warningBanner}>
+                <Ionicons name="warning" size={16} color="#F59E0B" />
+                <Text style={styles.warningText}>
+                  {customerError}
+                </Text>
+              </View>
+            )}
+            
             <View style={styles.customerInputContainer}>
               <TextInput
                 style={styles.customerInput}
@@ -370,32 +410,48 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
           <View style={styles.itemsSection}>
             <Text style={styles.itemsCount}>
               {filteredProducts.length} items available
+              {searchQuery && ` (searched for "${searchQuery}")`}
             </Text>
             
-            <FlatList
-              data={filteredProducts}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.productCard}
-                  onPress={() => handleAddItem(item)}
-                >
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{item.name}</Text>
-                    <Text style={styles.productPrice}>${item.sellingPrice.toFixed(2)}</Text>
-                    <Text style={styles.productStock}>Stock: {item.quantity}</Text>
-                  </View>
+            {loadingItems ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#E67E22" />
+                <Text style={styles.loadingText}>Loading items...</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredProducts}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={styles.addButton}
+                    style={styles.productCard}
                     onPress={() => handleAddItem(item)}
                   >
-                    <Ionicons name="add-circle" size={32} color="#1976D2" />
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName}>{item.name}</Text>
+                      <Text style={styles.productPrice}>${item.sellingPrice.toFixed(2)}</Text>
+                      <Text style={styles.productStock}>Stock: {item.quantity}</Text>
+                    </View>
+                    <View style={styles.addButton}>
+                      <Ionicons name="add-circle" size={32} color="#1976D2" />
+                    </View>
                   </TouchableOpacity>
-                </TouchableOpacity>
-              )}
-              scrollEnabled={false}
-              nestedScrollEnabled={true}
-            />
+                )}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
+                ListEmptyComponent={
+                  <View style={styles.emptyItems}>
+                    <Ionicons name="cube-outline" size={48} color="#CCC" />
+                    <Text style={styles.emptyItemsText}>
+                      {searchQuery 
+                        ? `No items match "${searchQuery}"`
+                        : 'No items available in this store'
+                      }
+                    </Text>
+                  </View>
+                }
+              />
+            )}
           </View>
         </ScrollView>
 
@@ -639,5 +695,38 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFF',
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF3C7',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#92400E',
+    flex: 1,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  loadingText: {
+    color: '#E67E22',
+    marginTop: 8,
+    fontSize: 14,
+  },
+  emptyItems: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyItemsText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 12,
+    textAlign: 'center',
   },
 });

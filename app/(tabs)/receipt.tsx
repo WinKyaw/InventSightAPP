@@ -151,6 +151,7 @@ export default function ReceiptScreen() {
   const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState({ name: '', phone: '', email: '' });
+  const [customerError, setCustomerError] = useState<string | null>(null);
 
   // Check if user is GM+ (case-insensitive)
   const userRoleUpper = user?.role?.toUpperCase();
@@ -265,9 +266,17 @@ export default function ReceiptScreen() {
       });
       const customerList = response.data?.customers || response.data || [];
       setCustomers(customerList);
-    } catch (error) {
+      setCustomerError(null);
+    } catch (error: any) {
+      console.error('❌ API Error:', error.response?.status, '-', error.config?.url);
       console.error('Error loading customers:', error);
-      // Fail silently - customer autocomplete is optional
+      
+      // ✅ Don't block - just log and allow manual entry
+      setCustomerError('Could not load customer list. You can still enter names manually.');
+      setCustomers([]); // Empty array as fallback
+      
+      // Don't show alert - just log
+      console.log('ℹ️ Customer autocomplete unavailable, manual entry enabled');
     }
   };
 
@@ -801,186 +810,202 @@ export default function ReceiptScreen() {
     </View>
   );
 
-  // Render History Tab Content (reuse existing renderReceiptListTab logic)
-  const renderHistoryTab = () => renderReceiptListTab();
-
-  const renderReceiptListTab = () => (
-    <View style={styles.receiptContainer}>
-      {/* Header */}
-      <View style={styles.historyHeader}>
-        <Text style={styles.historyTitle}>Receipt History</Text>
-        <Text style={styles.historySubtitle}>Completed transactions</Text>
-      </View>
-
-      {/* Search bar with filter icon */}
-      <View style={styles.searchWithFilterContainer}>
-        <View style={styles.searchBarWrapper}>
-          <SearchBar
-            placeholder="Search receipts..."
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            style={styles.searchBarInput}
-          />
+  // Render History Tab Content - Use FlatList with ListHeaderComponent to avoid nested ScrollView
+  const renderHistoryTab = () => {
+    // Header component for FlatList
+    const renderListHeader = () => (
+      <>
+        {/* Header */}
+        <View style={styles.historyHeader}>
+          <Text style={styles.historyTitle}>Receipt History</Text>
+          <Text style={styles.historySubtitle}>Completed transactions</Text>
         </View>
-        
-        {/* Hamburger Filter Button */}
-        <TouchableOpacity 
-          style={styles.filterButton}
-          onPress={() => setShowFilterModal(true)}
-        >
-          <Ionicons name="options-outline" size={24} color="#333" />
-          {hasActiveFilters && <View style={styles.filterBadge} />}
-        </TouchableOpacity>
-      </View>
 
-      {/* Active Filters Display */}
-      {hasActiveFilters && (
-        <View style={styles.activeFiltersContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.activeFiltersRow}>
-              {(activeFilters.startDate || activeFilters.endDate) && (
-                <Chip 
-                  label={`${activeFilters.startDate ? activeFilters.startDate.toLocaleDateString() : 'Any'} - ${activeFilters.endDate ? activeFilters.endDate.toLocaleDateString() : 'Any'}`}
-                  onRemove={() => setActiveFilters({ ...activeFilters, startDate: null, endDate: null })}
-                />
-              )}
-              {activeFilters.createdBy && (
-                <Chip 
-                  label={`Created by: ${activeFilters.createdBy.name}`}
-                  onRemove={() => setActiveFilters({ ...activeFilters, createdBy: null })}
-                />
-              )}
-              {activeFilters.fulfilledBy && (
-                <Chip 
-                  label={`Fulfilled by: ${activeFilters.fulfilledBy.name}`}
-                  onRemove={() => setActiveFilters({ ...activeFilters, fulfilledBy: null })}
-                />
-              )}
-              {activeFilters.deliveredBy && (
-                <Chip 
-                  label={`Delivered by: ${activeFilters.deliveredBy.name}`}
-                  onRemove={() => setActiveFilters({ ...activeFilters, deliveredBy: null })}
-                />
-              )}
-              {activeFilters.status && activeFilters.status.map(status => (
-                <Chip 
-                  key={status}
-                  label={`Status: ${status}`}
-                  onRemove={() => setActiveFilters({ 
-                    ...activeFilters, 
-                    status: activeFilters.status?.filter(s => s !== status) 
-                  })}
-                />
-              ))}
-              {activeFilters.paymentMethod && activeFilters.paymentMethod.map(method => (
-                <Chip 
-                  key={method}
-                  label={`Payment: ${method}`}
-                  onRemove={() => setActiveFilters({ 
-                    ...activeFilters, 
-                    paymentMethod: activeFilters.paymentMethod?.filter(m => m !== method) 
-                  })}
-                />
-              ))}
-              {activeFilters.receiptType && activeFilters.receiptType.map(type => (
-                <Chip 
-                  key={type}
-                  label={`Type: ${type.replace('_', ' ')}`}
-                  onRemove={() => setActiveFilters({ 
-                    ...activeFilters, 
-                    receiptType: activeFilters.receiptType?.filter(t => t !== type) 
-                  })}
-                />
-              ))}
-              
-              <TouchableOpacity onPress={handleClearFilters} style={styles.clearAllButton}>
-                <Text style={styles.clearAllText}>Clear All</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Sort/Stats Header */}
-      <View style={styles.employeeStats}>
-        <TouchableOpacity style={styles.employeeStatCard} onPress={() => setSortBy("date")}>
-          <Text style={styles.employeeStatValue}>Date</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.employeeStatCard} onPress={() => setSortBy("total")}>
-          <Text style={styles.employeeStatValue}>Total</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.employeeStatCard} onPress={() => setSortBy("customer")}>
-          <Text style={styles.employeeStatValue}>Customer</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.employeeStatCard} onPress={toggleSortOrder}>
-          <Ionicons
-            name={sortOrder === "asc" ? "arrow-up" : "arrow-down"}
-            size={16}
-            color="#6B7280"
-          />
-        </TouchableOpacity>
-      </View>
-
-      {loadingReceipts && !refreshing && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#F59E0B" />
-          <Text style={styles.loadingText}>Loading receipts...</Text>
-        </View>
-      )}
-
-      {receiptsError && (
-        <View style={styles.errorContainer}>
-          <View style={styles.errorHeader}>
-            <Ionicons name="alert-circle" size={16} color="#EF4444" />
-            <Text style={styles.errorText}>{receiptsError}</Text>
+        {/* Search bar with filter icon */}
+        <View style={styles.searchWithFilterContainer}>
+          <View style={styles.searchBarWrapper}>
+            <SearchBar
+              placeholder="Search receipts..."
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              style={styles.searchBarInput}
+            />
           </View>
-          <TouchableOpacity style={styles.retryButton} onPress={() => loadReceipts()}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+          
+          {/* Hamburger Filter Button */}
+          <TouchableOpacity 
+            style={styles.filterButton}
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Ionicons name="options-outline" size={24} color="#333" />
+            {hasActiveFilters && <View style={styles.filterBadge} />}
           </TouchableOpacity>
         </View>
-      )}
 
-      {!loadingReceipts && !receiptsError && (
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <View style={styles.activeFiltersContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.activeFiltersRow}>
+                {(activeFilters.startDate || activeFilters.endDate) && (
+                  <Chip 
+                    label={`${activeFilters.startDate ? activeFilters.startDate.toLocaleDateString() : 'Any'} - ${activeFilters.endDate ? activeFilters.endDate.toLocaleDateString() : 'Any'}`}
+                    onRemove={() => setActiveFilters({ ...activeFilters, startDate: null, endDate: null })}
+                  />
+                )}
+                {activeFilters.createdBy && (
+                  <Chip 
+                    label={`Created by: ${activeFilters.createdBy.name}`}
+                    onRemove={() => setActiveFilters({ ...activeFilters, createdBy: null })}
+                  />
+                )}
+                {activeFilters.fulfilledBy && (
+                  <Chip 
+                    label={`Fulfilled by: ${activeFilters.fulfilledBy.name}`}
+                    onRemove={() => setActiveFilters({ ...activeFilters, fulfilledBy: null })}
+                  />
+                )}
+                {activeFilters.deliveredBy && (
+                  <Chip 
+                    label={`Delivered by: ${activeFilters.deliveredBy.name}`}
+                    onRemove={() => setActiveFilters({ ...activeFilters, deliveredBy: null })}
+                  />
+                )}
+                {activeFilters.status && activeFilters.status.map(status => (
+                  <Chip 
+                    key={status}
+                    label={`Status: ${status}`}
+                    onRemove={() => setActiveFilters({ 
+                      ...activeFilters, 
+                      status: activeFilters.status?.filter(s => s !== status) 
+                    })}
+                  />
+                ))}
+                {activeFilters.paymentMethod && activeFilters.paymentMethod.map(method => (
+                  <Chip 
+                    key={method}
+                    label={`Payment: ${method}`}
+                    onRemove={() => setActiveFilters({ 
+                      ...activeFilters, 
+                      paymentMethod: activeFilters.paymentMethod?.filter(m => m !== method) 
+                    })}
+                  />
+                ))}
+                {activeFilters.receiptType && activeFilters.receiptType.map(type => (
+                  <Chip 
+                    key={type}
+                    label={`Type: ${type.replace('_', ' ')}`}
+                    onRemove={() => setActiveFilters({ 
+                      ...activeFilters, 
+                      receiptType: activeFilters.receiptType?.filter(t => t !== type) 
+                    })}
+                  />
+                ))}
+                
+                <TouchableOpacity onPress={handleClearFilters} style={styles.clearAllButton}>
+                  <Text style={styles.clearAllText}>Clear All</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Sort/Stats Header */}
+        <View style={styles.employeeStats}>
+          <TouchableOpacity style={styles.employeeStatCard} onPress={() => setSortBy("date")}>
+            <Text style={styles.employeeStatValue}>Date</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.employeeStatCard} onPress={() => setSortBy("total")}>
+            <Text style={styles.employeeStatValue}>Total</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.employeeStatCard} onPress={() => setSortBy("customer")}>
+            <Text style={styles.employeeStatValue}>Customer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.employeeStatCard} onPress={toggleSortOrder}>
+            <Ionicons
+              name={sortOrder === "asc" ? "arrow-up" : "arrow-down"}
+              size={16}
+              color="#6B7280"
+            />
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+
+    // Empty state component
+    const renderEmptyState = () => (
+      <View style={styles.emptyReceiptCard}>
+        <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
+        <Text style={styles.emptyReceiptTitle}>No Receipts Found</Text>
+        <Text style={styles.emptyReceiptText}>
+          {receiptsError 
+            ? receiptsError
+            : searchTerm.trim()
+              ? "No receipts match your search criteria"
+              : "No receipts have been created yet"}
+        </Text>
+      </View>
+    );
+
+    // Footer component for loading and stats
+    const renderListFooter = () => (
+      <>
+        {loadingReceipts && (
+          <View style={styles.loadingFooter}>
+            <ActivityIndicator size="small" color="#E67E22" />
+          </View>
+        )}
+        
+        {receipts.length > 0 && !loadingReceipts && (
+          <View style={styles.employeeStats}>
+            <View style={styles.employeeStatCard}>
+              <Text style={styles.employeeStatValue}>{receipts.length}</Text>
+              <Text style={styles.employeeStatLabel}>Total Receipts</Text>
+            </View>
+            <View style={styles.employeeStatCard}>
+              <Text style={styles.employeeStatValue}>
+                ${receipts.reduce((sum, receipt) => sum + (receipt.totalAmount || receipt.total || 0), 0).toLocaleString()}
+              </Text>
+              <Text style={styles.employeeStatLabel}>Total Revenue</Text>
+            </View>
+          </View>
+        )}
+      </>
+    );
+
+    return (
+      <View style={styles.receiptContainer}>
+        {receiptsError && !loadingReceipts && (
+          <View style={styles.errorContainer}>
+            <View style={styles.errorHeader}>
+              <Ionicons name="alert-circle" size={16} color="#EF4444" />
+              <Text style={styles.errorText}>{receiptsError}</Text>
+            </View>
+            <TouchableOpacity style={styles.retryButton} onPress={() => loadReceipts()}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* ✅ Single FlatList with header - no ScrollView wrapper */}
         <FlatList
           data={getFilteredAndSortedReceipts()}
           renderItem={renderReceiptItem}
           keyExtractor={(item) => item.id?.toString() || item.receiptNumber || Math.random().toString()}
+          ListHeaderComponent={renderListHeader}
+          ListEmptyComponent={!loadingReceipts ? renderEmptyState : null}
+          ListFooterComponent={renderListFooter}
+          contentContainerStyle={styles.flatListContent}
           refreshing={refreshing}
           onRefresh={handleRefreshReceipts}
-          contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={true}
-          nestedScrollEnabled={true}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyReceiptCard}>
-              <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyReceiptTitle}>No Receipts Found</Text>
-              <Text style={styles.emptyReceiptText}>
-                {searchTerm.trim()
-                  ? "No receipts match your search criteria"
-                  : "No receipts have been created yet"}
-              </Text>
-            </View>
-          )}
-          style={styles.employeesList}
         />
-      )}
+      </View>
+    );
+  };
 
-      {receipts.length > 0 && (
-        <View style={styles.employeeStats}>
-          <View style={styles.employeeStatCard}>
-            <Text style={styles.employeeStatValue}>{receipts.length}</Text>
-            <Text style={styles.employeeStatLabel}>Total Receipts</Text>
-          </View>
-          <View style={styles.employeeStatCard}>
-            <Text style={styles.employeeStatValue}>
-              ${receipts.reduce((sum, receipt) => sum + (receipt.totalAmount || receipt.total || 0), 0).toLocaleString()}
-            </Text>
-            <Text style={styles.employeeStatLabel}>Total Revenue</Text>
-          </View>
-        </View>
-      )}
-    </View>
-  );
+  // Keep for backward compatibility
+  const renderReceiptListTab = () => renderHistoryTab();
 
   // SmartScanner handlers
   const handleSmartBarcodeDetected = useCallback((barcode: string) => {
@@ -2137,6 +2162,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#DC2626',
+  },
+  flatListContent: {
+    paddingBottom: 20,
+  },
+  loadingFooter: {
+    padding: 20,
+    alignItems: 'center',
   },
   // Customer Autocomplete Styles
   customerDropdown: {
