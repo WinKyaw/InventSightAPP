@@ -5,6 +5,12 @@ import { tokenManager } from '../../utils/tokenManager';
 /**
  * Simple API Client for making HTTP requests to the Java backend
  * Focused on basic request/response handling with minimal complexity
+ * 
+ * Configuration:
+ * - baseURL is set to API_CONFIG.BASE_URL (e.g., http://localhost:8080)
+ * - baseURL does NOT include /api prefix
+ * - All API calls should include /api in their paths (e.g., apiClient.get('/api/customers'))
+ * - This ensures correct URL formation: http://localhost:8080/api/customers
  */
 class ApiClient {
   private client: AxiosInstance;

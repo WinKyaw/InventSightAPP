@@ -258,24 +258,39 @@ export default function ReceiptScreen() {
   }, [currentStore?.id]);
 
   const loadCustomers = async () => {
-    if (!currentStore?.id) return;
+    if (!currentStore?.id) {
+      console.warn('⚠️ No store selected, cannot load customers');
+      setCustomers([]);
+      setCustomerError('No store selected');
+      return;
+    }
     
     try {
+      console.log('📋 Loading customers for store:', currentStore.id);
+      
       const response = await apiClient.get('/api/customers', {
-        params: { storeId: currentStore.id }
+        params: { 
+          storeId: currentStore.id,
+          page: 0,
+          size: 100
+        }
       });
+
+      console.log('✅ Loaded customers:', response.data);
+      
       const customerList = response.data?.customers || response.data || [];
       setCustomers(customerList);
       setCustomerError(null);
+      
+      console.log(`✅ Customer autocomplete enabled with ${customerList.length} customers`);
+      
     } catch (error: any) {
       console.error('❌ API Error:', error.response?.status, '-', error.config?.url);
       console.error('Error loading customers:', error);
       
       // ✅ Don't block - just log and allow manual entry
-      setCustomerError('Could not load customer list. You can still enter names manually.');
-      setCustomers([]); // Empty array as fallback
-      
-      // Don't show alert - just log
+      setCustomers([]);
+      setCustomerError(error.message);
       console.log('ℹ️ Customer autocomplete unavailable, manual entry enabled');
     }
   };
