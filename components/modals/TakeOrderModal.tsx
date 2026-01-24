@@ -122,8 +122,8 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
       console.error('Error loading customers:', error);
       
       // ✅ Don't block - just log and allow manual entry
-      setCustomers([]);
-      setCustomerError(error.message);
+      setCustomerError('Could not load customer list. You can still enter names manually.');
+      setCustomers([]); // Empty array as fallback
       console.log('ℹ️ Customer autocomplete unavailable, manual entry enabled');
     }
   };
