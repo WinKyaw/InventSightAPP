@@ -51,10 +51,10 @@ export const API_ENDPOINTS = {
   },
   // Reports endpoints
   REPORTS: {
-    DAILY: '/reports/daily',
-    WEEKLY: '/reports/weekly', 
-    INVENTORY: '/reports/inventory',
-    BUSINESS_INTELLIGENCE: '/reports/business-intelligence',
+    DAILY: '/api/reports/daily',
+    WEEKLY: '/api/reports/weekly', 
+    INVENTORY: '/api/reports/inventory',
+    BUSINESS_INTELLIGENCE: '/api/reports/business-intelligence',
   },
   // Product endpoints
   PRODUCTS: {
