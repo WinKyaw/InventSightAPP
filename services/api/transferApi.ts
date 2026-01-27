@@ -153,14 +153,14 @@ export const transferApi = {
    * Approve transfer (GM+ only)
    */
   approveTransfer: async (id: string, approvedQuantity: number) => {
-    return apiClient.post<Transfer>(`/api/transfers/${id}/approve`, { approvedQuantity });
+    return apiClient.put<Transfer>(`/api/transfers/${id}/approve`, { approvedQuantity });
   },
 
   /**
    * Reject transfer (GM+ only)
    */
   rejectTransfer: async (id: string, reason: string) => {
-    return apiClient.post<Transfer>(`/api/transfers/${id}/reject`, { reason });
+    return apiClient.put<Transfer>(`/api/transfers/${id}/reject`, { reason });
   },
 
   /**
@@ -174,14 +174,14 @@ export const transferApi = {
    * Complete transfer
    */
   completeTransfer: async (id: string) => {
-    return apiClient.post<Transfer>(`/api/transfers/${id}/complete`);
+    return apiClient.put<Transfer>(`/api/transfers/${id}/complete`);
   },
 
   /**
    * Cancel transfer
    */
   cancelTransfer: async (id: string, reason: string) => {
-    return apiClient.post<Transfer>(`/api/transfers/${id}/cancel`, { reason });
+    return apiClient.put<Transfer>(`/api/transfers/${id}/cancel`, { reason });
   },
 
   /**
