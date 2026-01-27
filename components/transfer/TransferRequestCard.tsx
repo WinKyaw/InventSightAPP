@@ -164,7 +164,6 @@ const styles = StyleSheet.create({
     color: Colors.secondaryText,
     marginRight: 8,
   },
-  },
   priorityBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
