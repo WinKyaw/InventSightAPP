@@ -219,16 +219,19 @@ export const getTransferHistory = async (
  * Get transfer summary statistics
  * @param filters - Optional filters for the summary
  * @returns Transfer history summary
- * @deprecated Backend endpoint not yet implemented - will return 404
+ * @deprecated Backend endpoint not yet implemented - will return 404 until backend implements /api/transfers/summary
  */
 export const getTransferSummary = async (
   filters?: TransferFilters
 ): Promise<TransferHistorySummary> => {
+  // Note: This endpoint is not yet implemented in the backend
+  // It has been removed from the config to avoid accidental use
+  // but kept here for backward compatibility until the backend adds support
+  const SUMMARY_ENDPOINT = '/api/transfers/summary';
+  
   try {
-    // Note: Backend endpoint /api/transfers/summary not yet implemented
-    // This will fail with 404 until backend adds the endpoint
     const response = await apiClient.get(
-      '/api/transfers/summary', // Hardcoded since removed from config
+      SUMMARY_ENDPOINT,
       {
         params: filters,
       }
