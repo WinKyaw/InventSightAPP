@@ -14,7 +14,7 @@ import {
  * Manages master catalog of items for GM+ users and Supply Management Specialists
  */
 export class PredefinedItemsService {
-  private static BASE_URL = `${API_CONFIG.BASE_URL}/api/predefined-items`;
+  private static BASE_URL = '/api/predefined-items';
 
   /**
    * Get all predefined items with pagination and filters

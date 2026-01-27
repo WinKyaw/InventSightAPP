@@ -72,9 +72,9 @@ export class DashboardService {
     return requestDeduplicator.execute(cacheKey, async () => {
       // Retry with exponential backoff on rate limit
       return retryWithBackoff(async () => {
-        var testURL = API_CONFIG.BASE_URL + API_ENDPOINTS.DASHBOARD.SUMMARY;
+        var testURL = API_ENDPOINTS.DASHBOARD.SUMMARY;
         console.log("URL: " + testURL);
-        const response = await apiClient.get<DashboardSummary>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.DASHBOARD.SUMMARY}`);
+        const response = await apiClient.get<DashboardSummary>(API_ENDPOINTS.DASHBOARD.SUMMARY);
         
         // Cache successful response
         responseCache.set(cacheKey, response, CACHE_TTL);
@@ -166,7 +166,7 @@ export class DashboardService {
           sales: number;
           quantity: number;
           trend: number;
-        }>>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.DASHBOARD.SUMMARY}/top-items?limit=${limit}`);
+        }>>(`${API_ENDPOINTS.DASHBOARD.SUMMARY}/top-items?limit=${limit}`);
         
         // Cache successful response
         responseCache.set(cacheKey, response, CACHE_TTL);

@@ -33,7 +33,7 @@ export class CategoryService {
       // Retry with exponential backoff on rate limit
       return retryWithBackoff(async () => {
         const response = await apiClient.get<CategoryCountResponse>(
-          `${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.COUNT}`
+          API_ENDPOINTS.CATEGORIES.COUNT
         );
         const count = response.totalCategories;
         
@@ -62,7 +62,7 @@ export class CategoryService {
       // Retry with exponential backoff on rate limit
       return retryWithBackoff(async () => {
         const response = await apiClient.get<CategoriesResponse>(
-          `${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.ALL}`
+          API_ENDPOINTS.CATEGORIES.ALL
         );
         
         // Cache successful response
@@ -79,7 +79,7 @@ export class CategoryService {
   static async createCategory(name: string, description?: string): Promise<void> {
     // Retry with exponential backoff on rate limit
     await retryWithBackoff(async () => {
-      await apiClient.post(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.CREATE}`, {
+      await apiClient.post(API_ENDPOINTS.CATEGORIES.CREATE, {
         name,
         description,
       });
@@ -96,7 +96,7 @@ export class CategoryService {
   static async updateCategory(id: number, name: string, description?: string): Promise<void> {
     // Retry with exponential backoff on rate limit
     await retryWithBackoff(async () => {
-      await apiClient.put(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.UPDATE(id)}`, {
+      await apiClient.put(API_ENDPOINTS.CATEGORIES.UPDATE(id), {
         name,
         description,
       });
@@ -113,7 +113,7 @@ export class CategoryService {
   static async deleteCategory(id: number): Promise<void> {
     // Retry with exponential backoff on rate limit
     await retryWithBackoff(async () => {
-      await apiClient.delete(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CATEGORIES.DELETE(id)}`);
+      await apiClient.delete(API_ENDPOINTS.CATEGORIES.DELETE(id));
     });
     
     // Invalidate categories and dashboard cache
