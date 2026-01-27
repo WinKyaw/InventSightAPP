@@ -157,12 +157,13 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   transferId: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.secondaryText,
+    marginRight: 8,
+  },
   },
   priorityBadge: {
     paddingHorizontal: 8,
@@ -178,13 +179,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    gap: 8,
   },
   itemName: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
     flex: 1,
+    marginLeft: 8,
   },
   locationSection: {
     flexDirection: 'row',
@@ -194,12 +195,12 @@ const styles = StyleSheet.create({
   location: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     flex: 1,
   },
   locationText: {
     fontSize: 14,
     color: Colors.text,
+    marginLeft: 4,
   },
   arrow: {
     marginHorizontal: 8,
@@ -220,7 +221,6 @@ const styles = StyleSheet.create({
   carrierSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: Colors.lightGray,
@@ -229,6 +229,7 @@ const styles = StyleSheet.create({
   carrierText: {
     fontSize: 13,
     color: Colors.text,
+    marginLeft: 6,
   },
   actionsSection: {
     flexDirection: 'row',
