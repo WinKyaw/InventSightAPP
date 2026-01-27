@@ -113,6 +113,19 @@ export const API_ENDPOINTS = {
     CHECK: '/api/supply-management/check',
     PERMISSIONS: '/api/supply-management/permissions',
   },
+  // Transfer Request endpoints
+  TRANSFER_REQUESTS: {
+    ALL: '/api/transfer-requests',
+    BY_ID: (id: string) => `/api/transfer-requests/${id}`,
+    CREATE: '/api/transfer-requests',
+    APPROVE: (id: string) => `/api/transfer-requests/${id}/approve`,
+    REJECT: (id: string) => `/api/transfer-requests/${id}/reject`,
+    SEND: (id: string) => `/api/transfer-requests/${id}/send`,
+    CONFIRM_RECEIPT: (id: string) => `/api/transfer-requests/${id}/receive`,
+    CANCEL: (id: string) => `/api/transfer-requests/${id}/cancel`,
+    HISTORY: '/api/transfer-requests/history',
+    SUMMARY: '/api/transfer-requests/summary',
+  },
 };
 
 // Session Information
