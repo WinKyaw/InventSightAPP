@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   transferId: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.secondaryText,
+    color: Colors.textSecondary,
     marginRight: 8,
   },
   priorityBadge: {
@@ -209,12 +209,12 @@ const styles = StyleSheet.create({
   },
   detail: {
     fontSize: 13,
-    color: Colors.secondaryText,
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   reason: {
     fontSize: 13,
-    color: Colors.secondaryText,
+    color: Colors.textSecondary,
     fontStyle: 'italic',
   },
   carrierSection: {
