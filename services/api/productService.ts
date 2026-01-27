@@ -39,7 +39,7 @@ export class ProductService {
     return requestDeduplicator.execute(cacheKey, async () => {
       // Retry with exponential backoff on rate limit
       return retryWithBackoff(async () => {
-        const response = await apiClient.get<ProductCountResponse>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.COUNT);
+        const response = await apiClient.get<ProductCountResponse>(API_ENDPOINTS.PRODUCTS.COUNT);
         const count = response.totalProducts;
         
         // Cache successful response
@@ -66,7 +66,7 @@ export class ProductService {
     return requestDeduplicator.execute(cacheKey, async () => {
       // Retry with exponential backoff on rate limit
       return retryWithBackoff(async () => {
-        const response = await apiClient.get<LowStockResponse>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.LOW_STOCK);
+        const response = await apiClient.get<LowStockResponse>(API_ENDPOINTS.PRODUCTS.LOW_STOCK);
         
         // Cache successful response
         responseCache.set(cacheKey, response, CACHE_TTL);
@@ -92,7 +92,7 @@ export class ProductService {
     return requestDeduplicator.execute(cacheKey, async () => {
       // Retry with exponential backoff on rate limit
       return retryWithBackoff(async () => {
-        let fullUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.PRODUCTS.ALL}?page=${page - 1}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+        let fullUrl = `${API_ENDPOINTS.PRODUCTS.ALL}?page=${page - 1}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
         
         // ✅ FIX: Add storeId parameter if provided
         if (storeId) {
@@ -135,14 +135,14 @@ export class ProductService {
    * Get product by ID
    */
   static async getProductById(id: number): Promise<Product> {
-    return await apiClient.get<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.BY_ID(id));
+    return await apiClient.get<Product>(API_ENDPOINTS.PRODUCTS.BY_ID(id));
   }
 
   /**
    * Create new product and invalidate cache
    */
   static async createProduct(productData: CreateProductRequest): Promise<Product> {
-    const product = await apiClient.post<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.CREATE, productData);
+    const product = await apiClient.post<Product>(API_ENDPOINTS.PRODUCTS.CREATE, productData);
     
     // Invalidate products and dashboard cache
     CacheManager.invalidateProducts();
@@ -155,7 +155,7 @@ export class ProductService {
    * Update existing product and invalidate cache
    */
   static async updateProduct(id: number, updates: UpdateProductRequest): Promise<Product> {
-    const product = await apiClient.put<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.UPDATE(id), updates);
+    const product = await apiClient.put<Product>(API_ENDPOINTS.PRODUCTS.UPDATE(id), updates);
     
     // Invalidate products and dashboard cache
     CacheManager.invalidateProducts();
@@ -168,7 +168,7 @@ export class ProductService {
    * Delete product and invalidate cache
    */
   static async deleteProduct(id: number): Promise<boolean> {
-    await apiClient.delete<void>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.DELETE(id));
+    await apiClient.delete<void>(API_ENDPOINTS.PRODUCTS.DELETE(id));
     
     // Invalidate products and dashboard cache
     CacheManager.invalidateProducts();
@@ -181,7 +181,7 @@ export class ProductService {
    * Update product stock and invalidate cache
    */
   static async updateProductStock(id: number, stockData: UpdateStockRequest): Promise<Product> {
-    const product = await apiClient.put<Product>(API_CONFIG.BASE_URL+API_ENDPOINTS.PRODUCTS.UPDATE_STOCK(id), stockData);
+    const product = await apiClient.put<Product>(API_ENDPOINTS.PRODUCTS.UPDATE_STOCK(id), stockData);
     
     // Invalidate products and dashboard cache (stock affects low stock and counts)
     CacheManager.invalidateProducts();
@@ -212,7 +212,7 @@ export class ProductService {
       console.log(`🔍 Searching products for store: ${params.storeId}`);
     }
 
-    const url = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.PRODUCTS.SEARCH}?${queryString.toString()}`;
+    const url = `${API_ENDPOINTS.PRODUCTS.SEARCH}?${queryString.toString()}`;
     return await apiClient.get<ProductSearchResponse>(url);
   }
 
@@ -226,7 +226,7 @@ export class ProductService {
     sortBy = 'name', 
     sortOrder: 'asc' | 'desc' = 'asc'
   ): Promise<ProductsListResponse> {
-    const url = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.PRODUCTS.BY_CATEGORY(categoryId)}?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+    const url = `${API_ENDPOINTS.PRODUCTS.BY_CATEGORY(categoryId)}?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
     return await apiClient.get<ProductsListResponse>(url);
   }
 }

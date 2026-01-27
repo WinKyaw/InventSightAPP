@@ -41,7 +41,7 @@ export class PermissionService {
       }
       
       const response = await apiClient.get<{ hasPermission: boolean }>(
-        `${API_CONFIG.BASE_URL}/api/permissions/check?type=${type}`
+        `/api/permissions/check?type=${type}`
       );
       
       const result = response.hasPermission;
@@ -75,7 +75,7 @@ export class PermissionService {
   static async checkPermissions(types: string[]): Promise<Record<string, boolean>> {
     try {
       const response = await apiClient.post<Record<string, boolean>>(
-        `${API_CONFIG.BASE_URL}/api/permissions/check-batch`,
+        '/api/permissions/check-batch',
         { permissions: types }
       );
       

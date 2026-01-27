@@ -29,7 +29,7 @@ export class ReportService {
   static async getDailyReport(date?: string): Promise<DailyReportData> {
     await this.verifyAuthentication();
     const params = date ? `?date=${date}` : '';
-    return await apiClient.get<DailyReportData>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.REPORTS.DAILY}${params}`);
+    return await apiClient.get<DailyReportData>(`${API_ENDPOINTS.REPORTS.DAILY}${params}`);
   }
 
   /**
@@ -42,7 +42,7 @@ export class ReportService {
     if (endDate) params.append('endDate', endDate);
     
     const queryString = params.toString();
-    const url = queryString ? `${API_CONFIG.BASE_URL}${API_ENDPOINTS.REPORTS.WEEKLY}?${queryString}` : API_ENDPOINTS.REPORTS.WEEKLY;
+    const url = queryString ? `${API_ENDPOINTS.REPORTS.WEEKLY}?${queryString}` : API_ENDPOINTS.REPORTS.WEEKLY;
     
     return await apiClient.get<WeeklyReportData>(url);
   }
@@ -52,7 +52,7 @@ export class ReportService {
    */
   static async getInventoryReport(): Promise<InventoryReportData> {
     await this.verifyAuthentication();
-    return await apiClient.get<InventoryReportData>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.REPORTS.INVENTORY}`);
+    return await apiClient.get<InventoryReportData>(API_ENDPOINTS.REPORTS.INVENTORY);
   }
 
   /**
@@ -60,7 +60,7 @@ export class ReportService {
    */
   static async getBusinessIntelligence(): Promise<BusinessIntelligenceData> {
     await this.verifyAuthentication();
-    return await apiClient.get<BusinessIntelligenceData>(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.REPORTS.BUSINESS_INTELLIGENCE}`);
+    return await apiClient.get<BusinessIntelligenceData>(API_ENDPOINTS.REPORTS.BUSINESS_INTELLIGENCE);
   }
 
   /**
