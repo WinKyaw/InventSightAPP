@@ -1,0 +1,590 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { useTransferRequest } from '../../hooks/useTransferRequests';
+import { useTransferPermissions } from '../../hooks/useTransferPermissions';
+import { TransferStatusBadge } from '../../components/transfer/TransferStatusBadge';
+import { TransferTimeline } from '../../components/transfer/TransferTimeline';
+import { ApproveTransferModal } from '../../components/transfer/ApproveTransferModal';
+import { ReceiveTransferModal } from '../../components/transfer/ReceiveTransferModal';
+import { Header } from '../../components/shared/Header';
+import { Button } from '../../components/ui/Button';
+import { Colors } from '../../constants/Colors';
+import { TransferStatus, TransferPriority } from '../../types/transfer';
+import { cancelTransfer } from '../../services/api/transferRequestService';
+
+export default function TransferDetailScreen() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { isAuthenticated } = useAuth();
+  
+  const { transfer, loading, error, refresh, setTransfer } = useTransferRequest(id);
+  const {
+    canApproveTransfer,
+    canCancelTransfer,
+    canReceiveTransfer,
+  } = useTransferPermissions();
+
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // Check authentication
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated]);
+
+  const handleCancelTransfer = () => {
+    if (!transfer) return;
+
+    Alert.alert(
+      'Cancel Transfer',
+      'Are you sure you want to cancel this transfer request?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsCancelling(true);
+              const reason = 'Cancelled by requester';
+              const updated = await cancelTransfer(transfer.id, reason);
+              setTransfer(updated);
+              Alert.alert('Success', 'Transfer request cancelled');
+            } catch (err) {
+              console.error('Error cancelling transfer:', err);
+              Alert.alert('Error', 'Failed to cancel transfer request');
+            } finally {
+              setIsCancelling(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleApproveSuccess = () => {
+    setShowApproveModal(false);
+    refresh();
+  };
+
+  const handleReceiveSuccess = () => {
+    setShowReceiveModal(false);
+    refresh();
+  };
+
+  const getPriorityColor = (priority: TransferPriority) => {
+    switch (priority) {
+      case TransferPriority.HIGH:
+        return Colors.danger;
+      case TransferPriority.MEDIUM:
+        return Colors.warning;
+      case TransferPriority.LOW:
+        return Colors.success;
+      default:
+        return Colors.gray;
+    }
+  };
+
+  const getPriorityIcon = (priority: TransferPriority) => {
+    switch (priority) {
+      case TransferPriority.HIGH:
+        return 'alert-circle';
+      case TransferPriority.MEDIUM:
+        return 'alert';
+      case TransferPriority.LOW:
+        return 'information-circle';
+      default:
+        return 'information-circle';
+    }
+  };
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Header title="Transfer Details" showBackButton />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading transfer details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !transfer) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Header title="Transfer Details" showBackButton />
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={64} color={Colors.error} />
+          <Text style={styles.errorTitle}>Failed to Load</Text>
+          <Text style={styles.errorText}>
+            {error || 'Transfer request not found'}
+          </Text>
+          <Button title="Retry" onPress={refresh} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const showApproveButton = canApproveTransfer(transfer);
+  const showReceiveButton = canReceiveTransfer(transfer);
+  const showCancelButton = canCancelTransfer(transfer);
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <Header title={`Transfer #${transfer.id}`} showBackButton />
+
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Status Header */}
+        <View style={styles.statusHeader}>
+          <TransferStatusBadge status={transfer.status} size="large" />
+          <View style={[styles.priorityBadge, { borderColor: getPriorityColor(transfer.priority) }]}>
+            <Ionicons
+              name={getPriorityIcon(transfer.priority) as any}
+              size={16}
+              color={getPriorityColor(transfer.priority)}
+            />
+            <Text style={[styles.priorityText, { color: getPriorityColor(transfer.priority) }]}>
+              {transfer.priority} Priority
+            </Text>
+          </View>
+        </View>
+
+        {/* Locations */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Transfer Route</Text>
+          
+          <View style={styles.locationCard}>
+            <View style={styles.locationHeader}>
+              <Ionicons
+                name={transfer.fromLocation.type === 'WAREHOUSE' ? 'business' : 'storefront'}
+                size={20}
+                color={Colors.primary}
+              />
+              <Text style={styles.locationLabel}>From</Text>
+            </View>
+            <Text style={styles.locationName}>{transfer.fromLocation.name}</Text>
+            {transfer.fromLocation.address && (
+              <Text style={styles.locationAddress}>{transfer.fromLocation.address}</Text>
+            )}
+          </View>
+
+          <View style={styles.arrowContainer}>
+            <Ionicons name="arrow-down" size={24} color={Colors.primary} />
+          </View>
+
+          <View style={styles.locationCard}>
+            <View style={styles.locationHeader}>
+              <Ionicons
+                name={transfer.toLocation.type === 'WAREHOUSE' ? 'business' : 'storefront'}
+                size={20}
+                color={Colors.success}
+              />
+              <Text style={styles.locationLabel}>To</Text>
+            </View>
+            <Text style={styles.locationName}>{transfer.toLocation.name}</Text>
+            {transfer.toLocation.address && (
+              <Text style={styles.locationAddress}>{transfer.toLocation.address}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Item Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Item Details</Text>
+          
+          <View style={styles.itemCard}>
+            <View style={styles.itemHeader}>
+              <Ionicons name="cube" size={24} color={Colors.primary} />
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemName}>{transfer.item.name}</Text>
+                <Text style={styles.itemSku}>SKU: {transfer.item.sku}</Text>
+              </View>
+            </View>
+
+            <View style={styles.quantityRow}>
+              <View style={styles.quantityItem}>
+                <Text style={styles.quantityLabel}>Requested</Text>
+                <Text style={styles.quantityValue}>{transfer.requestedQuantity}</Text>
+              </View>
+              {transfer.approvedQuantity !== undefined && (
+                <View style={styles.quantityItem}>
+                  <Text style={styles.quantityLabel}>Approved</Text>
+                  <Text style={[styles.quantityValue, { color: Colors.success }]}>
+                    {transfer.approvedQuantity}
+                  </Text>
+                </View>
+              )}
+              {transfer.receivedQuantity !== undefined && (
+                <View style={styles.quantityItem}>
+                  <Text style={styles.quantityLabel}>Received</Text>
+                  <Text style={[styles.quantityValue, { color: Colors.success }]}>
+                    {transfer.receivedQuantity}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Timeline */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Timeline</Text>
+          <TransferTimeline timeline={transfer.timeline} />
+        </View>
+
+        {/* Carrier Info */}
+        {transfer.carrier && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Carrier Information</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Ionicons name="person" size={20} color={Colors.primary} />
+                <Text style={styles.infoText}>{transfer.carrier.name}</Text>
+              </View>
+              {transfer.carrier.phone && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="call" size={20} color={Colors.primary} />
+                  <Text style={styles.infoText}>{transfer.carrier.phone}</Text>
+                </View>
+              )}
+              {transfer.carrier.vehicle && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="car" size={20} color={Colors.primary} />
+                  <Text style={styles.infoText}>{transfer.carrier.vehicle}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Reason */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Reason</Text>
+          <View style={styles.noteCard}>
+            <Text style={styles.noteText}>{transfer.reason}</Text>
+          </View>
+        </View>
+
+        {/* Notes */}
+        {transfer.notes && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notes</Text>
+            <View style={styles.noteCard}>
+              <Text style={styles.noteText}>{transfer.notes}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Approval Notes */}
+        {transfer.approvalNotes && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Approval Notes</Text>
+            <View style={[styles.noteCard, { backgroundColor: Colors.successLight }]}>
+              <Text style={styles.noteText}>{transfer.approvalNotes}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Receipt Notes */}
+        {transfer.receiptNotes && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Receipt Notes</Text>
+            <View style={[styles.noteCard, { backgroundColor: Colors.lightBlue }]}>
+              <Text style={styles.noteText}>{transfer.receiptNotes}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Rejection Reason */}
+        {transfer.rejectionReason && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Rejection Reason</Text>
+            <View style={[styles.noteCard, { backgroundColor: '#FEE2E2' }]}>
+              <Text style={[styles.noteText, { color: Colors.danger }]}>
+                {transfer.rejectionReason}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Action Buttons */}
+        {(showApproveButton || showReceiveButton || showCancelButton) && (
+          <View style={styles.actionsSection}>
+            {showApproveButton && (
+              <Button
+                title="Approve & Send"
+                onPress={() => setShowApproveModal(true)}
+                icon="checkmark-circle"
+              />
+            )}
+
+            {showReceiveButton && (
+              <Button
+                title="Confirm Receipt"
+                onPress={() => setShowReceiveModal(true)}
+                icon="checkmark-done"
+              />
+            )}
+
+            {showCancelButton && (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCancelTransfer}
+                disabled={isCancelling}
+              >
+                {isCancelling ? (
+                  <ActivityIndicator size="small" color={Colors.danger} />
+                ) : (
+                  <>
+                    <Ionicons name="close-circle" size={20} color={Colors.danger} />
+                    <Text style={styles.cancelButtonText}>Cancel Transfer</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Modals */}
+      {showApproveModal && transfer && (
+        <ApproveTransferModal
+          visible={showApproveModal}
+          transfer={transfer}
+          onClose={() => setShowApproveModal(false)}
+          onSuccess={handleApproveSuccess}
+        />
+      )}
+
+      {showReceiveModal && transfer && (
+        <ReceiveTransferModal
+          visible={showReceiveModal}
+          transfer={transfer}
+          onClose={() => setShowReceiveModal(false)}
+          onSuccess={handleReceiveSuccess}
+        />
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  statusHeader: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 12,
+  },
+  priorityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    gap: 6,
+  },
+  priorityText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  locationCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  locationLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  locationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  locationAddress: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  arrowContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  itemCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  itemSku: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  quantityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  quantityItem: {
+    alignItems: 'center',
+  },
+  quantityLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  quantityValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  infoCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+  },
+  noteCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  noteText: {
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  actionsSection: {
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.danger,
+    backgroundColor: Colors.white,
+    gap: 8,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.danger,
+  },
+});
