@@ -255,6 +255,16 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
                       </TouchableOpacity>
                     );
                   })()}
+                  
+                  {/* ✅ Transfer Requests - Available to all users */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => navigateToScreen('/transfer-requests')}
+                  >
+                    <Ionicons name="swap-horizontal-outline" size={20} color="#8B5CF6" />
+                    <Text style={styles.menuItemText}>Transfer Requests</Text>
+                    <Ionicons name="chevron-forward" size={16} color={Colors.lightGray} />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.divider} />
