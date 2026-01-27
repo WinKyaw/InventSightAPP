@@ -117,7 +117,7 @@ export const rejectTransfer = async (
   reason: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post(
+    const response = await apiClient.put(
       API_ENDPOINTS.TRANSFER_REQUESTS.REJECT(id),
       { reason }
     );
@@ -161,13 +161,32 @@ export const cancelTransfer = async (
   reason: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post(
+    const response = await apiClient.put(
       API_ENDPOINTS.TRANSFER_REQUESTS.CANCEL(id),
       { reason }
     );
     return response.data;
   } catch (error) {
     console.error(`❌ Error cancelling transfer ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Complete a transfer request
+ * @param id - Transfer request ID
+ * @returns Updated transfer request
+ */
+export const completeTransfer = async (
+  id: string
+): Promise<TransferRequest> => {
+  try {
+    const response = await apiClient.put(
+      API_ENDPOINTS.TRANSFER_REQUESTS.COMPLETE(id)
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error completing transfer ${id}:`, error);
     throw error;
   }
 };
@@ -200,13 +219,19 @@ export const getTransferHistory = async (
  * Get transfer summary statistics
  * @param filters - Optional filters for the summary
  * @returns Transfer history summary
+ * @deprecated Backend endpoint not yet implemented - will return 404 until backend implements /api/transfers/summary
  */
 export const getTransferSummary = async (
   filters?: TransferFilters
 ): Promise<TransferHistorySummary> => {
+  // Note: This endpoint is not yet implemented in the backend
+  // It has been removed from the config to avoid accidental use
+  // but kept here for backward compatibility until the backend adds support
+  const SUMMARY_ENDPOINT = '/api/transfers/summary';
+  
   try {
     const response = await apiClient.get(
-      API_ENDPOINTS.TRANSFER_REQUESTS.SUMMARY,
+      SUMMARY_ENDPOINT,
       {
         params: filters,
       }
@@ -214,6 +239,7 @@ export const getTransferSummary = async (
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching transfer summary:', error);
+    console.warn('⚠️  Backend endpoint /api/transfers/summary not yet implemented');
     throw error;
   }
 };
@@ -248,6 +274,7 @@ export default {
   rejectTransfer,
   confirmReceipt,
   cancelTransfer,
+  completeTransfer,
   getTransferHistory,
   getTransferSummary,
   exportTransferHistoryCSV,

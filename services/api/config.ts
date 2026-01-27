@@ -115,16 +115,16 @@ export const API_ENDPOINTS = {
   },
   // Transfer Request endpoints
   TRANSFER_REQUESTS: {
-    ALL: '/api/transfer-requests',
-    BY_ID: (id: string) => `/api/transfer-requests/${id}`,
-    CREATE: '/api/transfer-requests',
-    APPROVE: (id: string) => `/api/transfer-requests/${id}/approve`,
-    REJECT: (id: string) => `/api/transfer-requests/${id}/reject`,
-    SEND: (id: string) => `/api/transfer-requests/${id}/send`,
-    CONFIRM_RECEIPT: (id: string) => `/api/transfer-requests/${id}/receive`,
-    CANCEL: (id: string) => `/api/transfer-requests/${id}/cancel`,
-    HISTORY: '/api/transfer-requests/history',
-    SUMMARY: '/api/transfer-requests/summary',
+    ALL: '/api/transfers',
+    BY_ID: (id: string) => `/api/transfers/${id}`,
+    CREATE: '/api/transfers/request',
+    APPROVE: (id: string) => `/api/transfers/${id}/approve`,
+    REJECT: (id: string) => `/api/transfers/${id}/reject`,
+    SEND: (id: string) => `/api/transfers/${id}/send`,
+    CONFIRM_RECEIPT: (id: string) => `/api/transfers/${id}/receive`,
+    CANCEL: (id: string) => `/api/transfers/${id}/cancel`,
+    COMPLETE: (id: string) => `/api/transfers/${id}/complete`,
+    HISTORY: '/api/transfers/history',
   },
 };
 
