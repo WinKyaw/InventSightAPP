@@ -24,11 +24,11 @@ export const createTransferRequest = async (
   request: CreateTransferRequestDTO
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post(
+    const response = await apiClient.post<TransferRequest>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CREATE,
       request
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error('❌ Error creating transfer request:', error);
     throw error;
@@ -54,11 +54,11 @@ export const getTransferRequests = async (
       ...filters,
     };
     
-    const response = await apiClient.get(API_ENDPOINTS.TRANSFER_REQUESTS.ALL, {
+    const response = await apiClient.get<PaginatedTransferResponse>(API_ENDPOINTS.TRANSFER_REQUESTS.ALL, {
       params,
     });
     
-    return response.data;
+    return response;
   } catch (error) {
     console.error('❌ Error fetching transfer requests:', error);
     throw error;
@@ -74,10 +74,10 @@ export const getTransferRequestById = async (
   id: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.get(
+    const response = await apiClient.get<TransferRequest>(
       API_ENDPOINTS.TRANSFER_REQUESTS.BY_ID(id)
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error(`❌ Error fetching transfer request ${id}:`, error);
     throw error;
@@ -95,11 +95,11 @@ export const approveAndSendTransfer = async (
   sendData: SendTransferDTO
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post(
+    const response = await apiClient.post<TransferRequest>(
       API_ENDPOINTS.TRANSFER_REQUESTS.SEND(id),
       sendData
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error(`❌ Error approving transfer ${id}:`, error);
     throw error;
@@ -117,11 +117,11 @@ export const rejectTransfer = async (
   reason: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.put(
+    const response = await apiClient.put<TransferRequest>(
       API_ENDPOINTS.TRANSFER_REQUESTS.REJECT(id),
       { reason }
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error(`❌ Error rejecting transfer ${id}:`, error);
     throw error;
@@ -139,11 +139,11 @@ export const confirmReceipt = async (
   receiptData: ReceiptDTO
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post(
+    const response = await apiClient.post<TransferRequest>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CONFIRM_RECEIPT(id),
       receiptData
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error(`❌ Error confirming receipt for transfer ${id}:`, error);
     throw error;
@@ -161,11 +161,11 @@ export const cancelTransfer = async (
   reason: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.put(
+    const response = await apiClient.put<TransferRequest>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CANCEL(id),
       { reason }
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error(`❌ Error cancelling transfer ${id}:`, error);
     throw error;
@@ -181,10 +181,10 @@ export const completeTransfer = async (
   id: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.put(
+    const response = await apiClient.put<TransferRequest>(
       API_ENDPOINTS.TRANSFER_REQUESTS.COMPLETE(id)
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error(`❌ Error completing transfer ${id}:`, error);
     throw error;
@@ -202,13 +202,13 @@ export const getTransferHistory = async (
   locationType: string
 ): Promise<TransferRequest[]> => {
   try {
-    const response = await apiClient.get(
+    const response = await apiClient.get<TransferRequest[]>(
       API_ENDPOINTS.TRANSFER_REQUESTS.HISTORY,
       {
         params: { locationId, locationType },
       }
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error('❌ Error fetching transfer history:', error);
     throw error;
@@ -230,13 +230,13 @@ export const getTransferSummary = async (
   const SUMMARY_ENDPOINT = '/api/transfers/summary';
   
   try {
-    const response = await apiClient.get(
+    const response = await apiClient.get<TransferHistorySummary>(
       SUMMARY_ENDPOINT,
       {
         params: filters,
       }
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error('❌ Error fetching transfer summary:', error);
     console.warn('⚠️  Backend endpoint /api/transfers/summary not yet implemented');
@@ -252,14 +252,14 @@ export const exportTransferHistoryCSV = async (
   filters?: TransferFilters
 ): Promise<string> => {
   try {
-    const response = await apiClient.get(
+    const response = await apiClient.get<string>(
       `${API_ENDPOINTS.TRANSFER_REQUESTS.HISTORY}/export/csv`,
       {
         params: filters,
         responseType: 'text',
       }
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error('❌ Error exporting transfer history:', error);
     throw error;
