@@ -59,6 +59,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
   const [orderType, setOrderType] = useState<OrderType>('hold');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [topSellers, setTopSellers] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -138,6 +139,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
     try {
       console.log(`📦 Loading items for store: ${currentStore.id}`);
       
+      // Load all products for search
       const response = await apiClient.get('/api/products', {
         params: { 
           storeId: currentStore.id,
@@ -148,9 +150,29 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
         }
       });
       
-      const productList = response.data?.products || response.data || [];
+      const productList = response.products || [];
       console.log(`✅ Loaded ${productList.length} items`);
       setProducts(productList);
+      
+      // Load top sellers for default view
+      try {
+        const topSellersResponse = await apiClient.get('/api/products/top-sellers', {
+          params: {
+            storeId: currentStore.id,
+            limit: 10
+          }
+        });
+        const topSellersList = topSellersResponse.products || [];
+        console.log(`✅ Loaded ${topSellersList.length} top sellers`);
+        setTopSellers(topSellersList);
+      } catch (error) {
+        console.log('ℹ️ Top sellers not available, showing all products');
+        // Fallback: Sort products by quantity sold (if field exists) or just show first 10
+        const sorted = [...productList]
+          .sort((a, b) => ((b as any).salesCount || 0) - ((a as any).salesCount || 0))
+          .slice(0, 10);
+        setTopSellers(sorted);
+      }
     } catch (error: any) {
       console.error('❌ Error loading items:', error);
       Alert.alert(
@@ -243,10 +265,12 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
     }
   };
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = searchQuery
+    ? products.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : topSellers;
 
   return (
     <Modal
@@ -425,7 +449,10 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
           <View style={styles.itemsSection}>
             <Text style={styles.itemsCount}>
               {filteredProducts.length} items available
-              {searchQuery && ` (searched for "${searchQuery}")`}
+              {searchQuery 
+                ? ` (searched for "${searchQuery}")`
+                : ' (top sellers)'
+              }
             </Text>
             
             {loadingItems ? (
@@ -460,7 +487,9 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                     <Text style={styles.emptyItemsText}>
                       {searchQuery 
                         ? `No items match "${searchQuery}"`
-                        : 'No items available in this store'
+                        : topSellers.length === 0
+                          ? 'No items available in this store'
+                          : 'Start typing to search all products'
                       }
                     </Text>
                   </View>
