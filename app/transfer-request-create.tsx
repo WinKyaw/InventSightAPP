@@ -126,7 +126,7 @@ export default function TransferRequestCreateScreen() {
           searchParams.fromWarehouseId = fromLocationId;
         }
         
-        console.log(`🔍 Searching products for transfer in ${fromLocationType}: ${fromLocationId}`);
+        console.log(`[Transfer Search] Query: "${query}" in ${fromLocationType}: ${fromLocationId}`);
         
         const response = await ProductService.searchProductsForTransfer(searchParams);
         
@@ -139,14 +139,14 @@ export default function TransferRequestCreateScreen() {
           availableForTransfer: p.availableForTransfer,
           reserved: p.reserved,
           inTransit: p.inTransit,
-          stockQuantity: p.availableForTransfer,  // For compatibility
+          stockQuantity: p.availableForTransfer,  // Fallback for components expecting stockQuantity
         }));
         
-        console.log(`✅ Found ${products.length} products available for transfer`);
+        console.log(`[Transfer Search] Found ${products.length} products available for transfer`);
         setSearchResults(products);
         
       } catch (error) {
-        console.error('Error searching products for transfer:', error);
+        console.error('[Transfer Search] Error:', error);
         Alert.alert('Search Error', 'Failed to search products. Please try again.');
         setSearchResults([]);
       } finally {
@@ -409,11 +409,12 @@ export default function TransferRequestCreateScreen() {
                         <Text style={styles.searchResultName}>{product.name}</Text>
                         <Text style={styles.searchResultSku}>SKU: {product.sku}</Text>
                         {/* Show availability details */}
-                        {(product.reserved && product.reserved > 0) || (product.inTransit && product.inTransit > 0) ? (
+                        {((product.reserved !== undefined && product.reserved > 0) || 
+                          (product.inTransit !== undefined && product.inTransit > 0)) ? (
                           <Text style={styles.searchResultDetails}>
                             Total: {product.quantity} | Available: {product.availableForTransfer}
-                            {product.reserved && product.reserved > 0 && ` | Reserved: ${product.reserved}`}
-                            {product.inTransit && product.inTransit > 0 && ` | In Transit: ${product.inTransit}`}
+                            {product.reserved !== undefined && product.reserved > 0 && ` | Reserved: ${product.reserved}`}
+                            {product.inTransit !== undefined && product.inTransit > 0 && ` | In Transit: ${product.inTransit}`}
                           </Text>
                         ) : null}
                       </View>

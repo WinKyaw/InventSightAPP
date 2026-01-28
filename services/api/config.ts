@@ -554,7 +554,7 @@ export interface CategoriesResponse {
  * Transfer-specific product search parameters
  */
 export interface SearchProductsForTransferParams {
-  query: string;
+  query?: string;
   fromStoreId?: string;
   fromWarehouseId?: string;
   fromCompanyId?: string;

@@ -257,12 +257,12 @@ export class ProductService {
 
     const url = `${API_ENDPOINTS.PRODUCTS.SEARCH_FOR_TRANSFER}?${queryString.toString()}`;
     
-    console.log(`🔍 Searching products for transfer: ${params.query}`);
+    console.log('[ProductService] Searching products for transfer:', params.query || 'all products');
     if (params.fromStoreId) {
-      console.log(`📍 From Store: ${params.fromStoreId}`);
+      console.log('[ProductService] From Store:', params.fromStoreId);
     }
     if (params.fromWarehouseId) {
-      console.log(`🏭 From Warehouse: ${params.fromWarehouseId}`);
+      console.log('[ProductService] From Warehouse:', params.fromWarehouseId);
     }
     
     return await apiClient.get<TransferProductSearchResponse>(url);
