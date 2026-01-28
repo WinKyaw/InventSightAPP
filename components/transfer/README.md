@@ -145,7 +145,7 @@ export function TransferRequestsScreen() {
 
   const loadTransfers = async () => {
     const response = await getTransferRequests(filters);
-    setTransfers(response.items);
+    setTransfers(response.requests);
   };
 
   useEffect(() => {

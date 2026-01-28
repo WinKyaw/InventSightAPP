@@ -45,7 +45,7 @@ export function useTransferRequests(
           pageSize
         );
 
-        setTransfers(response.items || []);
+        setTransfers(response.requests || []);
         setCurrentPage(response.currentPage);
         setTotalPages(response.totalPages);
         setTotalItems(response.totalItems);

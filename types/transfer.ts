@@ -185,7 +185,7 @@ export interface TransferFilters {
  * Paginated response for transfer requests
  */
 export interface PaginatedTransferResponse {
-  items: TransferRequest[];
+  requests: TransferRequest[];
   currentPage: number;
   totalPages: number;
   totalItems: number;
