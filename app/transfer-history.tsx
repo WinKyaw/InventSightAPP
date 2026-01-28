@@ -70,7 +70,7 @@ export default function TransferHistoryScreen() {
   const loadTransfers = async () => {
     try {
       const response = await getTransferRequests(filters, 0, 50);
-      setTransfers(response.items || []);
+      setTransfers(response.requests || []);
     } catch (error) {
       console.error('Error loading transfers:', error);
       throw error;
@@ -103,7 +103,7 @@ export default function TransferHistoryScreen() {
     try {
       setLoading(true);
       const response = await getTransferRequests(newFilters, 0, 50);
-      setTransfers(response.items || []);
+      setTransfers(response.requests || []);
       
       const summaryData = await getTransferSummary(newFilters);
       setSummary(summaryData);
@@ -123,7 +123,7 @@ export default function TransferHistoryScreen() {
     try {
       setLoading(true);
       const response = await getTransferRequests(emptyFilters, 0, 50);
-      setTransfers(response.items || []);
+      setTransfers(response.requests || []);
       
       const summaryData = await getTransferSummary(emptyFilters);
       setSummary(summaryData);
