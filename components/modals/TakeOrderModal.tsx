@@ -166,7 +166,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
         console.log(`✅ Loaded ${topSellersList.length} top sellers`);
         setTopSellers(topSellersList);
       } catch (error) {
-        console.log('ℹ️ Top sellers not available, showing all products');
+        console.log('ℹ️ Top sellers endpoint not available, using fallback sorting');
         // Fallback: Sort products by quantity sold (if field exists) or just show first 10
         const sorted = [...productList]
           .sort((a, b) => ((b as any).salesCount || 0) - ((a as any).salesCount || 0))
@@ -487,9 +487,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                     <Text style={styles.emptyItemsText}>
                       {searchQuery 
                         ? `No items match "${searchQuery}"`
-                        : topSellers.length === 0
-                          ? 'No items available in this store'
-                          : 'Start typing to search all products'
+                        : 'No items available in this store'
                       }
                     </Text>
                   </View>
