@@ -21,6 +21,7 @@ import { Colors } from '../constants/Colors';
 import { LocationType, TransferPriority, CreateTransferRequestDTO } from '../types/transfer';
 import { createTransferRequest } from '../services/api/transferRequestService';
 import { ProductService } from '../services/api/productService';
+import { SearchProductsParams } from '../services/api/config';
 
 interface Product {
   id: string;
@@ -64,7 +65,7 @@ export default function TransferRequestCreateScreen() {
     if (!isAuthenticated) {
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -103,16 +104,16 @@ export default function TransferRequestCreateScreen() {
       setShowSearchResults(true);
       
       try {
-        const searchParams: any = {
+        const searchParams: SearchProductsParams = {
           query,
           page: 1,
           limit: 10,
         };
         
-        // Add appropriate location filter
+        // Add appropriate location filter based on type
         if (fromLocationType === LocationType.STORE) {
           searchParams.storeId = fromLocationId;
-        } else {
+        } else if (fromLocationType === LocationType.WAREHOUSE) {
           searchParams.warehouseId = fromLocationId;
         }
         
