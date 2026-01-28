@@ -206,10 +206,16 @@ export class ProductService {
     if (params.limit) queryString.append('limit', params.limit.toString());
     if (params.sortBy) queryString.append('sortBy', params.sortBy);
     if (params.sortOrder) queryString.append('sortOrder', params.sortOrder);
-    // ✅ FIX: Add storeId parameter if provided
+    
+    // Add location filters
     if (params.storeId) {
       queryString.append('storeId', params.storeId);
       console.log(`🔍 Searching products for store: ${params.storeId}`);
+    }
+    
+    if (params.warehouseId) {
+      queryString.append('warehouseId', params.warehouseId);
+      console.log(`🔍 Searching products for warehouse: ${params.warehouseId}`);
     }
 
     const url = `${API_ENDPOINTS.PRODUCTS.SEARCH}?${queryString.toString()}`;

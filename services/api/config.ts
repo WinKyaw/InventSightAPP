@@ -489,11 +489,18 @@ export interface UpdateStockRequest {
 export interface SearchProductsParams {
   query?: string;
   category?: string;
+  categoryId?: number;
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
+  lowStock?: boolean;
+  page?: number;
   limit?: number;
   offset?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  storeId?: string;        // Filter by store
+  warehouseId?: string;    // Filter by warehouse
 }
 
 export interface ProductSearchResponse {
