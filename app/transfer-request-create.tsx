@@ -21,6 +21,7 @@ import { Colors } from '../constants/Colors';
 import { LocationType, TransferPriority, CreateTransferRequestDTO } from '../types/transfer';
 import { createTransferRequest } from '../services/api/transferRequestService';
 import { ProductService } from '../services/api/productService';
+import { SearchProductsParams } from '../services/api/config';
 
 interface Product {
   id: string;
@@ -55,6 +56,7 @@ export default function TransferRequestCreateScreen() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -63,11 +65,25 @@ export default function TransferRequestCreateScreen() {
     if (!isAuthenticated) {
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Search products
-  const handleSearchProducts = useCallback(async (query: string) => {
+  const handleSearchProducts = useCallback((query: string) => {
     setSearchQuery(query);
+    
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
     
     if (query.length < 2) {
       setSearchResults([]);
@@ -75,24 +91,45 @@ export default function TransferRequestCreateScreen() {
       return;
     }
 
-    setIsSearching(true);
-    setShowSearchResults(true);
-    
-    try {
-      const response = await ProductService.searchProducts({
-        query,
-        page: 1,
-        limit: 10,
-      });
-      
-      setSearchResults(response.products || []);
-    } catch (error) {
-      console.error('Error searching products:', error);
+    // Don't search if no source location selected
+    if (!fromLocationId) {
       setSearchResults([]);
-    } finally {
-      setIsSearching(false);
+      setShowSearchResults(false);
+      return;
     }
-  }, []);
+
+    // Debounce: Wait 300ms after user stops typing
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      setShowSearchResults(true);
+      
+      try {
+        const searchParams: SearchProductsParams = {
+          query,
+          page: 1,
+          limit: 10,
+        };
+        
+        // Add appropriate location filter based on type
+        if (fromLocationType === LocationType.STORE) {
+          searchParams.storeId = fromLocationId;
+        } else if (fromLocationType === LocationType.WAREHOUSE) {
+          searchParams.warehouseId = fromLocationId;
+        }
+        
+        console.log(`🔍 Searching products in ${fromLocationType}: ${fromLocationId}`);
+        
+        const response = await ProductService.searchProducts(searchParams);
+        
+        setSearchResults(response.products || []);
+      } catch (error) {
+        console.error('Error searching products:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300); // 300ms debounce delay
+  }, [fromLocationId, fromLocationType]);
 
   const handleSelectProduct = (product: Product) => {
     setProductId(product.id);
