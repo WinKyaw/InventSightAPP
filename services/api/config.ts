@@ -51,6 +51,7 @@ export const API_ENDPOINTS = {
     DELETE: (id: string | number) => `/api/products/${id}`,
     COUNT: '/api/products/count',
     SEARCH: '/api/products/search',
+    SEARCH_FOR_TRANSFER: '/api/products/search-for-transfer',
     LOW_STOCK: '/api/products/low-stock',
     UPDATE_STOCK: (id: string | number) => `/api/products/${id}/stock`,
     BY_CATEGORY: (categoryId: string | number) => `/api/products/category/${categoryId}`,
@@ -547,4 +548,57 @@ export interface Category {
 export interface CategoriesResponse {
   categories: Category[];
   total: number;
+}
+
+/**
+ * Transfer-specific product search parameters
+ */
+export interface SearchProductsForTransferParams {
+  query?: string;
+  fromStoreId?: string;
+  fromWarehouseId?: string;
+  fromCompanyId?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+/**
+ * Product with transfer availability info
+ */
+export interface ProductForTransfer {
+  id: string;
+  name: string;
+  sku: string;
+  quantity: number;
+  reserved: number;
+  inTransit: number;
+  availableForTransfer: number;
+  location: {
+    id: string;
+    type: 'STORE' | 'WAREHOUSE';
+    name: string;
+    companyId: string;
+  };
+}
+
+/**
+ * Transfer search response
+ */
+export interface TransferProductSearchResponse {
+  products: ProductForTransfer[];
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalElements: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+  filters: {
+    query: string;
+    fromLocationId: string;
+    fromLocationType: 'STORE' | 'WAREHOUSE';
+    fromCompanyId: string;
+  };
 }

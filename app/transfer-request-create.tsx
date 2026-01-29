@@ -21,13 +21,17 @@ import { Colors } from '../constants/Colors';
 import { LocationType, TransferPriority, CreateTransferRequestDTO } from '../types/transfer';
 import { createTransferRequest } from '../services/api/transferRequestService';
 import { ProductService } from '../services/api/productService';
-import { SearchProductsParams } from '../services/api/config';
+import { SearchProductsForTransferParams } from '../services/api/config';
 
 interface Product {
   id: string;
   name: string;
   sku: string;
-  stockQuantity?: number;
+  quantity: number;             // Total quantity
+  availableForTransfer: number; // What can actually be transferred
+  reserved?: number;            // Quantity in pending transfers
+  inTransit?: number;           // Quantity currently being moved
+  stockQuantity?: number;       // For backward compatibility
 }
 
 export default function TransferRequestCreateScreen() {
@@ -91,10 +95,14 @@ export default function TransferRequestCreateScreen() {
       return;
     }
 
-    // Don't search if no source location selected
+    // Validate source location is selected
     if (!fromLocationId) {
       setSearchResults([]);
       setShowSearchResults(false);
+      Alert.alert(
+        'Select Source Location', 
+        'Please select a "From Location" first to search for available products.'
+      );
       return;
     }
 
@@ -104,26 +112,42 @@ export default function TransferRequestCreateScreen() {
       setShowSearchResults(true);
       
       try {
-        const searchParams: SearchProductsParams = {
+        // Use transfer-specific search
+        const searchParams: SearchProductsForTransferParams = {
           query,
-          page: 1,
-          limit: 10,
+          page: 0,  // Backend uses 0-based indexing
+          size: 10,
         };
         
-        // Add appropriate location filter based on type
+        // Add appropriate location filter
         if (fromLocationType === LocationType.STORE) {
-          searchParams.storeId = fromLocationId;
-        } else if (fromLocationType === LocationType.WAREHOUSE) {
-          searchParams.warehouseId = fromLocationId;
+          searchParams.fromStoreId = fromLocationId;
+        } else {
+          searchParams.fromWarehouseId = fromLocationId;
         }
         
-        console.log(`🔍 Searching products in ${fromLocationType}: ${fromLocationId}`);
+        console.log(`[Transfer Search] Query: "${query}" in ${fromLocationType}: ${fromLocationId}`);
         
-        const response = await ProductService.searchProducts(searchParams);
+        const response = await ProductService.searchProductsForTransfer(searchParams);
         
-        setSearchResults(response.products || []);
+        // Map response to match local Product interface
+        const products: Product[] = response.products.map(p => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          quantity: p.quantity,
+          availableForTransfer: p.availableForTransfer,
+          reserved: p.reserved,
+          inTransit: p.inTransit,
+          stockQuantity: p.availableForTransfer,  // Fallback for components expecting stockQuantity
+        }));
+        
+        console.log(`[Transfer Search] Found ${products.length} products available for transfer`);
+        setSearchResults(products);
+        
       } catch (error) {
-        console.error('Error searching products:', error);
+        console.error('[Transfer Search] Error:', error);
+        Alert.alert('Search Error', 'Failed to search products. Please try again.');
         setSearchResults([]);
       } finally {
         setIsSearching(false);
@@ -384,12 +408,19 @@ export default function TransferRequestCreateScreen() {
                       <View style={styles.searchResultInfo}>
                         <Text style={styles.searchResultName}>{product.name}</Text>
                         <Text style={styles.searchResultSku}>SKU: {product.sku}</Text>
+                        {/* Show availability details */}
+                        {((product.reserved !== undefined && product.reserved > 0) || 
+                          (product.inTransit !== undefined && product.inTransit > 0)) ? (
+                          <Text style={styles.searchResultDetails}>
+                            Total: {product.quantity} | Available: {product.availableForTransfer}
+                            {product.reserved !== undefined && product.reserved > 0 && ` | Reserved: ${product.reserved}`}
+                            {product.inTransit !== undefined && product.inTransit > 0 && ` | In Transit: ${product.inTransit}`}
+                          </Text>
+                        ) : null}
                       </View>
-                      {product.stockQuantity !== undefined && (
-                        <Text style={styles.searchResultStock}>
-                          Stock: {product.stockQuantity}
-                        </Text>
-                      )}
+                      <Text style={styles.searchResultStock}>
+                        {product.availableForTransfer} available
+                      </Text>
                     </TouchableOpacity>
                   ))
                 )}
@@ -624,6 +655,12 @@ const styles = StyleSheet.create({
   searchResultSku: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  searchResultDetails: {
+    fontSize: 11,
+    color: Colors.warning,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   searchResultStock: {
     fontSize: 12,

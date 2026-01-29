@@ -10,7 +10,9 @@ import {
   UpdateProductRequest,
   UpdateStockRequest,
   SearchProductsParams,
-  ProductSearchResponse
+  ProductSearchResponse,
+  SearchProductsForTransferParams,
+  TransferProductSearchResponse
 } from './config';
 import { requestDeduplicator } from '../../utils/requestDeduplicator';
 import { responseCache } from '../../utils/responseCache';
@@ -234,6 +236,36 @@ export class ProductService {
   ): Promise<ProductsListResponse> {
     const url = `${API_ENDPOINTS.PRODUCTS.BY_CATEGORY(categoryId)}?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
     return await apiClient.get<ProductsListResponse>(url);
+  }
+
+  /**
+   * Search products for transfer operations
+   * Includes availability calculation (quantity - reserved - inTransit)
+   */
+  static async searchProductsForTransfer(
+    params: SearchProductsForTransferParams
+  ): Promise<TransferProductSearchResponse> {
+    const queryString = new URLSearchParams();
+    
+    if (params.query) queryString.append('query', params.query);
+    if (params.fromStoreId) queryString.append('fromStoreId', params.fromStoreId);
+    if (params.fromWarehouseId) queryString.append('fromWarehouseId', params.fromWarehouseId);
+    if (params.fromCompanyId) queryString.append('fromCompanyId', params.fromCompanyId);
+    if (params.page !== undefined) queryString.append('page', params.page.toString());
+    if (params.size !== undefined) queryString.append('size', params.size.toString());
+    if (params.sort) queryString.append('sort', params.sort);
+
+    const url = `${API_ENDPOINTS.PRODUCTS.SEARCH_FOR_TRANSFER}?${queryString.toString()}`;
+    
+    console.log('[ProductService] Searching products for transfer:', params.query || 'all products');
+    if (params.fromStoreId) {
+      console.log('[ProductService] From Store:', params.fromStoreId);
+    }
+    if (params.fromWarehouseId) {
+      console.log('[ProductService] From Warehouse:', params.fromWarehouseId);
+    }
+    
+    return await apiClient.get<TransferProductSearchResponse>(url);
   }
 }
 
