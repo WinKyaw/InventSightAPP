@@ -48,19 +48,83 @@ export const getTransferRequests = async (
   size: number = 20
 ): Promise<PaginatedTransferResponse> => {
   try {
-    const params = {
-      page,
-      size,
-      ...filters,
-    };
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+
+    // Add filters to params
+    if (filters?.status && filters.status !== 'ALL') {
+      params.append('status', filters.status);
+    }
+    if (filters?.priority) {
+      params.append('priority', filters.priority);
+    }
+    if (filters?.locationId) {
+      params.append('locationId', filters.locationId);
+    }
+    if (filters?.locationType) {
+      params.append('locationType', filters.locationType);
+    }
+    if (filters?.searchQuery) {
+      params.append('searchQuery', filters.searchQuery);
+    }
+    if (filters?.fromDate) {
+      params.append('fromDate', filters.fromDate);
+    }
+    if (filters?.toDate) {
+      params.append('toDate', filters.toDate);
+    }
+    if (filters?.myLocationsOnly !== undefined) {
+      params.append('myLocationsOnly', filters.myLocationsOnly.toString());
+    }
+
+    const url = `${API_ENDPOINTS.TRANSFER_REQUESTS.ALL}?${params.toString()}`;
     
-    const response = await apiClient.get<PaginatedTransferResponse>(API_ENDPOINTS.TRANSFER_REQUESTS.ALL, {
-      params,
-    });
+    console.log('🌐 [API] Fetching transfers from:', url);
     
-    return response;
+    const response = await apiClient.get<any>(url);
+    
+    console.log('✅ [API] Raw response:', response);
+    console.log('📦 [API] Response type:', typeof response);
+    console.log('📋 [API] Response keys:', Object.keys(response));
+    
+    // Handle different response structures from backend
+    if (Array.isArray(response)) {
+      // Backend returned array directly
+      console.log('📦 [API] Backend returned array directly');
+      return {
+        requests: response,
+        currentPage: page,
+        totalPages: 1,
+        totalItems: response.length,
+        hasMore: false,
+      };
+    } else if (response.requests) {
+      // Backend returned paginated response
+      console.log('📦 [API] Backend returned paginated response');
+      return response as PaginatedTransferResponse;
+    } else if ('data' in response && Array.isArray(response.data)) {
+      // Backend returned { data: [...] }
+      console.log('📦 [API] Backend returned data wrapper');
+      return {
+        requests: response.data,
+        currentPage: response.currentPage || page,
+        totalPages: response.totalPages || 1,
+        totalItems: response.totalItems || response.data.length,
+        hasMore: response.hasMore || false,
+      };
+    } else {
+      console.warn('⚠️ [API] Unexpected response format:', response);
+      return {
+        requests: [],
+        currentPage: 0,
+        totalPages: 0,
+        totalItems: 0,
+        hasMore: false,
+      };
+    }
   } catch (error) {
-    console.error('❌ Error fetching transfer requests:', error);
+    console.error('❌ [API] Error fetching transfer requests:', error);
     throw error;
   }
 };

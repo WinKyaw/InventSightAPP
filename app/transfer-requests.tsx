@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTransferRequests } from '../hooks/useTransferRequests';
@@ -43,6 +43,14 @@ export default function TransferRequestsScreen() {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('📱 [TransferRequests] Screen focused - refreshing data');
+      refresh();
+    }, [refresh])
+  );
 
   const handleCardPress = (transfer: TransferRequest) => {
     router.push(`/transfer-detail/${transfer.id}`);
@@ -121,7 +129,7 @@ export default function TransferRequestsScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Header 
         title="Transfer Requests" 
-        showBackButton={false}
+        showBackButton={true}
         rightElement={
           <TouchableOpacity
             onPress={() => setShowFilters(!showFilters)}
