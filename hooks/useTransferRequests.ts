@@ -39,22 +39,43 @@ export function useTransferRequests(
         setError(null);
 
         const appliedFilters = newFilters || filters;
+        
+        console.log('🔍 [useTransferRequests] Fetching transfers...');
+        console.log('📄 Page:', page);
+        console.log('📊 Page size:', pageSize);
+        console.log('🔎 Filters:', appliedFilters);
+        
         const response: PaginatedTransferResponse = await getTransferRequests(
           appliedFilters,
           page,
           pageSize
         );
 
-        setTransfers(response.requests || []);
-        setCurrentPage(response.currentPage);
-        setTotalPages(response.totalPages);
-        setTotalItems(response.totalItems);
-        setHasMore(response.hasMore);
+        console.log('✅ [useTransferRequests] API Response:', response);
+        console.log('📦 Transfers received:', response.requests?.length || 0);
+        console.log('📄 Current page:', response.currentPage);
+        console.log('📊 Total items:', response.totalItems);
+        console.log('📚 Total pages:', response.totalPages);
+        console.log('➡️ Has more:', response.hasMore);
+
+        // Handle different response structures
+        const transfersList = response.requests || [];
+        
+        if (transfersList.length === 0) {
+          console.warn('⚠️ [useTransferRequests] No transfers in response');
+          console.warn('Full response:', JSON.stringify(response, null, 2));
+        }
+
+        setTransfers(transfersList);
+        setCurrentPage(response.currentPage || page);
+        setTotalPages(response.totalPages || 0);
+        setTotalItems(response.totalItems || transfersList.length);
+        setHasMore(response.hasMore || false);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to fetch transfers';
         setError(errorMessage);
-        console.error('Error fetching transfers:', err);
+        console.error('❌ [useTransferRequests] Error fetching transfers:', err);
       } finally {
         setLoading(false);
         setRefreshing(false);
