@@ -94,33 +94,60 @@ export const getTransferRequests = async (
       console.log('📦 [API] Backend returned array directly');
       return {
         requests: response,
-        currentPage: page,
-        totalPages: 1,
-        totalItems: response.length,
-        hasMore: false,
+        pagination: {
+          currentPage: page,
+          totalPages: 1,
+          totalElements: response.length,
+          pageSize: size,
+          hasNext: false,
+          hasPrevious: false,
+        },
       };
-    } else if (response.requests) {
-      // Backend returned paginated response
-      console.log('📦 [API] Backend returned paginated response');
+    } else if (response.pagination && response.requests) {
+      // Backend returned new structure with nested pagination
+      console.log('📦 [API] Backend returned paginated response with nested pagination');
       return response as PaginatedTransferResponse;
+    } else if (response.requests) {
+      // Backend returned old paginated response structure
+      console.log('📦 [API] Backend returned old paginated response structure');
+      // Convert old structure to new structure
+      return {
+        requests: response.requests,
+        pagination: {
+          currentPage: response.currentPage ?? page,
+          totalPages: response.totalPages ?? 1,
+          totalElements: response.totalItems ?? response.requests.length,
+          pageSize: size,
+          hasNext: response.hasMore ?? false,
+          hasPrevious: page > 0,
+        },
+      };
     } else if ('data' in response && Array.isArray(response.data)) {
       // Backend returned { data: [...] }
       console.log('📦 [API] Backend returned data wrapper');
       return {
         requests: response.data,
-        currentPage: response.currentPage || page,
-        totalPages: response.totalPages || 1,
-        totalItems: response.totalItems || response.data.length,
-        hasMore: response.hasMore || false,
+        pagination: {
+          currentPage: response.currentPage ?? page,
+          totalPages: response.totalPages ?? 1,
+          totalElements: response.totalItems ?? response.data.length,
+          pageSize: size,
+          hasNext: response.hasMore ?? false,
+          hasPrevious: page > 0,
+        },
       };
     } else {
       console.warn('⚠️ [API] Unexpected response format:', response);
       return {
         requests: [],
-        currentPage: 0,
-        totalPages: 0,
-        totalItems: 0,
-        hasMore: false,
+        pagination: {
+          currentPage: 0,
+          totalPages: 0,
+          totalElements: 0,
+          pageSize: size,
+          hasNext: false,
+          hasPrevious: false,
+        },
       };
     }
   } catch (error) {

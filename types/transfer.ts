@@ -98,33 +98,107 @@ export interface TransferTimeline {
  */
 export interface TransferRequest {
   id: string;
-  fromLocation: TransferLocation;
-  toLocation: TransferLocation;
-  item: TransferItem;
+  
+  // Product information (new backend structure)
+  productId: string;
+  productName?: string | null;
+  productSku?: string | null;
+  itemName?: string | null;    // Legacy field
+  itemSku?: string | null;     // Legacy field
+  
+  // Location structures (for backward compatibility)
+  fromLocation?: TransferLocation;
+  toLocation?: TransferLocation;
+  
+  // Backend location fields
+  fromLocationType?: LocationType;
+  fromLocationId?: string;
+  fromStoreId?: string | null;
+  fromWarehouseId?: string | null;
+  fromStore?: any | null;
+  fromWarehouse?: any | null;
+  
+  toLocationType?: LocationType;
+  toLocationId?: string;
+  toStoreId?: string | null;
+  toWarehouseId?: string | null;
+  toStore?: any | null;
+  toWarehouse?: any | null;
+  
+  // Item (for backward compatibility)
+  item?: TransferItem;
+  
+  // Quantity
   requestedQuantity: number;
   approvedQuantity?: number;
   receivedQuantity?: number;
+  damagedQuantity?: number | null;
+  
+  // Status and priority
   status: TransferStatus;
   priority: TransferPriority;
-  reason: string;
-  notes?: string;
-  requestedBy: {
+  
+  // Users
+  requestedBy?: {
     id: string;
     name: string;
     email?: string;
   };
+  requestedByUserId?: string | null;
+  requestedByName?: string | null;
+  
   approvedBy?: {
     id: string;
     name: string;
   };
+  approvedByUserId?: string | null;
+  approvedByName?: string | null;
+  
+  receivedByUser?: any | null;
+  receivedByUserId?: string | null;
+  receiverName?: string | null;
+  
+  // Carrier/Handler
   carrier?: CarrierInfo;
-  receiver?: ReceiverInfo;
-  timeline: TransferTimeline;
+  carrierUserId?: string | null;
+  carrierName?: string | null;
+  carrierPhone?: string | null;
+  carrierVehicle?: string | null;
+  
+  handlerUserId?: string | null;
+  handlerName?: string | null;
+  
+  // Timeline (for backward compatibility)
+  timeline?: TransferTimeline;
+  
+  // Timestamps (new backend structure)
+  requestedAt?: string;
+  approvedAt?: string | null;
+  shippedAt?: string | null;
+  receivedAt?: string | null;
+  completedAt?: string | null;
+  estimatedDeliveryAt?: string | null;
+  
+  // Additional info
+  reason?: string;
+  notes?: string;
   approvalNotes?: string;
   receiptNotes?: string;
   rejectionReason?: string;
+  transportMethod?: string | null;
+  conditionOnArrival?: string | null;
+  
+  // Other fields
+  receiver?: ReceiverInfo;
+  isReceiptConfirmed?: boolean;
+  receiverSignatureUrl?: string | null;
+  proofOfDeliveryUrl?: string | null;
+  
+  // Audit
   createdAt?: string;
   updatedAt?: string;
+  createdBy?: string | null;
+  updatedBy?: string | null;
 }
 
 /**
@@ -186,10 +260,20 @@ export interface TransferFilters {
  */
 export interface PaginatedTransferResponse {
   requests: TransferRequest[];
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
-  hasMore: boolean;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalElements: number;
+    pageSize: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+  success?: boolean;
+  // For backward compatibility
+  currentPage?: number;
+  totalPages?: number;
+  totalItems?: number;
+  hasMore?: boolean;
 }
 
 /**

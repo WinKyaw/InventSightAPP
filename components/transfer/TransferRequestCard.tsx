@@ -13,6 +13,22 @@ interface TransferRequestCardProps {
 }
 
 /**
+ * Get product name from transfer request
+ * Handles multiple field names and null values
+ */
+const getProductName = (transfer: TransferRequest): string => {
+  return transfer.productName || transfer.itemName || transfer.item?.name || 'Unknown Product';
+};
+
+/**
+ * Get product SKU from transfer request
+ * Handles multiple field names and null values
+ */
+const getProductSku = (transfer: TransferRequest): string => {
+  return transfer.productSku || transfer.itemSku || transfer.item?.sku || 'N/A';
+};
+
+/**
  * Card component for displaying transfer request in list
  */
 export function TransferRequestCard({
@@ -21,6 +37,9 @@ export function TransferRequestCard({
   onActionPress,
   showActions = false,
 }: TransferRequestCardProps) {
+  const productName = getProductName(transfer);
+  const productSku = getProductSku(transfer);
+  
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -45,9 +64,19 @@ export function TransferRequestCard({
     }
   };
 
-  const getLocationIcon = (type: string) => {
+  const getLocationIcon = (type?: string) => {
     return type === 'WAREHOUSE' ? 'business' : 'storefront';
   };
+  
+  // Safe location access
+  const fromLocationName = transfer.fromLocation?.name || transfer.fromWarehouse?.name || transfer.fromStore?.name || 'Unknown';
+  const fromLocationType = transfer.fromLocation?.type || transfer.fromLocationType;
+  const toLocationName = transfer.toLocation?.name || transfer.toWarehouse?.name || transfer.toStore?.name || 'Unknown';
+  const toLocationType = transfer.toLocation?.type || transfer.toLocationType;
+  
+  // Safe timeline access
+  const requestedAt = transfer.timeline?.requestedAt || transfer.requestedAt || '';
+  const requestedByName = transfer.requestedBy?.name || transfer.requestedByName || 'Unknown';
 
   return (
     <TouchableOpacity
@@ -72,7 +101,7 @@ export function TransferRequestCard({
       <View style={styles.itemSection}>
         <Ionicons name="cube" size={20} color={Colors.primary} />
         <Text style={styles.itemName}>
-          {transfer.item.name} ({transfer.requestedQuantity} units)
+          {productName} ({transfer.requestedQuantity} units)
         </Text>
       </View>
 
@@ -80,27 +109,27 @@ export function TransferRequestCard({
       <View style={styles.locationSection}>
         <View style={styles.location}>
           <Ionicons
-            name={getLocationIcon(transfer.fromLocation.type) as any}
+            name={getLocationIcon(fromLocationType) as any}
             size={16}
             color={Colors.primary}
           />
-          <Text style={styles.locationText}>{transfer.fromLocation.name}</Text>
+          <Text style={styles.locationText}>{fromLocationName}</Text>
         </View>
         <Ionicons name="arrow-forward" size={16} color={Colors.gray} style={styles.arrow} />
         <View style={styles.location}>
           <Ionicons
-            name={getLocationIcon(transfer.toLocation.type) as any}
+            name={getLocationIcon(toLocationType) as any}
             size={16}
             color={Colors.success}
           />
-          <Text style={styles.locationText}>{transfer.toLocation.name}</Text>
+          <Text style={styles.locationText}>{toLocationName}</Text>
         </View>
       </View>
 
       {/* Details */}
       <View style={styles.detailsSection}>
         <Text style={styles.detail}>
-          Requested: {formatDate(transfer.timeline.requestedAt)} by {transfer.requestedBy.name}
+          Requested: {formatDate(requestedAt)} by {requestedByName}
         </Text>
         {transfer.reason && (
           <Text style={styles.reason} numberOfLines={2}>
@@ -110,12 +139,12 @@ export function TransferRequestCard({
       </View>
 
       {/* Carrier Info (if in transit) */}
-      {transfer.carrier && (
+      {(transfer.carrier || transfer.carrierName) && (
         <View style={styles.carrierSection}>
           <Ionicons name="car" size={16} color={Colors.warning} />
           <Text style={styles.carrierText}>
-            Carrier: {transfer.carrier.name}
-            {transfer.carrier.vehicle && ` (${transfer.carrier.vehicle})`}
+            Carrier: {transfer.carrier?.name || transfer.carrierName}
+            {(transfer.carrier?.vehicle || transfer.carrierVehicle) && ` (${transfer.carrier?.vehicle || transfer.carrierVehicle})`}
           </Text>
         </View>
       )}
