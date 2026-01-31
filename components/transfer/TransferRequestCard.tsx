@@ -30,21 +30,35 @@ const getProductSku = (transfer: TransferRequest): string => {
 
 /**
  * Get "FROM" location name
- * Handles both Store and Warehouse nested objects
+ * Handles both Store and Warehouse with multiple field names
  */
 const getFromLocationName = (transfer: TransferRequest): string => {
+  console.log('🔍 Getting FROM location name:', {
+    type: transfer.fromLocationType,
+    warehouse: transfer.fromWarehouse,
+    store: transfer.fromStore,
+  });
+
   // Try warehouse first
-  if (transfer.fromWarehouse) {
-    return transfer.fromWarehouse.name || 
-           transfer.fromWarehouse.warehouseName || 
-           'Unknown Warehouse';
+  if (transfer.fromLocationType === 'WAREHOUSE' || transfer.fromWarehouse) {
+    const warehouse = transfer.fromWarehouse;
+    if (warehouse) {
+      return warehouse.name || 
+             warehouse.warehouseName || 
+             warehouse.code ||
+             'Unknown Warehouse';
+    }
   }
   
   // Try store
-  if (transfer.fromStore) {
-    return transfer.fromStore.storeName || 
-           transfer.fromStore.name || 
-           'Unknown Store';
+  if (transfer.fromLocationType === 'STORE' || transfer.fromStore) {
+    const store = transfer.fromStore;
+    if (store) {
+      return store.storeName || 
+             store.name || 
+             store.storeCode ||
+             'Unknown Store';
+    }
   }
   
   // Try legacy location field
@@ -52,26 +66,40 @@ const getFromLocationName = (transfer: TransferRequest): string => {
     return transfer.fromLocation.name;
   }
   
-  return 'Unknown';
+  return 'Unknown Location';
 };
 
 /**
  * Get "TO" location name
- * Handles both Store and Warehouse nested objects
+ * Handles both Store and Warehouse with multiple field names
  */
 const getToLocationName = (transfer: TransferRequest): string => {
+  console.log('🔍 Getting TO location name:', {
+    type: transfer.toLocationType,
+    warehouse: transfer.toWarehouse,
+    store: transfer.toStore,
+  });
+
   // Try warehouse first
-  if (transfer.toWarehouse) {
-    return transfer.toWarehouse.name || 
-           transfer.toWarehouse.warehouseName || 
-           'Unknown Warehouse';
+  if (transfer.toLocationType === 'WAREHOUSE' || transfer.toWarehouse) {
+    const warehouse = transfer.toWarehouse;
+    if (warehouse) {
+      return warehouse.name || 
+             warehouse.warehouseName || 
+             warehouse.code ||
+             'Unknown Warehouse';
+    }
   }
   
   // Try store
-  if (transfer.toStore) {
-    return transfer.toStore.storeName || 
-           transfer.toStore.name || 
-           'Unknown Store';
+  if (transfer.toLocationType === 'STORE' || transfer.toStore) {
+    const store = transfer.toStore;
+    if (store) {
+      return store.storeName || 
+             store.name || 
+             store.storeCode ||
+             'Unknown Store';
+    }
   }
   
   // Try legacy location field
@@ -79,7 +107,7 @@ const getToLocationName = (transfer: TransferRequest): string => {
     return transfer.toLocation.name;
   }
   
-  return 'Unknown';
+  return 'Unknown Location';
 };
 
 /**
@@ -125,10 +153,20 @@ export function TransferRequestCard({
   onActionPress,
   showActions = false,
 }: TransferRequestCardProps) {
-  const productName = getProductName(transfer);
-  const productSku = getProductSku(transfer);
-  const fromLocationName = getFromLocationName(transfer);
-  const toLocationName = getToLocationName(transfer);
+  try {
+    // ✅ Debug logging
+    console.log('📦 Transfer card data:', {
+      id: transfer.id.substring(0, 8),
+      fromStore: transfer.fromStore,
+      fromWarehouse: transfer.fromWarehouse,
+      toStore: transfer.toStore,
+      toWarehouse: transfer.toWarehouse,
+    });
+
+    const productName = getProductName(transfer);
+    const productSku = getProductSku(transfer);
+    const fromLocationName = getFromLocationName(transfer);
+    const toLocationName = getToLocationName(transfer);
   const requesterName = getRequesterName(transfer);
   
   const formatDate = (dateStr?: string) => {
@@ -250,6 +288,22 @@ export function TransferRequestCard({
       )}
     </TouchableOpacity>
   );
+  } catch (error) {
+    console.error('❌ Error rendering transfer card:', error);
+    console.error('Transfer data:', transfer);
+    
+    // ✅ Fallback UI if card fails to render
+    return (
+      <View style={[styles.card, { backgroundColor: '#FFEBEE' }]}>
+        <Text style={{ color: '#DC3545', fontWeight: '600' }}>
+          Error displaying transfer
+        </Text>
+        <Text style={{ color: '#666', fontSize: 12, marginTop: 4 }}>
+          ID: {transfer.id ? transfer.id.substring(0, 8) : 'Unknown'}
+        </Text>
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
