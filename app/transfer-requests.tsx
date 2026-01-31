@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingBottom: 140, // Space for bottom nav (60px) + FAB
+    paddingBottom: 100, // ✅ Space for bottom nav (80px) + 20px margin
   },
   listContentEmpty: {
     flexGrow: 1,
@@ -281,6 +281,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
+    paddingBottom: 100, // ✅ Account for nav bar
   },
   emptyTitle: {
     fontSize: 20,
@@ -314,6 +315,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
+    paddingBottom: 20, // ✅ Extra space before nav
     gap: 8,
   },
   footerLoaderText: {
@@ -323,7 +325,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 76, // Above bottom nav (60px) + margin (16px)
+    bottom: 90, // ✅ 80px nav + 10px margin (consistent with other pages)
     width: 56,
     height: 56,
     borderRadius: 28,

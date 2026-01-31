@@ -4,7 +4,7 @@ import { TransferStatus } from '../../types/transfer';
 import { Colors } from '../../constants/Colors';
 
 interface TransferStatusBadgeProps {
-  status: TransferStatus;
+  status: TransferStatus | string;
   size?: 'small' | 'medium' | 'large';
 }
 
@@ -14,61 +14,84 @@ interface TransferStatusBadgeProps {
  */
 export function TransferStatusBadge({ status, size = 'medium' }: TransferStatusBadgeProps) {
   const getStatusConfig = () => {
-    switch (status) {
-      case TransferStatus.PENDING:
+    // ✅ Handle null/undefined status
+    if (!status) {
+      return {
+        label: 'Unknown',
+        color: '#6B7280', // Gray
+        backgroundColor: '#F3F4F6',
+        icon: '⚪',
+      };
+    }
+
+    // ✅ Normalize status to uppercase
+    const normalizedStatus = status.toString().toUpperCase();
+
+    switch (normalizedStatus) {
+      case 'PENDING':
         return {
           label: 'Pending',
           color: '#3B82F6', // Blue
           backgroundColor: '#DBEAFE',
           icon: '🔵',
         };
-      case TransferStatus.APPROVED:
+      case 'APPROVED':
         return {
           label: 'Approved',
           color: '#10B981', // Green
           backgroundColor: '#D1FAE5',
           icon: '🟢',
         };
-      case TransferStatus.IN_TRANSIT:
+      case 'IN_TRANSIT':
+      case 'INTRANSIT':
         return {
           label: 'In Transit',
           color: '#F59E0B', // Yellow
           backgroundColor: '#FEF3C7',
           icon: '🟡',
         };
-      case TransferStatus.DELIVERED:
+      case 'DELIVERED':
         return {
           label: 'Delivered',
           color: '#F97316', // Orange
           backgroundColor: '#FFEDD5',
           icon: '🟠',
         };
-      case TransferStatus.RECEIVED:
-      case TransferStatus.COMPLETED:
+      case 'RECEIVED':
+      case 'COMPLETED':
         return {
-          label: status === TransferStatus.RECEIVED ? 'Received' : 'Completed',
+          label: normalizedStatus === 'RECEIVED' ? 'Received' : 'Completed',
           color: '#059669', // Success green
           backgroundColor: '#D1FAE5',
           icon: '✅',
         };
-      case TransferStatus.PARTIALLY_RECEIVED:
+      case 'PARTIALLY_RECEIVED':
         return {
           label: 'Partial',
           color: '#8B5CF6', // Purple
           backgroundColor: '#EDE9FE',
           icon: '⚡',
         };
-      case TransferStatus.REJECTED:
-      case TransferStatus.CANCELLED:
+      case 'REJECTED':
         return {
-          label: status === TransferStatus.REJECTED ? 'Rejected' : 'Cancelled',
+          label: 'Rejected',
+          color: '#EF4444', // Red
+          backgroundColor: '#FEE2E2',
+          icon: '❌',
+        };
+      case 'CANCELLED':
+      case 'CANCELED':
+        return {
+          label: 'Cancelled',
           color: '#EF4444', // Red
           backgroundColor: '#FEE2E2',
           icon: '❌',
         };
       default:
+        // ✅ Default case for unknown statuses
+        console.warn(`Unknown transfer status: ${status}`);
         return {
-          label: status,
+          label: status.toString().charAt(0).toUpperCase() + status.toString().slice(1).toLowerCase(),
           color: '#6B7280', // Gray
           backgroundColor: '#F3F4F6',
           icon: '⚪',
@@ -77,6 +100,12 @@ export function TransferStatusBadge({ status, size = 'medium' }: TransferStatusB
   };
 
   const config = getStatusConfig();
+  
+  // ✅ Safety check
+  if (!config || !config.label) {
+    return null;
+  }
+
   const sizeStyles = getSizeStyles(size);
 
   return (
