@@ -16,6 +16,7 @@ import { useTransferRequests } from '../hooks/useTransferRequests';
 import { TransferFilters } from '../components/transfer';
 import { TransferRequestCard } from '../components/transfer/TransferRequestCard';
 import { Header } from '../components/shared/Header';
+import { BottomNav } from '../components/shared/BottomNav';
 import { Colors } from '../constants/Colors';
 import { TransferRequest, TransferFilters as ITransferFilters } from '../types/transfer';
 
@@ -195,6 +196,9 @@ export default function TransferRequestsScreen() {
         showsVerticalScrollIndicator={false}
       />
 
+      {/* Bottom Navigation */}
+      <BottomNav />
+
       {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
@@ -263,7 +267,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingBottom: 80,
+    paddingBottom: 140, // Space for bottom nav (60px) + FAB
   },
   listContentEmpty: {
     flexGrow: 1,
@@ -319,7 +323,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    bottom: 76, // Above bottom nav (60px) + margin (16px)
     width: 56,
     height: 56,
     borderRadius: 28,

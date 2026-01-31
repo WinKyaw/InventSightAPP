@@ -29,6 +29,94 @@ const getProductSku = (transfer: TransferRequest): string => {
 };
 
 /**
+ * Get "FROM" location name
+ * Handles both Store and Warehouse nested objects
+ */
+const getFromLocationName = (transfer: TransferRequest): string => {
+  // Try warehouse first
+  if (transfer.fromWarehouse) {
+    return transfer.fromWarehouse.name || 
+           transfer.fromWarehouse.warehouseName || 
+           'Unknown Warehouse';
+  }
+  
+  // Try store
+  if (transfer.fromStore) {
+    return transfer.fromStore.storeName || 
+           transfer.fromStore.name || 
+           'Unknown Store';
+  }
+  
+  // Try legacy location field
+  if (transfer.fromLocation?.name) {
+    return transfer.fromLocation.name;
+  }
+  
+  return 'Unknown';
+};
+
+/**
+ * Get "TO" location name
+ * Handles both Store and Warehouse nested objects
+ */
+const getToLocationName = (transfer: TransferRequest): string => {
+  // Try warehouse first
+  if (transfer.toWarehouse) {
+    return transfer.toWarehouse.name || 
+           transfer.toWarehouse.warehouseName || 
+           'Unknown Warehouse';
+  }
+  
+  // Try store
+  if (transfer.toStore) {
+    return transfer.toStore.storeName || 
+           transfer.toStore.name || 
+           'Unknown Store';
+  }
+  
+  // Try legacy location field
+  if (transfer.toLocation?.name) {
+    return transfer.toLocation.name;
+  }
+  
+  return 'Unknown';
+};
+
+/**
+ * Get requester name from nested User object
+ */
+const getRequesterName = (transfer: TransferRequest): string => {
+  // Try requestedByName first (flat field)
+  if (transfer.requestedByName) {
+    return transfer.requestedByName;
+  }
+  
+  // Try to build from requestedBy object
+  if (transfer.requestedBy) {
+    const user = transfer.requestedBy;
+    // Try to build full name
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    // Fall back to username
+    if (user.username) {
+      return user.username;
+    }
+    // Fall back to name field if present
+    if (user.name) {
+      return user.name;
+    }
+  }
+  
+  // Try legacy timeline field
+  if (transfer.timeline?.requestedBy?.name) {
+    return transfer.timeline.requestedBy.name;
+  }
+  
+  return 'Unknown';
+};
+
+/**
  * Card component for displaying transfer request in list
  */
 export function TransferRequestCard({
@@ -39,6 +127,9 @@ export function TransferRequestCard({
 }: TransferRequestCardProps) {
   const productName = getProductName(transfer);
   const productSku = getProductSku(transfer);
+  const fromLocationName = getFromLocationName(transfer);
+  const toLocationName = getToLocationName(transfer);
+  const requesterName = getRequesterName(transfer);
   
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -68,15 +159,12 @@ export function TransferRequestCard({
     return type === 'WAREHOUSE' ? 'business' : 'storefront';
   };
   
-  // Safe location access
-  const fromLocationName = transfer.fromLocation?.name || transfer.fromWarehouse?.name || transfer.fromStore?.name || 'Unknown';
+  // Location types
   const fromLocationType = transfer.fromLocation?.type || transfer.fromLocationType;
-  const toLocationName = transfer.toLocation?.name || transfer.toWarehouse?.name || transfer.toStore?.name || 'Unknown';
   const toLocationType = transfer.toLocation?.type || transfer.toLocationType;
   
-  // Safe timeline access
+  // Timestamp
   const requestedAt = transfer.timeline?.requestedAt || transfer.requestedAt || '';
-  const requestedByName = transfer.requestedBy?.name || transfer.requestedByName || 'Unknown';
 
   return (
     <TouchableOpacity
@@ -129,7 +217,7 @@ export function TransferRequestCard({
       {/* Details */}
       <View style={styles.detailsSection}>
         <Text style={styles.detail}>
-          Requested: {formatDate(requestedAt)} by {requestedByName}
+          Requested: {formatDate(requestedAt)} by {requesterName}
         </Text>
         {transfer.reason && (
           <Text style={styles.reason} numberOfLines={2}>
