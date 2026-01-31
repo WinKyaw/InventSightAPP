@@ -45,7 +45,6 @@ const getFromLocationName = (transfer: TransferRequest): string => {
     if (warehouse) {
       return warehouse.name || 
              warehouse.warehouseName || 
-             warehouse.code ||
              'Unknown Warehouse';
     }
   }
@@ -86,7 +85,6 @@ const getToLocationName = (transfer: TransferRequest): string => {
     if (warehouse) {
       return warehouse.name || 
              warehouse.warehouseName || 
-             warehouse.code ||
              'Unknown Warehouse';
     }
   }
