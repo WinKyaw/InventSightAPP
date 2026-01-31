@@ -146,18 +146,24 @@ export function ApproveTransferModal({
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
         {/* Transfer Info */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>{transfer.item.name}</Text>
+          <Text style={styles.infoTitle}>
+            {transfer.productName || transfer.itemName || transfer.item?.name || 'Unknown Product'}
+          </Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Requested:</Text>
             <Text style={styles.infoValue}>{transfer.requestedQuantity} units</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>From:</Text>
-            <Text style={styles.infoValue}>{transfer.fromLocation.name}</Text>
+            <Text style={styles.infoValue}>
+              {transfer.fromLocation?.name || transfer.fromWarehouse?.name || transfer.fromStore?.name || 'Unknown'}
+            </Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>To:</Text>
-            <Text style={styles.infoValue}>{transfer.toLocation.name}</Text>
+            <Text style={styles.infoValue}>
+              {transfer.toLocation?.name || transfer.toWarehouse?.name || transfer.toStore?.name || 'Unknown'}
+            </Text>
           </View>
         </View>
 

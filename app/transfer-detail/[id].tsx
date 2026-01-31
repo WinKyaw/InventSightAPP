@@ -113,6 +113,25 @@ export default function TransferDetailScreen() {
     }
   };
 
+  // Construct timeline from either nested timeline or flat fields
+  const getTimeline = () => {
+    if (transfer?.timeline) {
+      return transfer.timeline;
+    }
+    // Construct from flat fields
+    return {
+      requestedAt: transfer?.requestedAt || '',
+      requestedBy: transfer?.requestedBy || undefined,
+      approvedAt: transfer?.approvedAt || undefined,
+      approvedBy: transfer?.approvedBy || undefined,
+      shippedAt: transfer?.shippedAt || undefined,
+      estimatedDeliveryAt: transfer?.estimatedDeliveryAt || undefined,
+      deliveredAt: transfer?.receivedAt || undefined, // Backend uses receivedAt for delivery
+      receivedAt: transfer?.receivedAt || undefined,
+      receivedBy: transfer?.receivedByUser || undefined,
+    };
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -176,15 +195,19 @@ export default function TransferDetailScreen() {
           <View style={styles.locationCard}>
             <View style={styles.locationHeader}>
               <Ionicons
-                name={transfer.fromLocation.type === 'WAREHOUSE' ? 'business' : 'storefront'}
+                name={(transfer.fromLocation?.type || transfer.fromLocationType) === 'WAREHOUSE' ? 'business' : 'storefront'}
                 size={20}
                 color={Colors.primary}
               />
               <Text style={styles.locationLabel}>From</Text>
             </View>
-            <Text style={styles.locationName}>{transfer.fromLocation.name}</Text>
-            {transfer.fromLocation.address && (
-              <Text style={styles.locationAddress}>{transfer.fromLocation.address}</Text>
+            <Text style={styles.locationName}>
+              {transfer.fromLocation?.name || transfer.fromWarehouse?.name || transfer.fromStore?.name || 'Unknown'}
+            </Text>
+            {(transfer.fromLocation?.address || transfer.fromWarehouse?.address || transfer.fromStore?.address) && (
+              <Text style={styles.locationAddress}>
+                {transfer.fromLocation?.address || transfer.fromWarehouse?.address || transfer.fromStore?.address}
+              </Text>
             )}
           </View>
 
@@ -195,15 +218,19 @@ export default function TransferDetailScreen() {
           <View style={styles.locationCard}>
             <View style={styles.locationHeader}>
               <Ionicons
-                name={transfer.toLocation.type === 'WAREHOUSE' ? 'business' : 'storefront'}
+                name={(transfer.toLocation?.type || transfer.toLocationType) === 'WAREHOUSE' ? 'business' : 'storefront'}
                 size={20}
                 color={Colors.success}
               />
               <Text style={styles.locationLabel}>To</Text>
             </View>
-            <Text style={styles.locationName}>{transfer.toLocation.name}</Text>
-            {transfer.toLocation.address && (
-              <Text style={styles.locationAddress}>{transfer.toLocation.address}</Text>
+            <Text style={styles.locationName}>
+              {transfer.toLocation?.name || transfer.toWarehouse?.name || transfer.toStore?.name || 'Unknown'}
+            </Text>
+            {(transfer.toLocation?.address || transfer.toWarehouse?.address || transfer.toStore?.address) && (
+              <Text style={styles.locationAddress}>
+                {transfer.toLocation?.address || transfer.toWarehouse?.address || transfer.toStore?.address}
+              </Text>
             )}
           </View>
         </View>
@@ -216,8 +243,12 @@ export default function TransferDetailScreen() {
             <View style={styles.itemHeader}>
               <Ionicons name="cube" size={24} color={Colors.primary} />
               <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{transfer.item.name}</Text>
-                <Text style={styles.itemSku}>SKU: {transfer.item.sku}</Text>
+                <Text style={styles.itemName}>
+                  {transfer.productName || transfer.itemName || transfer.item?.name || 'Unknown Product'}
+                </Text>
+                <Text style={styles.itemSku}>
+                  SKU: {transfer.productSku || transfer.itemSku || transfer.item?.sku || 'N/A'}
+                </Text>
               </View>
             </View>
 
@@ -249,28 +280,28 @@ export default function TransferDetailScreen() {
         {/* Timeline */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Timeline</Text>
-          <TransferTimeline timeline={transfer.timeline} />
+          <TransferTimeline timeline={getTimeline()} />
         </View>
 
         {/* Carrier Info */}
-        {transfer.carrier && (
+        {(transfer.carrier || transfer.carrierName) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Carrier Information</Text>
             <View style={styles.infoCard}>
               <View style={styles.infoRow}>
                 <Ionicons name="person" size={20} color={Colors.primary} />
-                <Text style={styles.infoText}>{transfer.carrier.name}</Text>
+                <Text style={styles.infoText}>{transfer.carrier?.name || transfer.carrierName}</Text>
               </View>
-              {transfer.carrier.phone && (
+              {(transfer.carrier?.phone || transfer.carrierPhone) && (
                 <View style={styles.infoRow}>
                   <Ionicons name="call" size={20} color={Colors.primary} />
-                  <Text style={styles.infoText}>{transfer.carrier.phone}</Text>
+                  <Text style={styles.infoText}>{transfer.carrier?.phone || transfer.carrierPhone}</Text>
                 </View>
               )}
-              {transfer.carrier.vehicle && (
+              {(transfer.carrier?.vehicle || transfer.carrierVehicle) && (
                 <View style={styles.infoRow}>
                   <Ionicons name="car" size={20} color={Colors.primary} />
-                  <Text style={styles.infoText}>{transfer.carrier.vehicle}</Text>
+                  <Text style={styles.infoText}>{transfer.carrier?.vehicle || transfer.carrierVehicle}</Text>
                 </View>
               )}
             </View>

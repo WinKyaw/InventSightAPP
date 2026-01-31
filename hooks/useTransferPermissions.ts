@@ -48,8 +48,9 @@ export function useTransferPermissions() {
     if (!user) return false;
     
     // Can cancel if it's their own request and it's still pending
+    const requestedById = transfer.requestedBy?.id || transfer.requestedByUserId;
     return (
-      transfer.requestedBy.id === user.id &&
+      requestedById === user.id &&
       transfer.status === TransferStatus.PENDING
     );
   };
@@ -127,17 +128,21 @@ export function useTransferPermissions() {
     if (isGMPlus) return true;
 
     // Check if user is the requester
-    if (transfer.requestedBy.id === user.id) return true;
+    const requestedById = transfer.requestedBy?.id || transfer.requestedByUserId;
+    if (requestedById === user.id) return true;
 
     // Check if user has access to either location involved
-    const hasFromAccess = hasLocationAccess(
-      transfer.fromLocation.id,
-      transfer.fromLocation.type
-    );
-    const hasToAccess = hasLocationAccess(
-      transfer.toLocation.id,
-      transfer.toLocation.type
-    );
+    const fromLocationId = transfer.fromLocation?.id || transfer.fromLocationId;
+    const fromLocationType = transfer.fromLocation?.type || transfer.fromLocationType;
+    const toLocationId = transfer.toLocation?.id || transfer.toLocationId;
+    const toLocationType = transfer.toLocation?.type || transfer.toLocationType;
+    
+    const hasFromAccess = fromLocationId && fromLocationType 
+      ? hasLocationAccess(fromLocationId, fromLocationType)
+      : false;
+    const hasToAccess = toLocationId && toLocationType
+      ? hasLocationAccess(toLocationId, toLocationType)
+      : false;
 
     return hasFromAccess || hasToAccess;
   };
