@@ -1,6 +1,49 @@
 // Transfer Request Types and Interfaces
 
 /**
+ * Store interface for nested store objects
+ */
+export interface Store {
+  id: string;
+  storeName: string;
+  name?: string;
+  storeCode?: string;
+  address?: string;
+}
+
+/**
+ * Warehouse interface for nested warehouse objects
+ */
+export interface Warehouse {
+  id: string;
+  name: string;
+  warehouseName?: string;
+  address?: string;
+  capacity?: number;
+}
+
+/**
+ * User interface for nested user objects
+ */
+export interface User {
+  id: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  email?: string;
+}
+
+/**
+ * Company interface for nested company objects
+ */
+export interface Company {
+  id: string;
+  name: string;
+  companyCode?: string;
+}
+
+/**
  * Transfer request status enum
  */
 export enum TransferStatus {
@@ -110,20 +153,26 @@ export interface TransferRequest {
   fromLocation?: TransferLocation;
   toLocation?: TransferLocation;
   
-  // Backend location fields
+  // Backend location fields with properly typed nested objects
   fromLocationType?: LocationType;
   fromLocationId?: string;
   fromStoreId?: string | null;
   fromWarehouseId?: string | null;
-  fromStore?: any | null;
-  fromWarehouse?: any | null;
+  fromStore?: Store | null;        // ✅ Properly typed nested object
+  fromWarehouse?: Warehouse | null; // ✅ Properly typed nested object
   
   toLocationType?: LocationType;
   toLocationId?: string;
   toStoreId?: string | null;
   toWarehouseId?: string | null;
-  toStore?: any | null;
-  toWarehouse?: any | null;
+  toStore?: Store | null;          // ✅ Properly typed nested object
+  toWarehouse?: Warehouse | null;  // ✅ Properly typed nested object
+  
+  // Company (nested object)
+  companyId?: string | null;
+  fromCompanyId?: string | null;
+  toCompanyId?: string | null;
+  company?: Company | null;        // ✅ Properly typed nested object
   
   // Item (for backward compatibility)
   item?: TransferItem;
@@ -138,23 +187,16 @@ export interface TransferRequest {
   status: TransferStatus;
   priority: TransferPriority;
   
-  // Users
-  requestedBy?: {
-    id: string;
-    name: string;
-    email?: string;
-  };
+  // Users with properly typed nested objects
+  requestedBy?: User | null;       // ✅ Properly typed nested object
   requestedByUserId?: string | null;
   requestedByName?: string | null;
   
-  approvedBy?: {
-    id: string;
-    name: string;
-  };
+  approvedBy?: User | null;        // ✅ Properly typed nested object
   approvedByUserId?: string | null;
   approvedByName?: string | null;
   
-  receivedByUser?: any | null;
+  receivedByUser?: User | null;    // ✅ Properly typed nested object
   receivedByUserId?: string | null;
   receiverName?: string | null;
   
