@@ -53,24 +53,35 @@ export function useTransferRequests(
 
         console.log('✅ [useTransferRequests] API Response:', response);
         console.log('📦 Transfers received:', response.requests?.length || 0);
-        console.log('📄 Current page:', response.currentPage);
-        console.log('📊 Total items:', response.totalItems);
-        console.log('📚 Total pages:', response.totalPages);
-        console.log('➡️ Has more:', response.hasMore);
+
+        // ✅ FIXED: Extract pagination from nested structure
+        const pagination = response.pagination || {
+          currentPage: response.currentPage ?? page,
+          totalPages: response.totalPages ?? 0,
+          totalElements: response.totalItems ?? 0,
+          hasNext: response.hasMore ?? false,
+          hasPrevious: false,
+          pageSize: pageSize,
+        };
+
+        console.log('📄 Current page:', pagination.currentPage);
+        console.log('📊 Total items:', pagination.totalElements);
+        console.log('📚 Total pages:', pagination.totalPages);
+        console.log('➡️ Has more:', pagination.hasNext);
 
         // Handle different response structures
         const transfersList = response.requests || [];
         
         if (transfersList.length === 0) {
           console.warn('⚠️ [useTransferRequests] No transfers in response');
-          console.warn('Full response:', JSON.stringify(response, null, 2));
         }
 
         setTransfers(transfersList);
-        setCurrentPage(response.currentPage || page);
-        setTotalPages(response.totalPages || 0);
-        setTotalItems(response.totalItems || transfersList.length);
-        setHasMore(response.hasMore || false);
+        setCurrentPage(pagination.currentPage);
+        setTotalPages(pagination.totalPages);
+        setTotalItems(pagination.totalElements);
+        setHasMore(pagination.hasNext);
+        
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to fetch transfers';
