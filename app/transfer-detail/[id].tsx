@@ -29,6 +29,9 @@ export default function TransferDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isAuthenticated } = useAuth();
   
+  // Log the ID for debugging
+  console.log('📦 Transfer Detail - ID from params:', id);
+  
   const { transfer, loading, error, refresh, setTransfer } = useTransferRequest(id);
   const {
     canApproveTransfer,
@@ -132,6 +135,88 @@ export default function TransferDetailScreen() {
     };
   };
 
+  /**
+   * Get FROM location name from nested object
+   */
+  const getFromLocationName = (): string => {
+    if (!transfer) return 'Unknown';
+    
+    console.log('🔍 FROM location data:', {
+      type: transfer.fromLocationType,
+      warehouse: transfer.fromWarehouse,
+      store: transfer.fromStore,
+    });
+    
+    // Check nested objects with proper field names
+    if (transfer.fromLocationType === 'WAREHOUSE' && transfer.fromWarehouse) {
+      return transfer.fromWarehouse.name || 
+             transfer.fromWarehouse.warehouseName || 
+             'Unknown Warehouse';
+    }
+    
+    if (transfer.fromLocationType === 'STORE' && transfer.fromStore) {
+      return transfer.fromStore.storeName || 
+             transfer.fromStore.name || 
+             'Unknown Store';
+    }
+    
+    // Fallback to old structure
+    if (transfer.fromLocation?.name) {
+      return transfer.fromLocation.name;
+    }
+    
+    return 'Unknown Location';
+  };
+
+  /**
+   * Get TO location name from nested object
+   */
+  const getToLocationName = (): string => {
+    if (!transfer) return 'Unknown';
+    
+    console.log('🔍 TO location data:', {
+      type: transfer.toLocationType,
+      warehouse: transfer.toWarehouse,
+      store: transfer.toStore,
+    });
+    
+    // Check nested objects with proper field names
+    if (transfer.toLocationType === 'WAREHOUSE' && transfer.toWarehouse) {
+      return transfer.toWarehouse.name || 
+             transfer.toWarehouse.warehouseName || 
+             'Unknown Warehouse';
+    }
+    
+    if (transfer.toLocationType === 'STORE' && transfer.toStore) {
+      return transfer.toStore.storeName || 
+             transfer.toStore.name || 
+             'Unknown Store';
+    }
+    
+    // Fallback to old structure
+    if (transfer.toLocation?.name) {
+      return transfer.toLocation.name;
+    }
+    
+    return 'Unknown Location';
+  };
+
+  /**
+   * Get product name
+   */
+  const getProductName = (): string => {
+    if (!transfer) return 'Unknown Product';
+    return transfer.productName || transfer.itemName || transfer.item?.name || 'Unknown Product';
+  };
+
+  /**
+   * Get product SKU
+   */
+  const getProductSku = (): string => {
+    if (!transfer) return 'N/A';
+    return transfer.productSku || transfer.itemSku || transfer.item?.sku || 'N/A';
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -168,9 +253,12 @@ export default function TransferDetailScreen() {
   const showReceiveButton = canReceiveTransfer(transfer);
   const showCancelButton = canCancelTransfer(transfer);
 
+  // Create display ID (first 8 characters of UUID)
+  const displayId = id ? id.substring(0, 8) : 'Unknown';
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Header title={`Transfer #${transfer.id}`} showBackButton />
+      <Header title={`Transfer #${displayId}`} showBackButton />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Status Header */}
@@ -202,7 +290,7 @@ export default function TransferDetailScreen() {
               <Text style={styles.locationLabel}>From</Text>
             </View>
             <Text style={styles.locationName}>
-              {transfer.fromLocation?.name || transfer.fromWarehouse?.name || transfer.fromStore?.name || 'Unknown'}
+              {getFromLocationName()}
             </Text>
             {(transfer.fromLocation?.address || transfer.fromWarehouse?.address || transfer.fromStore?.address) && (
               <Text style={styles.locationAddress}>
@@ -225,7 +313,7 @@ export default function TransferDetailScreen() {
               <Text style={styles.locationLabel}>To</Text>
             </View>
             <Text style={styles.locationName}>
-              {transfer.toLocation?.name || transfer.toWarehouse?.name || transfer.toStore?.name || 'Unknown'}
+              {getToLocationName()}
             </Text>
             {(transfer.toLocation?.address || transfer.toWarehouse?.address || transfer.toStore?.address) && (
               <Text style={styles.locationAddress}>
@@ -244,10 +332,10 @@ export default function TransferDetailScreen() {
               <Ionicons name="cube" size={24} color={Colors.primary} />
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>
-                  {transfer.productName || transfer.itemName || transfer.item?.name || 'Unknown Product'}
+                  {getProductName()}
                 </Text>
                 <Text style={styles.itemSku}>
-                  SKU: {transfer.productSku || transfer.itemSku || transfer.item?.sku || 'N/A'}
+                  SKU: {getProductSku()}
                 </Text>
               </View>
             </View>
@@ -255,13 +343,13 @@ export default function TransferDetailScreen() {
             <View style={styles.quantityRow}>
               <View style={styles.quantityItem}>
                 <Text style={styles.quantityLabel}>Requested</Text>
-                <Text style={styles.quantityValue}>{transfer.requestedQuantity}</Text>
+                <Text style={styles.quantityValue}>{transfer.requestedQuantity || 0} units</Text>
               </View>
               {transfer.approvedQuantity !== undefined && (
                 <View style={styles.quantityItem}>
                   <Text style={styles.quantityLabel}>Approved</Text>
                   <Text style={[styles.quantityValue, { color: Colors.success }]}>
-                    {transfer.approvedQuantity}
+                    {transfer.approvedQuantity} units
                   </Text>
                 </View>
               )}
@@ -269,7 +357,7 @@ export default function TransferDetailScreen() {
                 <View style={styles.quantityItem}>
                   <Text style={styles.quantityLabel}>Received</Text>
                   <Text style={[styles.quantityValue, { color: Colors.success }]}>
-                    {transfer.receivedQuantity}
+                    {transfer.receivedQuantity} units
                   </Text>
                 </View>
               )}
