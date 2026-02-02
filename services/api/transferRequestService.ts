@@ -20,7 +20,15 @@ import {
  * Backend may return { success: true, request: {...} } or just the transfer object
  */
 const unwrapTransferResponse = (response: any): TransferRequest => {
-  return response.request || response;
+  const transferData = response.request || response;
+  
+  // Validate that we got a transfer object with an ID
+  if (!transferData || !transferData.id) {
+    console.error('⚠️ Invalid transfer response:', response);
+    throw new Error('Invalid transfer response: missing transfer data');
+  }
+  
+  return transferData;
 };
 
 /**
@@ -181,14 +189,17 @@ export const getTransferRequestById = async (
     // Extract the actual transfer data from the wrapper
     const transferData = unwrapTransferResponse(response);
     
-    console.log('📦 Transfer API response:', {
-      hasRequest: !!response.request,
-      hasSuccess: !!response.success,
-      transferId: transferData?.id,
-      status: transferData?.status,
-      fromWarehouse: transferData?.fromWarehouse,
-      toStore: transferData?.toStore,
-    });
+    // Debug logging (only in development)
+    if (__DEV__) {
+      console.log('📦 Transfer API response:', {
+        hasRequest: !!response.request,
+        hasSuccess: !!response.success,
+        transferId: transferData?.id,
+        status: transferData?.status,
+        fromWarehouse: transferData?.fromWarehouse,
+        toStore: transferData?.toStore,
+      });
+    }
     
     return transferData;
   } catch (error) {
