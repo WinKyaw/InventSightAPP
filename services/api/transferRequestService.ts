@@ -16,6 +16,14 @@ import {
  */
 
 /**
+ * Helper function to unwrap API response
+ * Backend may return { success: true, request: {...} } or just the transfer object
+ */
+const unwrapTransferResponse = (response: any): TransferRequest => {
+  return response.request || response;
+};
+
+/**
  * Create a new transfer request
  * @param request - Transfer request data
  * @returns Created transfer request
@@ -24,11 +32,11 @@ export const createTransferRequest = async (
   request: CreateTransferRequestDTO
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post<TransferRequest>(
+    const response = await apiClient.post<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CREATE,
       request
     );
-    return response;
+    return unwrapTransferResponse(response);
   } catch (error) {
     console.error('❌ Error creating transfer request:', error);
     throw error;
@@ -171,7 +179,7 @@ export const getTransferRequestById = async (
     
     // Backend returns { success: true, request: {...} }
     // Extract the actual transfer data from the wrapper
-    const transferData = response.request || response;
+    const transferData = unwrapTransferResponse(response);
     
     console.log('📦 Transfer API response:', {
       hasRequest: !!response.request,
@@ -200,11 +208,11 @@ export const approveAndSendTransfer = async (
   sendData: SendTransferDTO
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post<TransferRequest>(
+    const response = await apiClient.post<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.SEND(id),
       sendData
     );
-    return response;
+    return unwrapTransferResponse(response);
   } catch (error) {
     console.error(`❌ Error approving transfer ${id}:`, error);
     throw error;
@@ -222,11 +230,11 @@ export const rejectTransfer = async (
   reason: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.put<TransferRequest>(
+    const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.REJECT(id),
       { reason }
     );
-    return response;
+    return unwrapTransferResponse(response);
   } catch (error) {
     console.error(`❌ Error rejecting transfer ${id}:`, error);
     throw error;
@@ -244,11 +252,11 @@ export const confirmReceipt = async (
   receiptData: ReceiptDTO
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post<TransferRequest>(
+    const response = await apiClient.post<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CONFIRM_RECEIPT(id),
       receiptData
     );
-    return response;
+    return unwrapTransferResponse(response);
   } catch (error) {
     console.error(`❌ Error confirming receipt for transfer ${id}:`, error);
     throw error;
@@ -266,11 +274,11 @@ export const cancelTransfer = async (
   reason: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.put<TransferRequest>(
+    const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CANCEL(id),
       { reason }
     );
-    return response;
+    return unwrapTransferResponse(response);
   } catch (error) {
     console.error(`❌ Error cancelling transfer ${id}:`, error);
     throw error;
@@ -286,10 +294,10 @@ export const completeTransfer = async (
   id: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.put<TransferRequest>(
+    const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.COMPLETE(id)
     );
-    return response;
+    return unwrapTransferResponse(response);
   } catch (error) {
     console.error(`❌ Error completing transfer ${id}:`, error);
     throw error;
