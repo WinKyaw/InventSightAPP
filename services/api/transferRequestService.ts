@@ -165,10 +165,24 @@ export const getTransferRequestById = async (
   id: string
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.get<TransferRequest>(
+    const response = await apiClient.get<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.BY_ID(id)
     );
-    return response;
+    
+    // Backend returns { success: true, request: {...} }
+    // Extract the actual transfer data from the wrapper
+    const transferData = response.request || response;
+    
+    console.log('📦 Transfer API response:', {
+      hasRequest: !!response.request,
+      hasSuccess: !!response.success,
+      transferId: transferData?.id,
+      status: transferData?.status,
+      fromWarehouse: transferData?.fromWarehouse,
+      toStore: transferData?.toStore,
+    });
+    
+    return transferData;
   } catch (error) {
     console.error(`❌ Error fetching transfer request ${id}:`, error);
     throw error;
