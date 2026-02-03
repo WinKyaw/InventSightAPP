@@ -57,7 +57,7 @@ export enum TransferStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
-  PREPARING = 'PREPARING',
+  READY = 'READY',
   IN_TRANSIT = 'IN_TRANSIT',
   DELIVERED = 'DELIVERED',
   RECEIVED = 'RECEIVED',
@@ -168,6 +168,31 @@ export const transferApi = {
    */
   receiveTransfer: async (id: string, receiptData: ReceiveTransferRequest) => {
     return apiClient.post<Transfer>(`/api/transfers/${id}/receive`, receiptData);
+  },
+
+  /**
+   * Mark transfer as ready for pickup (warehouse prepared items)
+   */
+  markAsReady: async (id: string, data: { packedBy: string; notes?: string }) => {
+    return apiClient.put<Transfer>(`/api/transfers/${id}/ready`, data);
+  },
+
+  /**
+   * Start delivery / pickup (assign carrier and mark as in transit)
+   */
+  startDelivery: async (id: string, data: {
+    carrierName: string;
+    carrierPhone?: string;
+    carrierVehicle?: string;
+  }) => {
+    return apiClient.put<Transfer>(`/api/transfers/${id}/pickup`, data);
+  },
+
+  /**
+   * Mark as delivered (arrived at destination)
+   */
+  markAsDelivered: async (id: string, data?: { notes?: string }) => {
+    return apiClient.put<Transfer>(`/api/transfers/${id}/deliver`, data || {});
   },
 
   /**

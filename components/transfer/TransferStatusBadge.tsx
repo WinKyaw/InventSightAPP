@@ -42,6 +42,13 @@ export function TransferStatusBadge({ status, size = 'medium' }: TransferStatusB
           backgroundColor: '#D1FAE5',
           icon: '🟢',
         };
+      case 'READY':
+        return {
+          label: 'Ready',
+          color: '#8B5CF6', // Purple
+          backgroundColor: '#EDE9FE',
+          icon: '📦',
+        };
       case 'IN_TRANSIT':
       case 'INTRANSIT':
         return {

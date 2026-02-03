@@ -42,6 +42,27 @@ export function useTransferPermissions() {
   };
 
   /**
+   * Check if user can mark transfer as ready
+   */
+  const canMarkAsReady = (transfer: TransferRequest): boolean => {
+    return isGMPlus && transfer.status === TransferStatus.APPROVED;
+  };
+
+  /**
+   * Check if user can start delivery
+   */
+  const canStartDelivery = (transfer: TransferRequest): boolean => {
+    return isGMPlus && transfer.status === TransferStatus.READY;
+  };
+
+  /**
+   * Check if user can mark as delivered
+   */
+  const canMarkAsDelivered = (transfer: TransferRequest): boolean => {
+    return isGMPlus && transfer.status === TransferStatus.IN_TRANSIT;
+  };
+
+  /**
    * Check if user can cancel their own transfer request
    */
   const canCancelTransfer = (transfer: TransferRequest): boolean => {
@@ -64,7 +85,6 @@ export function useTransferPermissions() {
 
     // Check if transfer is in a receivable status
     const receivableStatuses = [
-      TransferStatus.IN_TRANSIT,
       TransferStatus.DELIVERED,
     ];
     
@@ -172,6 +192,9 @@ export function useTransferPermissions() {
     isGMPlus,
     canApproveTransfer,
     canRejectTransfer,
+    canMarkAsReady,
+    canStartDelivery,
+    canMarkAsDelivered,
     canCancelTransfer,
     canReceiveTransfer,
     canCreateTransfer,
