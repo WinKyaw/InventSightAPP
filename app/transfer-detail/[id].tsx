@@ -17,6 +17,10 @@ import { useTransferPermissions } from '../../hooks/useTransferPermissions';
 import { TransferStatusBadge } from '../../components/transfer/TransferStatusBadge';
 import { TransferTimeline } from '../../components/transfer/TransferTimeline';
 import { ApproveTransferModal } from '../../components/transfer/ApproveTransferModal';
+import { RejectTransferModal } from '../../components/transfer/RejectTransferModal';
+import { MarkReadyModal } from '../../components/transfer/MarkReadyModal';
+import { StartDeliveryModal } from '../../components/transfer/StartDeliveryModal';
+import { MarkDeliveredModal } from '../../components/transfer/MarkDeliveredModal';
 import { ReceiveTransferModal } from '../../components/transfer/ReceiveTransferModal';
 import { Header } from '../../components/shared/Header';
 import { Button } from '../../components/ui/Button';
@@ -35,11 +39,19 @@ export default function TransferDetailScreen() {
   const { transfer, loading, error, refresh, setTransfer } = useTransferRequest(id);
   const {
     canApproveTransfer,
+    canRejectTransfer,
+    canMarkAsReady,
+    canStartDelivery,
+    canMarkAsDelivered,
     canCancelTransfer,
     canReceiveTransfer,
   } = useTransferPermissions();
 
   const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showReadyModal, setShowReadyModal] = useState(false);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [showDeliveredModal, setShowDeliveredModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -82,6 +94,26 @@ export default function TransferDetailScreen() {
 
   const handleApproveSuccess = () => {
     setShowApproveModal(false);
+    refresh();
+  };
+
+  const handleRejectSuccess = () => {
+    setShowRejectModal(false);
+    refresh();
+  };
+
+  const handleReadySuccess = () => {
+    setShowReadyModal(false);
+    refresh();
+  };
+
+  const handleDeliverySuccess = () => {
+    setShowDeliveryModal(false);
+    refresh();
+  };
+
+  const handleDeliveredSuccess = () => {
+    setShowDeliveredModal(false);
     refresh();
   };
 
@@ -250,6 +282,10 @@ export default function TransferDetailScreen() {
   }
 
   const showApproveButton = canApproveTransfer(transfer);
+  const showRejectButton = canRejectTransfer(transfer);
+  const showReadyButton = canMarkAsReady(transfer);
+  const showDeliveryButton = canStartDelivery(transfer);
+  const showDeliveredButton = canMarkAsDelivered(transfer);
   const showReceiveButton = canReceiveTransfer(transfer);
   const showCancelButton = canCancelTransfer(transfer);
 
@@ -447,24 +483,69 @@ export default function TransferDetailScreen() {
         )}
 
         {/* Action Buttons */}
-        {(showApproveButton || showReceiveButton || showCancelButton) && (
+        {(showApproveButton || showRejectButton || showReadyButton || showDeliveryButton || showDeliveredButton || showReceiveButton || showCancelButton) && (
           <View style={styles.actionsSection}>
+            {/* PENDING Status: Approve / Reject */}
             {showApproveButton && (
               <Button
-                title="Approve & Send"
+                title="Approve"
                 onPress={() => setShowApproveModal(true)}
                 icon="checkmark-circle"
+                color={Colors.success}
               />
             )}
 
+            {showRejectButton && (
+              <TouchableOpacity
+                style={styles.rejectButton}
+                onPress={() => setShowRejectModal(true)}
+              >
+                <Ionicons name="close-circle" size={20} color={Colors.danger} />
+                <Text style={styles.rejectButtonText}>Reject</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* APPROVED Status: Mark as Ready */}
+            {showReadyButton && (
+              <Button
+                title="Mark as Ready"
+                onPress={() => setShowReadyModal(true)}
+                icon="checkmark-done"
+                color={Colors.primary}
+              />
+            )}
+
+            {/* READY Status: Start Delivery */}
+            {showDeliveryButton && (
+              <Button
+                title="Start Delivery"
+                onPress={() => setShowDeliveryModal(true)}
+                icon="car"
+                color={Colors.warning}
+              />
+            )}
+
+            {/* IN_TRANSIT Status: Mark Delivered */}
+            {showDeliveredButton && (
+              <Button
+                title="Mark as Delivered"
+                onPress={() => setShowDeliveredModal(true)}
+                icon="checkmark-done-circle"
+                color={Colors.accent}
+              />
+            )}
+
+            {/* DELIVERED Status: Confirm Receipt */}
             {showReceiveButton && (
               <Button
                 title="Confirm Receipt"
                 onPress={() => setShowReceiveModal(true)}
                 icon="checkmark-done"
+                color={Colors.success}
               />
             )}
 
+            {/* Cancel Button (for pending transfers by requester) */}
             {showCancelButton && (
               <TouchableOpacity
                 style={styles.cancelButton}
@@ -492,6 +573,42 @@ export default function TransferDetailScreen() {
           transfer={transfer}
           onClose={() => setShowApproveModal(false)}
           onSuccess={handleApproveSuccess}
+        />
+      )}
+
+      {showRejectModal && transfer && (
+        <RejectTransferModal
+          visible={showRejectModal}
+          transfer={transfer}
+          onClose={() => setShowRejectModal(false)}
+          onSuccess={handleRejectSuccess}
+        />
+      )}
+
+      {showReadyModal && transfer && (
+        <MarkReadyModal
+          visible={showReadyModal}
+          transfer={transfer}
+          onClose={() => setShowReadyModal(false)}
+          onSuccess={handleReadySuccess}
+        />
+      )}
+
+      {showDeliveryModal && transfer && (
+        <StartDeliveryModal
+          visible={showDeliveryModal}
+          transfer={transfer}
+          onClose={() => setShowDeliveryModal(false)}
+          onSuccess={handleDeliverySuccess}
+        />
+      )}
+
+      {showDeliveredModal && transfer && (
+        <MarkDeliveredModal
+          visible={showDeliveredModal}
+          transfer={transfer}
+          onClose={() => setShowDeliveredModal(false)}
+          onSuccess={handleDeliveredSuccess}
         />
       )}
 
@@ -689,6 +806,22 @@ const styles = StyleSheet.create({
   actionsSection: {
     gap: 12,
     marginTop: 8,
+  },
+  rejectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.danger,
+    backgroundColor: Colors.white,
+    gap: 8,
+  },
+  rejectButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.danger,
   },
   cancelButton: {
     flexDirection: 'row',

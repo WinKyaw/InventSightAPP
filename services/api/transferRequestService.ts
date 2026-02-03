@@ -297,6 +297,76 @@ export const cancelTransfer = async (
 };
 
 /**
+ * Mark transfer as ready for pickup
+ * @param id - Transfer request ID
+ * @param data - Ready data (packer info, notes)
+ * @returns Updated transfer request
+ */
+export const markAsReady = async (
+  id: string,
+  data: { packedBy: string; notes?: string }
+): Promise<TransferRequest> => {
+  try {
+    const response = await apiClient.put<any>(
+      API_ENDPOINTS.TRANSFER_REQUESTS.READY(id),
+      data
+    );
+    return unwrapTransferResponse(response);
+  } catch (error) {
+    console.error(`❌ Error marking transfer ${id} as ready:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Start delivery / pickup transfer
+ * @param id - Transfer request ID
+ * @param data - Carrier information
+ * @returns Updated transfer request
+ */
+export const startDelivery = async (
+  id: string,
+  data: {
+    carrierName: string;
+    carrierPhone?: string;
+    carrierVehicle?: string;
+  }
+): Promise<TransferRequest> => {
+  try {
+    const response = await apiClient.put<any>(
+      API_ENDPOINTS.TRANSFER_REQUESTS.PICKUP(id),
+      data
+    );
+    return unwrapTransferResponse(response);
+  } catch (error) {
+    console.error(`❌ Error starting delivery for transfer ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Mark transfer as delivered
+ * @param id - Transfer request ID
+ * @param data - Delivery notes (optional)
+ * @returns Updated transfer request
+ */
+export const markAsDelivered = async (
+  id: string,
+  data?: { notes?: string }
+): Promise<TransferRequest> => {
+  try {
+    const response = await apiClient.put<any>(
+      API_ENDPOINTS.TRANSFER_REQUESTS.DELIVER(id),
+      data || {}
+    );
+    return unwrapTransferResponse(response);
+  } catch (error) {
+    console.error(`❌ Error marking transfer ${id} as delivered:`, error);
+    throw error;
+  }
+};
+
+/**
  * Complete a transfer request
  * @param id - Transfer request ID
  * @returns Updated transfer request
@@ -398,6 +468,9 @@ export default {
   rejectTransfer,
   confirmReceipt,
   cancelTransfer,
+  markAsReady,
+  startDelivery,
+  markAsDelivered,
   completeTransfer,
   getTransferHistory,
   getTransferSummary,
