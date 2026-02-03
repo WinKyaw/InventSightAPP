@@ -237,6 +237,13 @@ export interface TransferRequest {
   receiverSignatureUrl?: string | null;
   proofOfDeliveryUrl?: string | null;
   
+  /**
+   * Actions available to current user for this transfer
+   * Calculated by backend based on user role, status, and location access
+   * @example ['approve', 'reject', 'cancel']
+   */
+  availableActions?: string[];
+  
   // Audit
   createdAt?: string;
   updatedAt?: string;
