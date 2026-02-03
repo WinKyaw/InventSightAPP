@@ -490,8 +490,8 @@ export default function TransferDetailScreen() {
               <Button
                 title="Approve"
                 onPress={() => setShowApproveModal(true)}
-                icon="checkmark-circle"
                 color={Colors.success}
+                leftIcon={<Ionicons name="checkmark-circle" size={20} color={Colors.white} />}
               />
             )}
 
@@ -510,8 +510,8 @@ export default function TransferDetailScreen() {
               <Button
                 title="Mark as Ready"
                 onPress={() => setShowReadyModal(true)}
-                icon="checkmark-done"
                 color={Colors.primary}
+                leftIcon={<Ionicons name="checkmark-done" size={20} color={Colors.white} />}
               />
             )}
 
@@ -520,8 +520,8 @@ export default function TransferDetailScreen() {
               <Button
                 title="Start Delivery"
                 onPress={() => setShowDeliveryModal(true)}
-                icon="car"
                 color={Colors.warning}
+                leftIcon={<Ionicons name="car" size={20} color={Colors.white} />}
               />
             )}
 
@@ -530,8 +530,8 @@ export default function TransferDetailScreen() {
               <Button
                 title="Mark as Delivered"
                 onPress={() => setShowDeliveredModal(true)}
-                icon="checkmark-done-circle"
                 color={Colors.accent}
+                leftIcon={<Ionicons name="checkmark-done-circle" size={20} color={Colors.white} />}
               />
             )}
 
@@ -540,8 +540,8 @@ export default function TransferDetailScreen() {
               <Button
                 title="Confirm Receipt"
                 onPress={() => setShowReceiveModal(true)}
-                icon="checkmark-done"
                 color={Colors.success}
+                leftIcon={<Ionicons name="checkmark-done" size={20} color={Colors.white} />}
               />
             )}
 

@@ -150,13 +150,13 @@ export function StartDeliveryModal({
 
         {/* Action Buttons */}
         <View style={styles.actions}>
-          <Button
-            title="Cancel"
-            onPress={onClose}
-            variant="outline"
-            disabled={loading}
+          <TouchableOpacity
             style={styles.cancelButton}
-          />
+            onPress={onClose}
+            disabled={loading}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
 
           <Button
             title={loading ? 'Processing...' : 'Start Delivery'}
@@ -240,6 +240,20 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
   },
   confirmButton: {
     flex: 1.5,
