@@ -289,7 +289,7 @@ export default function TransferDetailScreen() {
   const showReceiveButton = canReceiveTransfer(transfer);
   const showCancelButton = canCancelTransfer(transfer);
 
-  // Debug logging for available actions
+  // Debug logging for available actions (TODO: Remove after backend integration is complete)
   console.log('📋 Transfer available actions:', {
     availableActions: transfer.availableActions,
     showApproveButton,

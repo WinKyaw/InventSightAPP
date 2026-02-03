@@ -56,7 +56,7 @@ export function useTransferPermissions() {
     if (transfer.availableActions) {
       return transfer.availableActions.includes('reject');
     }
-    console.warn('⚠️ Using frontend permission fallback for reject');
+    console.warn('⚠️ Using frontend permission fallback for reject - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.PENDING;
   };
 
@@ -67,7 +67,7 @@ export function useTransferPermissions() {
     if (transfer.availableActions) {
       return transfer.availableActions.includes('markReady');
     }
-    console.warn('⚠️ Using frontend permission fallback for markReady');
+    console.warn('⚠️ Using frontend permission fallback for markReady - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.APPROVED;
   };
 
@@ -78,7 +78,7 @@ export function useTransferPermissions() {
     if (transfer.availableActions) {
       return transfer.availableActions.includes('startDelivery');
     }
-    console.warn('⚠️ Using frontend permission fallback for startDelivery');
+    console.warn('⚠️ Using frontend permission fallback for startDelivery - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.READY;
   };
 
@@ -89,7 +89,7 @@ export function useTransferPermissions() {
     if (transfer.availableActions) {
       return transfer.availableActions.includes('markDelivered');
     }
-    console.warn('⚠️ Using frontend permission fallback for markDelivered');
+    console.warn('⚠️ Using frontend permission fallback for markDelivered - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.IN_TRANSIT;
   };
 
@@ -101,7 +101,7 @@ export function useTransferPermissions() {
       return transfer.availableActions.includes('cancel');
     }
     
-    console.warn('⚠️ Using frontend permission fallback for cancel');
+    console.warn('⚠️ Using frontend permission fallback for cancel - backend should send availableActions');
     if (!user) return false;
     
     const requestedById = transfer.requestedBy?.id || transfer.requestedByUserId;
@@ -119,7 +119,7 @@ export function useTransferPermissions() {
       return transfer.availableActions.includes('receive');
     }
     
-    console.warn('⚠️ Using frontend permission fallback for receive');
+    console.warn('⚠️ Using frontend permission fallback for receive - backend should send availableActions');
     if (!user) return false;
 
     const receivableStatuses = [
