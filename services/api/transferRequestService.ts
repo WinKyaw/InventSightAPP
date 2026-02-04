@@ -17,10 +17,29 @@ import {
 
 /**
  * Helper function to unwrap API response
- * Backend may return { success: true, request: {...} } or just the transfer object
+ * Handles multiple backend response structures:
+ * 1. New structure: {availableActions: [...], transfer: {...}}
+ * 2. Old structure: {success: true, request: {...}}
+ * 3. Direct transfer object
  */
 const unwrapTransferResponse = (response: any): TransferRequest => {
-  const transferData = response.request || response;
+  let transferData;
+  
+  // New structure: {availableActions: [...], transfer: {...}}
+  if (response.transfer && typeof response.transfer === 'object') {
+    transferData = {
+      ...response.transfer,
+      availableActions: response.availableActions || [],
+    };
+  }
+  // Old structure: {success: true, request: {...}}
+  else if (response.request) {
+    transferData = response.request;
+  }
+  // Direct transfer object
+  else {
+    transferData = response;
+  }
   
   // Validate that we got a transfer object with an ID
   if (!transferData || !transferData.id) {
@@ -105,67 +124,75 @@ export const getTransferRequests = async (
     console.log('📋 [API] Response keys:', Object.keys(response));
     
     // Handle different response structures from backend
+    let rawRequests: any[] = [];
+    let paginationData: any = {};
+    
     if (Array.isArray(response)) {
       // Backend returned array directly
       console.log('📦 [API] Backend returned array directly');
-      return {
-        requests: response,
-        pagination: {
-          currentPage: page,
-          totalPages: 1,
-          totalElements: response.length,
-          pageSize: size,
-          hasNext: false,
-          hasPrevious: false,
-        },
+      rawRequests = response;
+      paginationData = {
+        currentPage: page,
+        totalPages: 1,
+        totalElements: response.length,
+        pageSize: size,
+        hasNext: false,
+        hasPrevious: false,
       };
     } else if (response.pagination && response.requests) {
       // Backend returned new structure with nested pagination
       console.log('📦 [API] Backend returned paginated response with nested pagination');
-      return response as PaginatedTransferResponse;
+      rawRequests = response.requests;
+      paginationData = response.pagination;
     } else if (response.requests) {
       // Backend returned old paginated response structure
       console.log('📦 [API] Backend returned old paginated response structure');
-      // Convert old structure to new structure
-      return {
-        requests: response.requests,
-        pagination: {
-          currentPage: response.currentPage ?? page,
-          totalPages: response.totalPages ?? 1,
-          totalElements: response.totalItems ?? response.requests.length,
-          pageSize: size,
-          hasNext: response.hasMore ?? false,
-          hasPrevious: page > 0,
-        },
+      rawRequests = response.requests;
+      paginationData = {
+        currentPage: response.currentPage ?? page,
+        totalPages: response.totalPages ?? 1,
+        totalElements: response.totalItems ?? response.requests.length,
+        pageSize: size,
+        hasNext: response.hasMore ?? false,
+        hasPrevious: page > 0,
       };
     } else if ('data' in response && Array.isArray(response.data)) {
       // Backend returned { data: [...] }
       console.log('📦 [API] Backend returned data wrapper');
-      return {
-        requests: response.data,
-        pagination: {
-          currentPage: response.currentPage ?? page,
-          totalPages: response.totalPages ?? 1,
-          totalElements: response.totalItems ?? response.data.length,
-          pageSize: size,
-          hasNext: response.hasMore ?? false,
-          hasPrevious: page > 0,
-        },
+      rawRequests = response.data;
+      paginationData = {
+        currentPage: response.currentPage ?? page,
+        totalPages: response.totalPages ?? 1,
+        totalElements: response.totalItems ?? response.data.length,
+        pageSize: size,
+        hasNext: response.hasMore ?? false,
+        hasPrevious: page > 0,
       };
     } else {
       console.warn('⚠️ [API] Unexpected response format:', response);
-      return {
-        requests: [],
-        pagination: {
-          currentPage: 0,
-          totalPages: 0,
-          totalElements: 0,
-          pageSize: size,
-          hasNext: false,
-          hasPrevious: false,
-        },
+      rawRequests = [];
+      paginationData = {
+        currentPage: 0,
+        totalPages: 0,
+        totalElements: 0,
+        pageSize: size,
+        hasNext: false,
+        hasPrevious: false,
       };
     }
+    
+    // Unwrap each transfer item to handle nested structures
+    const unwrappedRequests = rawRequests.map(unwrapTransferResponse);
+    
+    console.log('✅ [API] Unwrapped transfers:', unwrappedRequests.length);
+    if (unwrappedRequests.length > 0) {
+      console.log('📄 [API] First transfer:', unwrappedRequests[0]);
+    }
+    
+    return {
+      requests: unwrappedRequests,
+      pagination: paginationData,
+    };
   } catch (error) {
     console.error('❌ [API] Error fetching transfer requests:', error);
     throw error;
@@ -185,19 +212,20 @@ export const getTransferRequestById = async (
       API_ENDPOINTS.TRANSFER_REQUESTS.BY_ID(id)
     );
     
-    // Backend returns { success: true, request: {...} }
-    // Extract the actual transfer data from the wrapper
+    // Unwrap the response to handle different structures
     const transferData = unwrapTransferResponse(response);
     
     // Debug logging (only in development)
     if (__DEV__) {
       console.log('📦 Transfer API response:', {
         hasRequest: !!response.request,
+        hasTransfer: !!response.transfer,
         hasSuccess: !!response.success,
         transferId: transferData?.id,
         status: transferData?.status,
         fromWarehouse: transferData?.fromWarehouse,
         toStore: transferData?.toStore,
+        availableActions: transferData?.availableActions,
       });
     }
     

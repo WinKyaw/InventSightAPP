@@ -69,14 +69,27 @@ export function useTransferRequests(
         console.log('📚 Total pages:', pagination.totalPages);
         console.log('➡️ Has more:', pagination.hasNext);
 
-        // Handle different response structures
-        const transfersList = response.requests || [];
+        // Handle different response structures and validate transfers
+        const rawTransfersList = response.requests || [];
         
-        if (transfersList.length === 0) {
+        // ✅ Validate transfers before setting state
+        const validTransfers = rawTransfersList.filter((t: any) => {
+          if (!t || !t.id) {
+            console.warn('⚠️ Skipping invalid transfer:', t);
+            return false;
+          }
+          return true;
+        });
+        
+        if (rawTransfersList.length === 0) {
           console.warn('⚠️ [useTransferRequests] No transfers in response');
+        } else if (validTransfers.length < rawTransfersList.length) {
+          console.warn(`⚠️ [useTransferRequests] Filtered out ${rawTransfersList.length - validTransfers.length} invalid transfers`);
         }
+        
+        console.log('✅ Valid transfers:', validTransfers.length);
 
-        setTransfers(transfersList);
+        setTransfers(validTransfers);
         setCurrentPage(pagination.currentPage);
         setTotalPages(pagination.totalPages);
         setTotalItems(pagination.totalElements);
