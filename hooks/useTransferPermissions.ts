@@ -4,8 +4,11 @@ import { TransferRequest, TransferStatus, LocationType } from '../types/transfer
 
 /**
  * GM+ roles that can approve transfers
+ * NOTE: This is FALLBACK ONLY until backend sends availableActions
+ * Backend should be the source of truth for permissions
  */
 const GM_PLUS_ROLES = [
+  'OWNER',           // ← ADDED
   'FOUNDER',
   'CEO',
   'GENERAL_MANAGER',
@@ -15,6 +18,9 @@ const GM_PLUS_ROLES = [
 
 /**
  * Hook for checking transfer request permissions
+ * 
+ * IMPORTANT: This hook is for FALLBACK only when backend doesn't send availableActions.
+ * Prefer using transfer.availableActions from backend response.
  */
 export function useTransferPermissions() {
   const { user } = useAuth();
@@ -29,15 +35,28 @@ export function useTransferPermissions() {
 
   /**
    * Check if user can approve a specific transfer
+   * FALLBACK: Use this only if backend doesn't send availableActions
    */
   const canApproveTransfer = (transfer: TransferRequest): boolean => {
+    // Prefer backend response
+    if (transfer.availableActions) {
+      return transfer.availableActions.includes('approve');
+    }
+    
+    // Fallback to frontend check
+    console.warn('⚠️ Using frontend permission fallback for approve - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.PENDING;
   };
 
   /**
    * Check if user can reject a specific transfer
+   * FALLBACK: Use this only if backend doesn't send availableActions
    */
   const canRejectTransfer = (transfer: TransferRequest): boolean => {
+    if (transfer.availableActions) {
+      return transfer.availableActions.includes('reject');
+    }
+    console.warn('⚠️ Using frontend permission fallback for reject - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.PENDING;
   };
 
@@ -45,6 +64,10 @@ export function useTransferPermissions() {
    * Check if user can mark transfer as ready
    */
   const canMarkAsReady = (transfer: TransferRequest): boolean => {
+    if (transfer.availableActions) {
+      return transfer.availableActions.includes('markReady');
+    }
+    console.warn('⚠️ Using frontend permission fallback for markReady - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.APPROVED;
   };
 
@@ -52,6 +75,10 @@ export function useTransferPermissions() {
    * Check if user can start delivery
    */
   const canStartDelivery = (transfer: TransferRequest): boolean => {
+    if (transfer.availableActions) {
+      return transfer.availableActions.includes('startDelivery');
+    }
+    console.warn('⚠️ Using frontend permission fallback for startDelivery - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.READY;
   };
 
@@ -59,6 +86,10 @@ export function useTransferPermissions() {
    * Check if user can mark as delivered
    */
   const canMarkAsDelivered = (transfer: TransferRequest): boolean => {
+    if (transfer.availableActions) {
+      return transfer.availableActions.includes('markDelivered');
+    }
+    console.warn('⚠️ Using frontend permission fallback for markDelivered - backend should send availableActions');
     return isGMPlus && transfer.status === TransferStatus.IN_TRANSIT;
   };
 
@@ -66,9 +97,13 @@ export function useTransferPermissions() {
    * Check if user can cancel their own transfer request
    */
   const canCancelTransfer = (transfer: TransferRequest): boolean => {
+    if (transfer.availableActions) {
+      return transfer.availableActions.includes('cancel');
+    }
+    
+    console.warn('⚠️ Using frontend permission fallback for cancel - backend should send availableActions');
     if (!user) return false;
     
-    // Can cancel if it's their own request and it's still pending
     const requestedById = transfer.requestedBy?.id || transfer.requestedByUserId;
     return (
       requestedById === user.id &&
@@ -78,26 +113,20 @@ export function useTransferPermissions() {
 
   /**
    * Check if user can receive a transfer at the destination
-   * User must have access to the destination location
    */
   const canReceiveTransfer = (transfer: TransferRequest): boolean => {
+    if (transfer.availableActions) {
+      return transfer.availableActions.includes('receive');
+    }
+    
+    console.warn('⚠️ Using frontend permission fallback for receive - backend should send availableActions');
     if (!user) return false;
 
-    // Check if transfer is in a receivable status
     const receivableStatuses = [
       TransferStatus.DELIVERED,
     ];
     
-    if (!receivableStatuses.includes(transfer.status)) {
-      return false;
-    }
-
-    // TODO: Check if user has access to destination location
-    // This would require location assignment data from the backend
-    // For now, we'll allow any authenticated user to receive
-    // In production, you'd check against user's assigned locations
-    
-    return true;
+    return receivableStatuses.includes(transfer.status);
   };
 
   /**

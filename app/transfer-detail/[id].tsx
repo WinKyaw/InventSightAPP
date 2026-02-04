@@ -289,6 +289,18 @@ export default function TransferDetailScreen() {
   const showReceiveButton = canReceiveTransfer(transfer);
   const showCancelButton = canCancelTransfer(transfer);
 
+  // Debug logging for available actions (TODO: Remove after backend integration is complete)
+  console.log('📋 Transfer available actions:', {
+    availableActions: transfer.availableActions,
+    showApproveButton,
+    showRejectButton,
+    showReadyButton,
+    showDeliveryButton,
+    showDeliveredButton,
+    showReceiveButton,
+    showCancelButton,
+  });
+
   // Create display ID (first 8 characters of UUID)
   const displayId = id ? id.substring(0, 8) : 'Unknown';
 
@@ -634,7 +646,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 100,  // ← Increased from 32 to ensure bottom content visible
   },
   loadingContainer: {
     flex: 1,
