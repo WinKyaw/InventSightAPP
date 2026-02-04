@@ -182,17 +182,7 @@ export const getTransferRequests = async (
     }
     
     // Unwrap each transfer item to handle nested structures
-    const unwrappedRequests = rawRequests.map((item) => {
-      // Handle nested structure: {availableActions: [...], transfer: {...}}
-      if (item.transfer && typeof item.transfer === 'object') {
-        return {
-          ...item.transfer,
-          availableActions: item.availableActions || [],
-        };
-      }
-      // Already flat structure
-      return item;
-    });
+    const unwrappedRequests = rawRequests.map(unwrapTransferResponse);
     
     console.log('✅ [API] Unwrapped transfers:', unwrappedRequests.length);
     if (unwrappedRequests.length > 0) {

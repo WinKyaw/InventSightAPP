@@ -175,7 +175,7 @@ export default function TransferRequestsScreen() {
             />
           </View>
         )}
-        keyExtractor={(item) => item.id || item.transfer?.id || Math.random().toString()}
+        keyExtractor={(item, index) => item.id || String(index)}
         contentContainerStyle={[
           styles.listContent,
           transfers.length === 0 && styles.listContentEmpty,

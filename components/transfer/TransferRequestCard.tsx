@@ -167,7 +167,7 @@ export function TransferRequestCard({
   try {
     // ✅ Debug logging with null checks
     console.log('📦 Transfer card data:', {
-      id: transfer.id.substring(0, 8),
+      id: String(transfer.id).substring(0, 8),
       fromStore: transfer.fromStore,
       fromWarehouse: transfer.fromWarehouse,
       toStore: transfer.toStore,
@@ -311,7 +311,7 @@ export function TransferRequestCard({
           Error displaying transfer
         </Text>
         <Text style={{ color: '#666', fontSize: 12, marginTop: 4 }}>
-          ID: {transfer.id ? transfer.id.substring(0, 8) : 'Unknown'}
+          ID: {transfer.id ? String(transfer.id).substring(0, 8) : 'Unknown'}
         </Text>
       </View>
     );
