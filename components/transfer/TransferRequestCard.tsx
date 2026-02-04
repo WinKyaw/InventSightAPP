@@ -151,14 +151,28 @@ export function TransferRequestCard({
   onActionPress,
   showActions = false,
 }: TransferRequestCardProps) {
+  // ✅ Early return if transfer is invalid
+  if (!transfer || !transfer.id) {
+    console.error('❌ Invalid transfer object:', transfer);
+    return (
+      <View style={[styles.card, { backgroundColor: '#FFEBEE' }]}>
+        <Ionicons name="alert-circle" size={32} color={Colors.danger} />
+        <Text style={{ color: Colors.danger, fontWeight: '600', marginTop: 8 }}>
+          Invalid transfer data
+        </Text>
+      </View>
+    );
+  }
+  
   try {
-    // ✅ Debug logging
+    // ✅ Debug logging with null checks
     console.log('📦 Transfer card data:', {
       id: transfer.id.substring(0, 8),
       fromStore: transfer.fromStore,
       fromWarehouse: transfer.fromWarehouse,
       toStore: transfer.toStore,
       toWarehouse: transfer.toWarehouse,
+      availableActions: transfer.availableActions,
     });
 
     const productName = getProductName(transfer);
