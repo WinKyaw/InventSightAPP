@@ -582,7 +582,8 @@ export default function TransferDetailScreen() {
       {showApproveModal && transfer && (
         <ApproveTransferModal
           visible={showApproveModal}
-          transfer={transfer}
+          transferId={transfer.id}
+          requestedQuantity={transfer.requestedQuantity}
           onClose={() => setShowApproveModal(false)}
           onSuccess={handleApproveSuccess}
         />
