@@ -244,11 +244,11 @@ export const approveTransfer = async (
   id: string,
   approvedQuantity: number,
   notes?: string
-): Promise<any> => {
+): Promise<TransferRequest> => {
   try {
     console.log('📤 Approving transfer:', { id, approvedQuantity, notes });
     
-    const response = await apiClient.put(`/transfers/${id}/approve`, {
+    const response = await apiClient.put<any>(`/transfers/${id}/approve`, {
       approvedQuantity,
       notes: notes || null,
     });

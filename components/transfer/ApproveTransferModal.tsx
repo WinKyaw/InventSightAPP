@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: Colors.text,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.white,
   },
   textArea: {
     height: 80,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cancelButton: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
   },
