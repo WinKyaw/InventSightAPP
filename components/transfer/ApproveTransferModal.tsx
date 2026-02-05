@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   infoBox: {
     flexDirection: 'row',
     padding: 12,
-    backgroundColor: Colors.primary + '10',
+    backgroundColor: '#3B82F610',
     borderRadius: 8,
     marginTop: 10,
   },
