@@ -2,323 +2,275 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
+  Modal,
   Alert,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Modal } from '../ui/Modal';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import DatePicker from '../ui/DatePicker';
-import { TransferRequest, SendTransferDTO } from '../../types/transfer';
-import { approveAndSendTransfer, rejectTransfer } from '../../services/api/transferRequestService';
 import { Colors } from '../../constants/Colors';
+import { approveTransfer } from '../../services/api/transferRequestService';
 
 interface ApproveTransferModalProps {
   visible: boolean;
+  transferId: string;
+  requestedQuantity: number;
   onClose: () => void;
-  transfer: TransferRequest | null;
   onSuccess: () => void;
-}
-
-interface ValidationErrors {
-  approvedQuantity?: string;
-  carrierName?: string;
-  carrierPhone?: string;
 }
 
 export function ApproveTransferModal({
   visible,
+  transferId,
+  requestedQuantity,
   onClose,
-  transfer,
   onSuccess,
 }: ApproveTransferModalProps) {
-  const [formData, setFormData] = useState<SendTransferDTO>({
-    approvedQuantity: transfer?.requestedQuantity || 0,
-    carrierName: '',
-    carrierPhone: '',
-    carrierVehicle: '',
-    estimatedDeliveryAt: '',
-    approvalNotes: '',
-  });
-  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState<Date | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [approvedQuantity, setApprovedQuantity] = useState(requestedQuantity.toString());
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
-  React.useEffect(() => {
-    if (transfer && visible) {
-      setFormData({
-        approvedQuantity: transfer.requestedQuantity,
-        carrierName: '',
-        carrierPhone: '',
-        carrierVehicle: '',
-        estimatedDeliveryAt: '',
-        approvalNotes: '',
-      });
-      setEstimatedDeliveryDate(null);
-      setValidationErrors({});
-    }
-  }, [transfer, visible]);
-
-  const validateForm = (): boolean => {
-    const errors: ValidationErrors = {};
-
-    if (!formData.approvedQuantity || formData.approvedQuantity <= 0) {
-      errors.approvedQuantity = 'Approved quantity must be greater than 0';
-    } else if (transfer && formData.approvedQuantity > transfer.requestedQuantity) {
-      errors.approvedQuantity = `Cannot exceed requested quantity (${transfer.requestedQuantity})`;
-    }
-
-    if (!formData.carrierName.trim()) {
-      errors.carrierName = 'Carrier name is required';
-    }
-
-    if (formData.carrierPhone && !/^[\d\s\-\+\(\)]+$/.test(formData.carrierPhone)) {
-      errors.carrierPhone = 'Invalid phone number format';
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleApprove = async () => {
-    if (!transfer || !validateForm()) return;
+    // Validation
+    const quantity = parseInt(approvedQuantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Invalid Quantity', 'Please enter a valid quantity');
+      return;
+    }
 
-    setLoading(true);
+    if (quantity > requestedQuantity) {
+      Alert.alert(
+        'Quantity Too High',
+        `Approved quantity cannot exceed requested quantity (${requestedQuantity})`
+      );
+      return;
+    }
+
     try {
-      const sendData: SendTransferDTO = {
-        ...formData,
-        estimatedDeliveryAt: estimatedDeliveryDate
-          ? estimatedDeliveryDate.toISOString()
-          : undefined,
-      };
+      setLoading(true);
+      
+      console.log('🔄 Approving transfer:', {
+        transferId,
+        approvedQuantity: quantity,
+        notes,
+      });
 
-      await approveAndSendTransfer(transfer.id, sendData);
-      Alert.alert('Success', 'Transfer approved and sent successfully');
-      onSuccess();
-      onClose();
-    } catch (error) {
-      console.error('Failed to approve transfer:', error);
-      Alert.alert('Error', 'Failed to approve transfer. Please try again.');
+      await approveTransfer(transferId, quantity, notes);
+
+      Alert.alert(
+        'Transfer Approved',
+        'The transfer has been approved. It will be ready for pickup once items are packed.',
+        [{ text: 'OK', onPress: () => {
+          onClose();
+          onSuccess();
+        }}]
+      );
+    } catch (error: any) {
+      console.error('❌ Error approving transfer:', error);
+      Alert.alert(
+        'Approval Failed',
+        error.message || 'Failed to approve transfer. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReject = () => {
-    if (!transfer) return;
-
-    Alert.alert(
-      'Reject Transfer',
-      'Are you sure you want to reject this transfer request?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              const reason = formData.approvalNotes || 'Request rejected';
-              await rejectTransfer(transfer.id, reason);
-              Alert.alert('Rejected', 'Transfer request has been rejected');
-              onSuccess();
-              onClose();
-            } catch (error) {
-              console.error('Failed to reject transfer:', error);
-              Alert.alert('Error', 'Failed to reject transfer. Please try again.');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  if (!transfer) return null;
-
   return (
-    <Modal visible={visible} onClose={onClose} title="Approve Transfer">
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-        {/* Transfer Info */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>
-            {transfer.productName || transfer.itemName || transfer.item?.name || 'Unknown Product'}
-          </Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Requested:</Text>
-            <Text style={styles.infoValue}>{transfer.requestedQuantity} units</Text>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.modal}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Approve Transfer</Text>
+            <TouchableOpacity onPress={onClose} disabled={loading}>
+              <Ionicons name="close" size={24} color={Colors.text} />
+            </TouchableOpacity>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>From:</Text>
-            <Text style={styles.infoValue}>
-              {transfer.fromLocation?.name || transfer.fromWarehouse?.name || transfer.fromStore?.name || 'Unknown'}
-            </Text>
+
+          {/* Content */}
+          <View style={styles.content}>
+            {/* Approved Quantity */}
+            <View style={styles.field}>
+              <Text style={styles.label}>
+                Approved Quantity <Text style={styles.required}>*</Text>
+              </Text>
+              <Text style={styles.hint}>
+                Requested: {requestedQuantity} units
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={approvedQuantity}
+                onChangeText={setApprovedQuantity}
+                keyboardType="numeric"
+                placeholder="Enter approved quantity"
+                editable={!loading}
+              />
+            </View>
+
+            {/* Notes */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Approval Notes (Optional)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Add any notes about this approval"
+                multiline
+                numberOfLines={3}
+                editable={!loading}
+              />
+            </View>
+
+            {/* Info Message */}
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle" size={20} color={Colors.primary} />
+              <Text style={styles.infoText}>
+                After approval, warehouse staff will pack the items and mark them as ready for pickup.
+              </Text>
+            </View>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>To:</Text>
-            <Text style={styles.infoValue}>
-              {transfer.toLocation?.name || transfer.toWarehouse?.name || transfer.toStore?.name || 'Unknown'}
-            </Text>
-          </View>
-        </View>
 
-        {/* Approved Quantity */}
-        <Input
-          placeholder="Approved quantity"
-          value={formData.approvedQuantity.toString()}
-          onChangeText={(text) => {
-            const num = parseInt(text) || 0;
-            setFormData({ ...formData, approvedQuantity: num });
-          }}
-          keyboardType="numeric"
-          error={validationErrors.approvedQuantity}
-        />
+          {/* Actions */}
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={onClose}
+              disabled={loading}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
 
-        {/* Carrier Information */}
-        <Text style={styles.sectionTitle}>Carrier Information</Text>
-
-        <Input
-          placeholder="Carrier name"
-          value={formData.carrierName}
-          onChangeText={(text) => setFormData({ ...formData, carrierName: text })}
-          error={validationErrors.carrierName}
-        />
-
-        <Input
-          placeholder="Carrier phone (optional)"
-          value={formData.carrierPhone}
-          onChangeText={(text) => setFormData({ ...formData, carrierPhone: text })}
-          keyboardType="phone-pad"
-          error={validationErrors.carrierPhone}
-        />
-
-        <Input
-          placeholder="Vehicle/Tracking number (optional)"
-          value={formData.carrierVehicle}
-          onChangeText={(text) => setFormData({ ...formData, carrierVehicle: text })}
-        />
-
-        {/* Estimated Delivery */}
-        <DatePicker
-          label="Estimated Delivery (optional)"
-          value={estimatedDeliveryDate}
-          onChange={setEstimatedDeliveryDate}
-          placeholder="Select delivery date"
-          minimumDate={new Date()}
-        />
-
-        {/* Approval Notes */}
-        <Input
-          placeholder="Approval notes (optional)"
-          value={formData.approvalNotes}
-          onChangeText={(text) => setFormData({ ...formData, approvalNotes: text })}
-          multiline
-          numberOfLines={3}
-          style={styles.textArea}
-        />
-
-        {/* Action Buttons */}
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.rejectButton}
-            onPress={handleReject}
-            disabled={loading}
-          >
-            <Ionicons name="close-circle-outline" size={20} color={Colors.white} />
-            <Text style={styles.rejectButtonText}>Reject</Text>
-          </TouchableOpacity>
-
-          <Button
-            title={loading ? 'Processing...' : 'Approve & Send'}
-            onPress={handleApprove}
-            color={Colors.success}
-            disabled={loading}
-            style={styles.approveButton}
-            leftIcon={
-              loading ? (
-                <ActivityIndicator size="small" color={Colors.white} />
+            <TouchableOpacity
+              style={[styles.button, styles.approveButton]}
+              onPress={handleApprove}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Ionicons name="checkmark-circle-outline" size={20} color={Colors.white} />
-              )
-            }
-          />
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  <Text style={styles.approveButtonText}>Approve</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </ScrollView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    maxHeight: 600,
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  infoCard: {
-    backgroundColor: Colors.lightBlue,
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 20,
+  modal: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
   },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  infoRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  infoLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text,
   },
-  infoValue: {
+  content: {
+    padding: 20,
+  },
+  field: {
+    marginBottom: 20,
+  },
+  label: {
     fontSize: 14,
     fontWeight: '500',
     color: Colors.text,
+    marginBottom: 4,
   },
-  sectionTitle: {
+  required: {
+    color: Colors.danger,
+  },
+  hint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
-    fontWeight: '600',
     color: Colors.text,
-    marginBottom: 12,
-    marginTop: 8,
+    backgroundColor: Colors.surface,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
-    paddingTop: 12,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    padding: 12,
+    backgroundColor: Colors.primary + '10',
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginLeft: 8,
   },
   actions: {
     flexDirection: 'row',
+    padding: 20,
+    paddingTop: 10,
     gap: 12,
-    marginTop: 20,
-    marginBottom: 8,
   },
-  rejectButton: {
+  button: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    padding: 16,
     borderRadius: 8,
-    backgroundColor: Colors.danger,
-    gap: 6,
+    gap: 8,
   },
-  rejectButtonText: {
+  cancelButton: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.white,
+    color: Colors.text,
   },
   approveButton: {
-    flex: 1.5,
+    backgroundColor: Colors.success,
+  },
+  approveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

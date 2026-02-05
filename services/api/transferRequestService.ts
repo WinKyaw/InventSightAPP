@@ -237,7 +237,34 @@ export const getTransferRequestById = async (
 };
 
 /**
- * Approve and send a transfer request (GM+ only)
+ * Approve transfer request
+ * Sets status to APPROVED (not IN_TRANSIT)
+ */
+export const approveTransfer = async (
+  id: string,
+  approvedQuantity: number,
+  notes?: string
+): Promise<any> => {
+  try {
+    console.log('📤 Approving transfer:', { id, approvedQuantity, notes });
+    
+    const response = await apiClient.put(`/transfers/${id}/approve`, {
+      approvedQuantity,
+      notes: notes || null,
+    });
+    
+    console.log('✅ Transfer approved:', response.data);
+    
+    return unwrapTransferResponse(response.data.request || response.data);
+  } catch (error: any) {
+    console.error('❌ Error approving transfer:', error);
+    throw new Error(error.response?.data?.message || 'Failed to approve transfer');
+  }
+};
+
+/**
+ * DEPRECATED: Old approve and send function
+ * Use approveTransfer() instead
  * @param id - Transfer request ID
  * @param sendData - Carrier and delivery information
  * @returns Updated transfer request
@@ -246,16 +273,8 @@ export const approveAndSendTransfer = async (
   id: string,
   sendData: SendTransferDTO
 ): Promise<TransferRequest> => {
-  try {
-    const response = await apiClient.post<any>(
-      API_ENDPOINTS.TRANSFER_REQUESTS.SEND(id),
-      sendData
-    );
-    return unwrapTransferResponse(response);
-  } catch (error) {
-    console.error(`❌ Error approving transfer ${id}:`, error);
-    throw error;
-  }
+  console.warn('⚠️ approveAndSendTransfer is deprecated, use approveTransfer instead');
+  return approveTransfer(id, sendData.approvedQuantity, sendData.approvalNotes);
 };
 
 /**
@@ -492,6 +511,7 @@ export default {
   createTransferRequest,
   getTransferRequests,
   getTransferRequestById,
+  approveTransfer,
   approveAndSendTransfer,
   rejectTransfer,
   confirmReceipt,
