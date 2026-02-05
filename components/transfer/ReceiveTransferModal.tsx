@@ -52,7 +52,7 @@ export function ReceiveTransferModal({
 
   useEffect(() => {
     if (transfer && visible && user) {
-      const userName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+      const userName = user.name || user.email;
       setFormData({
         receivedQuantity: transfer.approvedQuantity || transfer.requestedQuantity,
         receiverName: userName,

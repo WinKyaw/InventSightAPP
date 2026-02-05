@@ -44,7 +44,7 @@ export function MarkReadyModal({
 
   useEffect(() => {
     if (transfer && visible && user) {
-      const userName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.email;
+      const userName = user.name || user.email;
       setFormData({
         packedBy: userName,
         notes: '',
