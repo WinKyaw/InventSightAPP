@@ -437,11 +437,12 @@ export const markAsReady = async (
   data: { packedBy: string; notes?: string }
 ): Promise<TransferRequest> => {
   try {
-    console.log('📤 Marking transfer as ready:', { id, notes: data.notes });
+    console.log('📤 Marking transfer as ready:', { id, packedBy: data.packedBy, notes: data.notes });
     
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.READY(id),
       {
+        packedBy: data.packedBy,
         notes: data.notes || null,
       }
     );
