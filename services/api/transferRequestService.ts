@@ -354,13 +354,23 @@ export const confirmReceipt = async (
   receiptData: ReceiptDTO
 ): Promise<TransferRequest> => {
   try {
-    console.log('📤 Confirming receipt:', { id, receivedQuantity: receiptData.receivedQuantity, notes: receiptData.notes });
+    console.log('📤 Confirming receipt:', { 
+      id, 
+      receivedQuantity: receiptData.receivedQuantity, 
+      receiptNotes: receiptData.receiptNotes,
+      condition: receiptData.condition
+    });
     
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CONFIRM_RECEIPT(id),
       {
         receivedQuantity: Number(receiptData.receivedQuantity), // Force number type
-        notes: receiptData.notes || null,
+        receiverName: receiptData.receiverName,
+        receivedAt: receiptData.receivedAt || null,
+        condition: receiptData.condition,
+        receiptNotes: receiptData.receiptNotes || null,
+        damageNotes: receiptData.damageNotes || null,
+        missingItemsNotes: receiptData.missingItemsNotes || null,
       }
     );
     
