@@ -368,7 +368,7 @@ export const confirmReceipt = async (
         receivedQuantity: Number(receiptData.receivedQuantity),
         receiverName: receiptData.receiverName || undefined,
         receiptNotes: receiptData.receiptNotes || undefined,
-        damageReported: receiptData.damageReported || false,
+        damageReported: receiptData.damageReported ?? undefined,
         damagedQuantity: receiptData.damagedQuantity || undefined,
         receiverSignatureUrl: receiptData.receiverSignatureUrl || undefined,
         deliveryQRCode: receiptData.deliveryQRCode || undefined,

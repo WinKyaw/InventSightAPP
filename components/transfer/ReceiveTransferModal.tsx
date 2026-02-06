@@ -89,8 +89,8 @@ export function ReceiveTransferModal({
         receivedQuantity: formData.receivedQuantity,
         receiverName: formData.receiverName,
         receiptNotes: formData.receiptNotes,
-        damageReported: (formData.damagedQuantity || 0) > 0,
-        damagedQuantity: formData.damagedQuantity || 0,
+        damageReported: (formData.damagedQuantity || 0) > 0 ? true : undefined,
+        damagedQuantity: formData.damagedQuantity || undefined,
         receiverSignatureUrl: formData.receiverSignatureUrl,
         deliveryQRCode: formData.deliveryQRCode,
       };
@@ -159,7 +159,7 @@ export function ReceiveTransferModal({
         {/* Damaged Quantity */}
         <Input
           placeholder="Damaged quantity (optional)"
-          value={formData.damagedQuantity?.toString() || '0'}
+          value={formData.damagedQuantity ? formData.damagedQuantity.toString() : ''}
           onChangeText={(text) => {
             const num = parseInt(text) || 0;
             setFormData({ 
