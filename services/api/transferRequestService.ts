@@ -248,10 +248,13 @@ export const approveTransfer = async (
   try {
     console.log('📤 Approving transfer:', { id, approvedQuantity, notes });
     
-    const response = await apiClient.put<any>(`/transfers/${id}/approve`, {
-      approvedQuantity,
-      notes: notes || null,
-    });
+    const response = await apiClient.put<any>(
+      API_ENDPOINTS.TRANSFER_REQUESTS.APPROVE(id),
+      {
+        approvedQuantity,
+        notes: notes || null,
+      }
+    );
     
     console.log('✅ Transfer approved:', response.data);
     
