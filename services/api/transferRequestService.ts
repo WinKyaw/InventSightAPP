@@ -248,20 +248,48 @@ export const approveTransfer = async (
   try {
     console.log('📤 Approving transfer:', { id, approvedQuantity, notes });
     
+    // Ensure approvedQuantity is a number and not null/undefined
+    const requestBody = {
+      approvedQuantity: Number(approvedQuantity), // Force number type
+      notes: notes || null,
+    };
+    
+    console.log('📦 Request body:', JSON.stringify(requestBody));
+    
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.APPROVE(id),
-      {
-        approvedQuantity,
-        notes: notes || null,
-      }
+      requestBody
     );
     
-    console.log('✅ Transfer approved:', response.data);
+    console.log('✅ Transfer approved - Full response:', JSON.stringify(response));
     
-    return unwrapTransferResponse(response.data.request || response.data);
+    // Handle different response structures
+    if (response?.data?.request) {
+      return unwrapTransferResponse(response.data.request);
+    } else if (response?.data) {
+      return unwrapTransferResponse(response.data);
+    } else if (response) {
+      return unwrapTransferResponse(response);
+    }
+    
+    throw new Error('Invalid response structure from backend');
+    
   } catch (error: any) {
     console.error('❌ Error approving transfer:', error);
-    throw new Error(error.response?.data?.message || 'Failed to approve transfer');
+    console.error('❌ Error response:', JSON.stringify(error.response));
+    
+    // Extract validation errors
+    if (error.response?.status === 400 && error.response?.data?.errors) {
+      const validationErrors = error.response.data.errors;
+      const errorMessages = Object.entries(validationErrors)
+        .map(([field, message]) => `${field}: ${message}`)
+        .join(', ');
+      throw new Error(`Validation failed: ${errorMessages}`);
+    }
+    
+    // Extract general error message
+    const errorMessage = error.response?.data?.message || 'Failed to approve transfer';
+    throw new Error(errorMessage);
   }
 };
 
@@ -291,14 +319,27 @@ export const rejectTransfer = async (
   reason: string
 ): Promise<TransferRequest> => {
   try {
+    console.log('📤 Rejecting transfer:', { id, reason });
+    
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.REJECT(id),
       { reason }
     );
+    
+    console.log('✅ Transfer rejected:', JSON.stringify(response));
+    
+    if (response?.data?.request) {
+      return unwrapTransferResponse(response.data.request);
+    } else if (response?.data) {
+      return unwrapTransferResponse(response.data);
+    }
+    
     return unwrapTransferResponse(response);
-  } catch (error) {
-    console.error(`❌ Error rejecting transfer ${id}:`, error);
-    throw error;
+    
+  } catch (error: any) {
+    console.error('❌ Error rejecting transfer:', error);
+    const errorMessage = error.response?.data?.message || 'Failed to reject transfer';
+    throw new Error(errorMessage);
   }
 };
 
@@ -313,14 +354,30 @@ export const confirmReceipt = async (
   receiptData: ReceiptDTO
 ): Promise<TransferRequest> => {
   try {
-    const response = await apiClient.post<any>(
+    console.log('📤 Confirming receipt:', { id, receivedQuantity: receiptData.receivedQuantity, notes: receiptData.notes });
+    
+    const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CONFIRM_RECEIPT(id),
-      receiptData
+      {
+        receivedQuantity: Number(receiptData.receivedQuantity), // Force number type
+        notes: receiptData.notes || null,
+      }
     );
+    
+    console.log('✅ Receipt confirmed:', JSON.stringify(response));
+    
+    if (response?.data?.request) {
+      return unwrapTransferResponse(response.data.request);
+    } else if (response?.data) {
+      return unwrapTransferResponse(response.data);
+    }
+    
     return unwrapTransferResponse(response);
-  } catch (error) {
-    console.error(`❌ Error confirming receipt for transfer ${id}:`, error);
-    throw error;
+    
+  } catch (error: any) {
+    console.error('❌ Error confirming receipt:', error);
+    const errorMessage = error.response?.data?.message || 'Failed to confirm receipt';
+    throw new Error(errorMessage);
   }
 };
 
@@ -335,14 +392,27 @@ export const cancelTransfer = async (
   reason: string
 ): Promise<TransferRequest> => {
   try {
+    console.log('📤 Cancelling transfer:', { id, reason });
+    
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CANCEL(id),
-      { reason }
+      { reason: reason || null }
     );
+    
+    console.log('✅ Transfer cancelled:', JSON.stringify(response));
+    
+    if (response?.data?.request) {
+      return unwrapTransferResponse(response.data.request);
+    } else if (response?.data) {
+      return unwrapTransferResponse(response.data);
+    }
+    
     return unwrapTransferResponse(response);
-  } catch (error) {
-    console.error(`❌ Error cancelling transfer ${id}:`, error);
-    throw error;
+    
+  } catch (error: any) {
+    console.error('❌ Error cancelling transfer:', error);
+    const errorMessage = error.response?.data?.message || 'Failed to cancel transfer';
+    throw new Error(errorMessage);
   }
 };
 
@@ -357,14 +427,29 @@ export const markAsReady = async (
   data: { packedBy: string; notes?: string }
 ): Promise<TransferRequest> => {
   try {
+    console.log('📤 Marking transfer as ready:', { id, notes: data.notes });
+    
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.READY(id),
-      data
+      {
+        notes: data.notes || null,
+      }
     );
+    
+    console.log('✅ Transfer marked as ready:', JSON.stringify(response));
+    
+    if (response?.data?.request) {
+      return unwrapTransferResponse(response.data.request);
+    } else if (response?.data) {
+      return unwrapTransferResponse(response.data);
+    }
+    
     return unwrapTransferResponse(response);
-  } catch (error) {
-    console.error(`❌ Error marking transfer ${id} as ready:`, error);
-    throw error;
+    
+  } catch (error: any) {
+    console.error('❌ Error marking transfer as ready:', error);
+    const errorMessage = error.response?.data?.message || 'Failed to mark transfer as ready';
+    throw new Error(errorMessage);
   }
 };
 
@@ -380,17 +465,42 @@ export const startDelivery = async (
     carrierName: string;
     carrierPhone?: string;
     carrierVehicle?: string;
+    estimatedDeliveryAt?: string;
   }
 ): Promise<TransferRequest> => {
   try {
+    console.log('📤 Starting delivery:', { 
+      id, 
+      carrierName: data.carrierName, 
+      carrierPhone: data.carrierPhone, 
+      carrierVehicle: data.carrierVehicle,
+      estimatedDeliveryAt: data.estimatedDeliveryAt
+    });
+    
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.PICKUP(id),
-      data
+      {
+        carrierName: data.carrierName,
+        carrierPhone: data.carrierPhone || null,
+        carrierVehicle: data.carrierVehicle || null,
+        estimatedDeliveryAt: data.estimatedDeliveryAt || null,
+      }
     );
+    
+    console.log('✅ Delivery started:', JSON.stringify(response));
+    
+    if (response?.data?.request) {
+      return unwrapTransferResponse(response.data.request);
+    } else if (response?.data) {
+      return unwrapTransferResponse(response.data);
+    }
+    
     return unwrapTransferResponse(response);
-  } catch (error) {
-    console.error(`❌ Error starting delivery for transfer ${id}:`, error);
-    throw error;
+    
+  } catch (error: any) {
+    console.error('❌ Error starting delivery:', error);
+    const errorMessage = error.response?.data?.message || 'Failed to start delivery';
+    throw new Error(errorMessage);
   }
 };
 
