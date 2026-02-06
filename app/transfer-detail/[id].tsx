@@ -306,7 +306,7 @@ export default function TransferDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Header title={`Transfer #${displayId}`} showBackButton onBackPress={() => router.back()} />
+      <Header title={`Transfer #${displayId}`} showBackButton />
 
       {/* Floating Back Button */}
       <TouchableOpacity 
