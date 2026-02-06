@@ -280,15 +280,16 @@ export interface SendTransferDTO {
 
 /**
  * DTO for confirming receipt
+ * Matches backend ReceiveTransferDTO structure
  */
 export interface ReceiptDTO {
   receivedQuantity: number;
-  receiverName: string;
-  receivedAt?: string;
-  condition: 'GOOD' | 'DAMAGED' | 'PARTIAL';
+  receiverName?: string;
   receiptNotes?: string;
-  damageNotes?: string;
-  missingItemsNotes?: string;
+  damageReported?: boolean;
+  damagedQuantity?: number;
+  receiverSignatureUrl?: string;
+  deliveryQRCode?: string;
 }
 
 /**

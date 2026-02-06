@@ -12,7 +12,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import DatePicker from '../ui/DatePicker';
 import { TransferRequest, ReceiptDTO } from '../../types/transfer';
 import { confirmReceipt } from '../../services/api/transferRequestService';
 import { useAuth } from '../../context/AuthContext';
@@ -25,11 +24,9 @@ interface ReceiveTransferModalProps {
   onSuccess: () => void;
 }
 
-type ConditionType = 'GOOD' | 'DAMAGED' | 'PARTIAL';
-
 interface ValidationErrors {
   receivedQuantity?: string;
-  receiverName?: string;
+  damagedQuantity?: string;
 }
 
 export function ReceiveTransferModal({
@@ -42,11 +39,10 @@ export function ReceiveTransferModal({
   const [formData, setFormData] = useState<ReceiptDTO>({
     receivedQuantity: 0,
     receiverName: '',
-    receivedAt: new Date().toISOString(),
-    condition: 'GOOD',
     receiptNotes: '',
+    damageReported: false,
+    damagedQuantity: 0,
   });
-  const [receivedDate, setReceivedDate] = useState<Date>(new Date());
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [loading, setLoading] = useState(false);
 
@@ -56,11 +52,10 @@ export function ReceiveTransferModal({
       setFormData({
         receivedQuantity: transfer.approvedQuantity || transfer.requestedQuantity,
         receiverName: userName,
-        receivedAt: new Date().toISOString(),
-        condition: 'GOOD',
         receiptNotes: '',
+        damageReported: false,
+        damagedQuantity: 0,
       });
-      setReceivedDate(new Date());
       setValidationErrors({});
     }
   }, [transfer, visible, user]);
@@ -75,8 +70,10 @@ export function ReceiveTransferModal({
       errors.receivedQuantity = `Cannot exceed approved quantity (${max})`;
     }
 
-    if (!formData.receiverName.trim()) {
-      errors.receiverName = 'Receiver name is required';
+    if (formData.damagedQuantity && formData.damagedQuantity < 0) {
+      errors.damagedQuantity = 'Damaged quantity cannot be negative';
+    } else if (formData.damagedQuantity && formData.receivedQuantity && formData.damagedQuantity > formData.receivedQuantity) {
+      errors.damagedQuantity = 'Damaged quantity cannot exceed received quantity';
     }
 
     setValidationErrors(errors);
@@ -89,8 +86,13 @@ export function ReceiveTransferModal({
     setLoading(true);
     try {
       const receiptData: ReceiptDTO = {
-        ...formData,
-        receivedAt: receivedDate.toISOString(),
+        receivedQuantity: formData.receivedQuantity,
+        receiverName: formData.receiverName,
+        receiptNotes: formData.receiptNotes,
+        damageReported: (formData.damagedQuantity || 0) > 0,
+        damagedQuantity: formData.damagedQuantity || 0,
+        receiverSignatureUrl: formData.receiverSignatureUrl,
+        deliveryQRCode: formData.deliveryQRCode,
       };
 
       await confirmReceipt(transfer.id, receiptData);
@@ -103,10 +105,6 @@ export function ReceiveTransferModal({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleConditionChange = (condition: ConditionType) => {
-    setFormData({ ...formData, condition });
   };
 
   if (!transfer) return null;
@@ -146,9 +144,6 @@ export function ReceiveTransferModal({
           onChangeText={(text) => {
             const num = parseInt(text) || 0;
             setFormData({ ...formData, receivedQuantity: num });
-            if (num < expectedQuantity && formData.condition === 'GOOD') {
-              setFormData({ ...formData, receivedQuantity: num, condition: 'PARTIAL' });
-            }
           }}
           keyboardType="numeric"
           error={validationErrors.receivedQuantity}
@@ -156,59 +151,26 @@ export function ReceiveTransferModal({
 
         {/* Receiver Name */}
         <Input
-          placeholder="Receiver name"
+          placeholder="Receiver name (optional)"
           value={formData.receiverName}
           onChangeText={(text) => setFormData({ ...formData, receiverName: text })}
-          error={validationErrors.receiverName}
         />
 
-        {/* Receipt Date/Time */}
-        <DatePicker
-          label="Receipt Date"
-          value={receivedDate}
-          onChange={(date) => {
-            if (date) setReceivedDate(date);
+        {/* Damaged Quantity */}
+        <Input
+          placeholder="Damaged quantity (optional)"
+          value={formData.damagedQuantity?.toString() || '0'}
+          onChangeText={(text) => {
+            const num = parseInt(text) || 0;
+            setFormData({ 
+              ...formData, 
+              damagedQuantity: num,
+              damageReported: num > 0
+            });
           }}
-          placeholder="Select receipt date"
-          maximumDate={new Date()}
+          keyboardType="numeric"
+          error={validationErrors.damagedQuantity}
         />
-
-        {/* Condition Checkboxes */}
-        <Text style={styles.sectionTitle}>Condition</Text>
-        <View style={styles.conditionContainer}>
-          {[
-            { value: 'GOOD', label: 'Good', icon: 'checkmark-circle', color: Colors.success },
-            { value: 'DAMAGED', label: 'Damaged', icon: 'alert-circle', color: Colors.warning },
-            { value: 'PARTIAL', label: 'Partial', icon: 'remove-circle', color: Colors.accent },
-          ].map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              style={[
-                styles.conditionOption,
-                formData.condition === option.value && styles.conditionOptionActive,
-                formData.condition === option.value && {
-                  backgroundColor: `${option.color}15`,
-                  borderColor: option.color,
-                },
-              ]}
-              onPress={() => handleConditionChange(option.value as ConditionType)}
-            >
-              <Ionicons
-                name={option.icon as any}
-                size={24}
-                color={formData.condition === option.value ? option.color : Colors.lightGray}
-              />
-              <Text
-                style={[
-                  styles.conditionLabel,
-                  formData.condition === option.value && { color: option.color },
-                ]}
-              >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
 
         {/* Receipt Notes */}
         <Input
@@ -219,32 +181,6 @@ export function ReceiveTransferModal({
           numberOfLines={4}
           style={styles.textArea}
         />
-
-        {/* Damage/Missing Notes */}
-        {(formData.condition === 'DAMAGED' || formData.condition === 'PARTIAL') && (
-          <>
-            {formData.condition === 'DAMAGED' && (
-              <Input
-                placeholder="Damage details"
-                value={formData.damageNotes}
-                onChangeText={(text) => setFormData({ ...formData, damageNotes: text })}
-                multiline
-                numberOfLines={3}
-                style={styles.textArea}
-              />
-            )}
-            {formData.condition === 'PARTIAL' && (
-              <Input
-                placeholder="Missing items details"
-                value={formData.missingItemsNotes}
-                onChangeText={(text) => setFormData({ ...formData, missingItemsNotes: text })}
-                multiline
-                numberOfLines={3}
-                style={styles.textArea}
-              />
-            )}
-          </>
-        )}
 
         {/* Action Button */}
         <Button
@@ -296,38 +232,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: Colors.text,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  conditionContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  conditionOption: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
-  },
-  conditionOptionActive: {
-    borderWidth: 2,
-  },
-  conditionLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-    marginTop: 8,
   },
   textArea: {
     height: 80,
