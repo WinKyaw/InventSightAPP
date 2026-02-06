@@ -1,6 +1,7 @@
 import React, { ReactNode, useState } from 'react';
 import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { ProfileModal } from './ProfileModal';
 
 interface HeaderProps {
@@ -10,6 +11,8 @@ interface HeaderProps {
   rightComponent?: ReactNode;
   style?: ViewStyle;
   showProfileButton?: boolean;
+  showBackButton?: boolean;
+  onBackPress?: () => void;
 }
 
 export function Header({ 
@@ -18,14 +21,34 @@ export function Header({
   backgroundColor = '#3B82F6', 
   rightComponent,
   style,
-  showProfileButton = false
+  showProfileButton = false,
+  showBackButton = false,
+  onBackPress,
 }: HeaderProps) {
+  const router = useRouter();
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const handleBackPress = () => {
+    if (onBackPress) {
+      onBackPress();
+    } else {
+      router.back();
+    }
+  };
 
   return (
     <>
       <View style={[styles.header, { backgroundColor }, style]}>
         <View style={styles.headerContent}>
+          {showBackButton && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBackPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+          )}
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>{title}</Text>
             {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
@@ -62,6 +85,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+    marginLeft: -8,
   },
   headerLeft: {
     flex: 1,

@@ -306,9 +306,26 @@ export default function TransferDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Header title={`Transfer #${displayId}`} showBackButton />
+      <Header title={`Transfer #${displayId}`} showBackButton onBackPress={() => router.back()} />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      {/* Floating Back Button */}
+      <TouchableOpacity 
+        style={styles.floatingBackButton}
+        onPress={() => router.back()}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="arrow-back" size={24} color={Colors.white} />
+      </TouchableOpacity>
+
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        scrollEventThrottle={16}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Status Header */}
         <View style={styles.statusHeader}>
           <TransferStatusBadge status={transfer.status} size="large" />
@@ -647,7 +664,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100,  // ← Increased from 32 to ensure bottom content visible
+    paddingBottom: 150,  // Increased for better visibility
   },
   loadingContainer: {
     flex: 1,
@@ -851,5 +868,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.danger,
+  },
+  floatingBackButton: {
+    position: 'absolute',
+    top: 60,
+    left: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
   },
 });
