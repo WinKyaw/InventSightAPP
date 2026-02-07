@@ -85,14 +85,15 @@ export function ReceiveTransferModal({
 
     setLoading(true);
     try {
+      // ✅ Build receipt data with proper defaults (no undefined!)
       const receiptData: ReceiptDTO = {
         receivedQuantity: formData.receivedQuantity,
-        receiverName: formData.receiverName,
-        receiptNotes: formData.receiptNotes,
-        damageReported: (formData.damagedQuantity || 0) > 0 ? true : undefined,
-        damagedQuantity: formData.damagedQuantity || undefined,
-        receiverSignatureUrl: formData.receiverSignatureUrl,
-        deliveryQRCode: formData.deliveryQRCode,
+        receiverName: formData.receiverName || '',
+        receiptNotes: formData.receiptNotes || '',
+        damageReported: (formData.damagedQuantity || 0) > 0,
+        damagedQuantity: formData.damagedQuantity || 0,
+        receiverSignatureUrl: formData.receiverSignatureUrl || undefined,
+        deliveryQRCode: formData.deliveryQRCode || undefined,
       };
 
       await confirmReceipt(transfer.id, receiptData);

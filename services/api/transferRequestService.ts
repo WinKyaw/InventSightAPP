@@ -354,28 +354,25 @@ export const confirmReceipt = async (
   receiptData: ReceiptDTO
 ): Promise<TransferRequest> => {
   try {
-    console.log('📤 Confirming receipt:', { 
-      id, 
-      receivedQuantity: receiptData.receivedQuantity, 
-      receiptNotes: receiptData.receiptNotes,
-      damageReported: receiptData.damageReported,
-      damagedQuantity: receiptData.damagedQuantity
-    });
+    // ✅ Build payload with proper null/default values (no undefined!)
+    const payload = {
+      receivedQuantity: Number(receiptData.receivedQuantity),           // ✅ Required field first
+      receiptNotes: receiptData.receiptNotes || '',                     // ✅ Empty string default
+      damageReported: (receiptData.damagedQuantity != null && receiptData.damagedQuantity > 0) || false,  // ✅ Boolean
+      damagedQuantity: receiptData.damagedQuantity || 0,                // ✅ Number default
+      receiverName: receiptData.receiverName || null,                   // ✅ null is valid JSON
+      receiverSignatureUrl: receiptData.receiverSignatureUrl || null,   // ✅ null is valid
+      deliveryQRCode: receiptData.deliveryQRCode || null                // ✅ null is valid
+    };
+
+    console.log('📤 Confirming receipt:', payload);
     
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CONFIRM_RECEIPT(id),
-      {
-        receivedQuantity: Number(receiptData.receivedQuantity),
-        receiverName: receiptData.receiverName || undefined,
-        receiptNotes: receiptData.receiptNotes || undefined,
-        damageReported: receiptData.damageReported ?? undefined,
-        damagedQuantity: receiptData.damagedQuantity || undefined,
-        receiverSignatureUrl: receiptData.receiverSignatureUrl || undefined,
-        deliveryQRCode: receiptData.deliveryQRCode || undefined,
-      }
+      payload
     );
     
-    console.log('✅ Receipt confirmed:', JSON.stringify(response));
+    console.log('✅ Receipt confirmed successfully:', response.data);
     
     if (response?.data?.request) {
       return unwrapTransferResponse(response.data.request);
