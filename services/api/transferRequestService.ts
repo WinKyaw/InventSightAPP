@@ -355,11 +355,13 @@ export const confirmReceipt = async (
 ): Promise<TransferRequest> => {
   try {
     // ✅ Safely convert receivedQuantity to number with validation
-    const receivedQty = receiptData.receivedQuantity != null 
-      ? (typeof receiptData.receivedQuantity === 'string' 
-          ? parseInt(receiptData.receivedQuantity, 10) 
-          : receiptData.receivedQuantity)
-      : 0;
+    if (receiptData.receivedQuantity == null) {
+      throw new Error('Received quantity is required');
+    }
+    
+    const receivedQty = typeof receiptData.receivedQuantity === 'string' 
+      ? parseInt(receiptData.receivedQuantity, 10) 
+      : receiptData.receivedQuantity;
     
     // ✅ Validate receivedQuantity is a valid number
     if (isNaN(receivedQty)) {
