@@ -360,7 +360,9 @@ export const confirmReceipt = async (
     }
     
     // Convert to integer (inventory quantities must be whole numbers)
-    // Both parseInt and Math.floor truncate decimals to ensure integer values
+    // For strings: parseInt('30.7', 10) -> 30
+    // For numbers: Math.floor(30.7) -> 30
+    // Any invalid input will result in NaN, which is caught below
     const receivedQty = typeof receiptData.receivedQuantity === 'string' 
       ? parseInt(receiptData.receivedQuantity, 10) 
       : Math.floor(Number(receiptData.receivedQuantity));
