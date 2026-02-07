@@ -357,7 +357,7 @@ export const confirmReceipt = async (
     // ✅ Build payload with proper null/default values (no undefined!)
     const payload = {
       receivedQuantity: Number(receiptData.receivedQuantity),           // ✅ Required field first
-      receiptNotes: receiptData.receiptNotes || '',                     // ✅ Empty string default
+      receiptNotes: receiptData.receiptNotes || null,                   // ✅ null for optional string
       damageReported: (receiptData.damagedQuantity != null && receiptData.damagedQuantity > 0) || false,  // ✅ Boolean
       damagedQuantity: receiptData.damagedQuantity || 0,                // ✅ Number default
       receiverName: receiptData.receiverName || null,                   // ✅ null is valid JSON

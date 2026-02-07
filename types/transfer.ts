@@ -284,12 +284,12 @@ export interface SendTransferDTO {
  */
 export interface ReceiptDTO {
   receivedQuantity: number;
-  receiverName?: string;
-  receiptNotes?: string;
+  receiverName?: string | null;
+  receiptNotes?: string | null;
   damageReported?: boolean;
   damagedQuantity?: number;
-  receiverSignatureUrl?: string;
-  deliveryQRCode?: string;
+  receiverSignatureUrl?: string | null;
+  deliveryQRCode?: string | null;
 }
 
 /**
