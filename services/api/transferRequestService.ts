@@ -362,8 +362,12 @@ export const confirmReceipt = async (
       : 0;
     
     // ✅ Validate receivedQuantity is a valid number
-    if (isNaN(receivedQty) || receivedQty <= 0) {
-      throw new Error('Received quantity must be a valid positive number');
+    if (isNaN(receivedQty)) {
+      throw new Error('Received quantity must be a valid number');
+    }
+    
+    if (receivedQty <= 0) {
+      throw new Error('Received quantity must be greater than zero');
     }
 
     // ✅ Build payload with properly validated values
