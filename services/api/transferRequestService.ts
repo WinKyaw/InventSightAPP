@@ -359,12 +359,13 @@ export const confirmReceipt = async (
       throw new Error('Received quantity is required');
     }
     
+    // Convert to integer (inventory quantities must be whole numbers)
     const receivedQty = typeof receiptData.receivedQuantity === 'string' 
       ? parseInt(receiptData.receivedQuantity, 10) 
-      : receiptData.receivedQuantity;
+      : Math.floor(receiptData.receivedQuantity);
     
     // ✅ Validate receivedQuantity is a valid number
-    if (isNaN(receivedQty)) {
+    if (isNaN(receivedQty) || !isFinite(receivedQty)) {
       throw new Error('Received quantity must be a valid number');
     }
     
