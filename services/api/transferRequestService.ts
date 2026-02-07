@@ -362,7 +362,7 @@ export const confirmReceipt = async (
       : 0;
     
     // ✅ Validate receivedQuantity is a valid number
-    if (isNaN(receivedQty) || receivedQty < 0) {
+    if (isNaN(receivedQty) || receivedQty <= 0) {
       throw new Error('Received quantity must be a valid positive number');
     }
 
