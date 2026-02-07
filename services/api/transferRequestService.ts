@@ -354,18 +354,30 @@ export const confirmReceipt = async (
   receiptData: ReceiptDTO
 ): Promise<TransferRequest> => {
   try {
-    // ✅ Build payload with proper null/default values (no undefined!)
+    // ✅ Safely convert receivedQuantity to number with validation
+    const receivedQty = receiptData.receivedQuantity != null 
+      ? (typeof receiptData.receivedQuantity === 'string' 
+          ? parseInt(receiptData.receivedQuantity, 10) 
+          : receiptData.receivedQuantity)
+      : 0;
+    
+    // ✅ Validate receivedQuantity is a valid number
+    if (isNaN(receivedQty) || receivedQty < 0) {
+      throw new Error('Received quantity must be a valid positive number');
+    }
+
+    // ✅ Build payload with properly validated values
     const payload = {
-      receivedQuantity: Number(receiptData.receivedQuantity),           // ✅ Required field first
-      receiptNotes: receiptData.receiptNotes || null,                   // ✅ null for optional string
-      damageReported: receiptData.damageReported ?? (receiptData.damagedQuantity != null && receiptData.damagedQuantity > 0),  // ✅ Boolean
-      damagedQuantity: receiptData.damagedQuantity || 0,                // ✅ Number default
-      receiverName: receiptData.receiverName || null,                   // ✅ null is valid JSON
-      receiverSignatureUrl: receiptData.receiverSignatureUrl || null,   // ✅ null is valid
-      deliveryQRCode: receiptData.deliveryQRCode || null                // ✅ null is valid
+      receivedQuantity: receivedQty,                                    // ✅ Safe number conversion
+      receiptNotes: receiptData.receiptNotes || null,                   // ✅ null for empty
+      damageReported: receiptData.damageReported ?? (receiptData.damagedQuantity != null && receiptData.damagedQuantity > 0),
+      damagedQuantity: receiptData.damagedQuantity || 0,                // ✅ 0 for undefined/null
+      receiverName: receiptData.receiverName || null,                   // ✅ null for empty
+      receiverSignatureUrl: receiptData.receiverSignatureUrl || null,   // ✅ null for empty
+      deliveryQRCode: receiptData.deliveryQRCode || null                // ✅ null for empty
     };
 
-    console.log('📤 Confirming receipt:', payload);
+    console.log('📤 Confirming receipt with validated payload:', payload);
     
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CONFIRM_RECEIPT(id),
