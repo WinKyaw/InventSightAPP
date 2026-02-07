@@ -346,7 +346,7 @@ export const rejectTransfer = async (
 /**
  * Confirm receipt of a transfer
  * @param id - Transfer request ID
- * @param receiptData - Receipt information
+ * @param receiptData - Receipt information matching backend ReceiveTransferDTO
  * @returns Updated transfer request
  */
 export const confirmReceipt = async (
@@ -358,19 +358,20 @@ export const confirmReceipt = async (
       id, 
       receivedQuantity: receiptData.receivedQuantity, 
       receiptNotes: receiptData.receiptNotes,
-      condition: receiptData.condition
+      damageReported: receiptData.damageReported,
+      damagedQuantity: receiptData.damagedQuantity
     });
     
     const response = await apiClient.put<any>(
       API_ENDPOINTS.TRANSFER_REQUESTS.CONFIRM_RECEIPT(id),
       {
-        receivedQuantity: Number(receiptData.receivedQuantity), // Force number type
-        receiverName: receiptData.receiverName,
-        receivedAt: receiptData.receivedAt || null,
-        condition: receiptData.condition,
-        receiptNotes: receiptData.receiptNotes || null,
-        damageNotes: receiptData.damageNotes || null,
-        missingItemsNotes: receiptData.missingItemsNotes || null,
+        receivedQuantity: Number(receiptData.receivedQuantity),
+        receiverName: receiptData.receiverName || undefined,
+        receiptNotes: receiptData.receiptNotes || undefined,
+        damageReported: receiptData.damageReported ?? undefined,
+        damagedQuantity: receiptData.damagedQuantity || undefined,
+        receiverSignatureUrl: receiptData.receiverSignatureUrl || undefined,
+        deliveryQRCode: receiptData.deliveryQRCode || undefined,
       }
     );
     
