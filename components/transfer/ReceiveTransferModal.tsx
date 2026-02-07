@@ -90,7 +90,7 @@ export function ReceiveTransferModal({
         receivedQuantity: formData.receivedQuantity,
         receiverName: formData.receiverName || null,
         receiptNotes: formData.receiptNotes || null,
-        damageReported: (formData.damagedQuantity || 0) > 0,
+        damageReported: formData.damagedQuantity != null && formData.damagedQuantity > 0,
         damagedQuantity: formData.damagedQuantity || 0,
         receiverSignatureUrl: formData.receiverSignatureUrl || null,
         deliveryQRCode: formData.deliveryQRCode || null,
