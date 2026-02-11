@@ -65,6 +65,13 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
   const [loadingItems, setLoadingItems] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
+  // Memoize combined product list for efficient lookups
+  const productLookup = React.useMemo(() => {
+    const map = new Map<number, Product>();
+    [...products, ...topSellers].forEach(p => map.set(p.id, p));
+    return map;
+  }, [products, topSellers]);
+
   // Load customers and products when modal opens
   useEffect(() => {
     if (visible && currentStore?.id) {
@@ -209,10 +216,20 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
     const product = filteredProducts.find(p => p.id === productId);
     if (!product) return;
     
-    // Parse input
-    const qty = parseInt(text) || 0;
+    // Parse input - only allow valid numbers
+    if (text === '' || text === '0') {
+      setQuantities(prev => ({ ...prev, [productId]: 0 }));
+      return;
+    }
     
-    // Validate
+    const qty = parseInt(text, 10);
+    
+    // Validate that it's a valid number
+    if (isNaN(qty) || qty < 0) {
+      return; // Ignore invalid input
+    }
+    
+    // Validate against stock
     if (qty > product.quantity) {
       Alert.alert(
         'Stock Limit',
@@ -291,7 +308,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
       return prev.map(item => {
         if (item.productId !== productId) return item;
         
-        const product = [...products, ...topSellers].find(p => p.id === productId);
+        const product = productLookup.get(productId);
         if (!product) return item;
         
         const newQty = item.quantity + delta;
@@ -315,7 +332,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
 
   // Helper to get current stock
   const getProductStock = (productId: number): number => {
-    const product = [...products, ...topSellers].find(p => p.id === productId);
+    const product = productLookup.get(productId);
     return product?.quantity || 0;
   };
 
@@ -602,37 +619,39 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                     </View>
                     
                     <View style={styles.quantityContainer}>
-                      {/* Minus button */}
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() => handleQuantityChange(item.id, -1)}
-                        disabled={(quantities[item.id] || 0) === 0}
-                        accessibilityLabel="Decrease quantity"
-                        accessibilityHint={(quantities[item.id] || 0) === 0 ? "Currently at minimum quantity" : "Tap to decrease quantity by 1"}
-                      >
-                        <Ionicons name="remove" size={16} color="#fff" />
-                      </TouchableOpacity>
-                      
-                      {/* Quantity input field */}
-                      <TextInput
-                        style={styles.quantityInput}
-                        value={(quantities[item.id] || 0).toString()}
-                        onChangeText={(text) => handleQuantityInput(item.id, text)}
-                        keyboardType="numeric"
-                        selectTextOnFocus
-                        maxLength={4}
-                      />
-                      
-                      {/* Plus button */}
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() => handleQuantityChange(item.id, 1)}
-                        disabled={(quantities[item.id] || 0) >= item.quantity}
-                        accessibilityLabel="Increase quantity"
-                        accessibilityHint={(quantities[item.id] || 0) >= item.quantity ? "Stock limit reached" : "Tap to increase quantity by 1"}
-                      >
-                        <Ionicons name="add" size={16} color="#fff" />
-                      </TouchableOpacity>
+                      <View style={styles.quantityControls}>
+                        {/* Minus button */}
+                        <TouchableOpacity
+                          style={styles.quantityButton}
+                          onPress={() => handleQuantityChange(item.id, -1)}
+                          disabled={(quantities[item.id] || 0) === 0}
+                          accessibilityLabel="Decrease quantity"
+                          accessibilityHint={(quantities[item.id] || 0) === 0 ? "Currently at minimum quantity" : "Tap to decrease quantity by 1"}
+                        >
+                          <Ionicons name="remove" size={16} color="#fff" />
+                        </TouchableOpacity>
+                        
+                        {/* Quantity input field */}
+                        <TextInput
+                          style={styles.quantityInput}
+                          value={(quantities[item.id] || 0).toString()}
+                          onChangeText={(text) => handleQuantityInput(item.id, text)}
+                          keyboardType="numeric"
+                          selectTextOnFocus
+                          maxLength={4}
+                        />
+                        
+                        {/* Plus button */}
+                        <TouchableOpacity
+                          style={styles.quantityButton}
+                          onPress={() => handleQuantityChange(item.id, 1)}
+                          disabled={(quantities[item.id] || 0) >= item.quantity}
+                          accessibilityLabel="Increase quantity"
+                          accessibilityHint={(quantities[item.id] || 0) >= item.quantity ? "Stock limit reached" : "Tap to increase quantity by 1"}
+                        >
+                          <Ionicons name="add" size={16} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
                       
                       {/* Add to Cart button */}
                       <TouchableOpacity
@@ -674,7 +693,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
           <View style={styles.cartSection}>
             <View style={styles.cartHeader}>
               <Text style={styles.cartTitle}>
-                Cart ({selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''})
+                Cart ({selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'})
               </Text>
             </View>
             
@@ -936,6 +955,12 @@ const styles = StyleSheet.create({
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   quantityButton: {
@@ -966,7 +991,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     gap: 4,
-    marginLeft: 'auto',
   },
   addToCartButtonDisabled: {
     backgroundColor: '#ccc',
