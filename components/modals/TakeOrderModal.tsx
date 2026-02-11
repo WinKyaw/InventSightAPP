@@ -63,6 +63,14 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
+
+  // Memoize combined product list for efficient lookups
+  const productLookup = React.useMemo(() => {
+    const map = new Map<number, Product>();
+    [...products, ...topSellers].forEach(p => map.set(p.id, p));
+    return map;
+  }, [products, topSellers]);
 
   // Load customers and products when modal opens
   useEffect(() => {
@@ -188,6 +196,144 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
     setSelectedCustomer(customer);
     setCustomerQuery(customer.name);
     setShowCustomerDropdown(false);
+  };
+
+  // Handle +/- button clicks
+  const handleQuantityChange = (productId: number, delta: number) => {
+    setQuantities(prev => {
+      const product = filteredProducts.find(p => p.id === productId);
+      if (!product) return prev;
+      
+      const currentQty = prev[productId] || 0;
+      const newQty = Math.max(0, Math.min(currentQty + delta, product.quantity));
+      
+      return { ...prev, [productId]: newQty };
+    });
+  };
+
+  // Handle direct input
+  const handleQuantityInput = (productId: number, text: string) => {
+    const product = filteredProducts.find(p => p.id === productId);
+    if (!product) return;
+    
+    // Parse input - only allow valid numbers
+    if (text === '' || text === '0') {
+      setQuantities(prev => ({ ...prev, [productId]: 0 }));
+      return;
+    }
+    
+    const qty = parseInt(text, 10);
+    
+    // Validate that it's a valid number
+    if (isNaN(qty) || qty < 0) {
+      return; // Ignore invalid input
+    }
+    
+    // Validate against stock
+    if (qty > product.quantity) {
+      Alert.alert(
+        'Stock Limit',
+        `Only ${product.quantity} units available`,
+        [{ text: 'OK' }]
+      );
+      setQuantities(prev => ({ ...prev, [productId]: product.quantity }));
+    } else {
+      setQuantities(prev => ({ ...prev, [productId]: qty }));
+    }
+  };
+
+  // Handle add to cart
+  const handleAddToCart = (product: Product, quantity: number) => {
+    if (quantity === 0) {
+      Alert.alert('Invalid Quantity', 'Please enter a quantity greater than 0');
+      return;
+    }
+    
+    // Check stock availability
+    if (quantity > product.quantity) {
+      Alert.alert('Insufficient Stock', `Only ${product.quantity} units available`);
+      return;
+    }
+    
+    // Check if item already in cart
+    const existingItem = selectedItems.find(item => item.productId === product.id);
+    const currentCartQty = existingItem ? existingItem.quantity : 0;
+    const totalQty = currentCartQty + quantity;
+    
+    if (totalQty > product.quantity) {
+      Alert.alert(
+        'Insufficient Stock',
+        `Only ${product.quantity} units available. You already have ${currentCartQty} in cart.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    // Add to cart
+    setSelectedItems(prev => {
+      const existing = prev.find(item => item.productId === product.id);
+      
+      if (existing) {
+        // Update quantity
+        return prev.map(item =>
+          item.productId === product.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      } else {
+        // Add new item
+        return [...prev, { 
+          productId: product.id,
+          name: product.name,
+          price: product.sellingPrice,
+          quantity 
+        }];
+      }
+    });
+    
+    // Reset quantity input for this product
+    setQuantities(prev => ({ ...prev, [product.id]: 0 }));
+    
+    // Show success feedback
+    Alert.alert(
+      'Added to Cart',
+      `${quantity}x ${product.name} added to cart`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  // Helper to update cart quantity
+  const updateCartQuantity = (productId: number, delta: number) => {
+    setSelectedItems(prev => {
+      return prev.map(item => {
+        if (item.productId !== productId) return item;
+        
+        const product = productLookup.get(productId);
+        if (!product) return item;
+        
+        const newQty = item.quantity + delta;
+        
+        // Remove item if quantity would be 0 or less
+        if (newQty <= 0) {
+          return null;
+        }
+        
+        // Cap at available stock
+        const cappedQty = Math.min(newQty, product.quantity);
+        return { ...item, quantity: cappedQty };
+      }).filter((item): item is CartItem => item !== null);
+    });
+  };
+
+  // Helper to remove from cart
+  const removeFromCart = (productId: number) => {
+    setSelectedItems(prev => prev.filter(item => item.productId !== productId));
+  };
+
+  // Helper to get current stock
+  const getProductStock = (productId: number): number => {
+    const product = productLookup.get(productId);
+    return product?.quantity || 0;
   };
 
   const handleAddItem = (product: Product) => {
@@ -465,19 +611,64 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                 data={filteredProducts}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.productCard}
-                    onPress={() => handleAddItem(item)}
-                  >
+                  <View style={styles.productCard}>
                     <View style={styles.productInfo}>
                       <Text style={styles.productName}>{item.name}</Text>
                       <Text style={styles.productPrice}>${item.sellingPrice.toFixed(2)}</Text>
-                      <Text style={styles.productStock}>Stock: {item.quantity}</Text>
+                      <Text style={styles.productStock}>Available: {item.quantity} units</Text>
                     </View>
-                    <View style={styles.addButton}>
-                      <Ionicons name="add-circle" size={32} color="#1976D2" />
+                    
+                    <View style={styles.quantityContainer}>
+                      <View style={styles.quantityControls}>
+                        {/* Minus button */}
+                        <TouchableOpacity
+                          style={styles.quantityButton}
+                          onPress={() => handleQuantityChange(item.id, -1)}
+                          disabled={(quantities[item.id] || 0) === 0}
+                          accessibilityLabel="Decrease quantity"
+                          accessibilityHint={(quantities[item.id] || 0) === 0 ? "Currently at minimum quantity" : "Tap to decrease quantity by 1"}
+                        >
+                          <Ionicons name="remove" size={16} color="#fff" />
+                        </TouchableOpacity>
+                        
+                        {/* Quantity input field */}
+                        <TextInput
+                          style={styles.quantityInput}
+                          value={(quantities[item.id] || 0).toString()}
+                          onChangeText={(text) => handleQuantityInput(item.id, text)}
+                          keyboardType="numeric"
+                          selectTextOnFocus
+                          maxLength={4}
+                        />
+                        
+                        {/* Plus button */}
+                        <TouchableOpacity
+                          style={styles.quantityButton}
+                          onPress={() => handleQuantityChange(item.id, 1)}
+                          disabled={(quantities[item.id] || 0) >= item.quantity}
+                          accessibilityLabel="Increase quantity"
+                          accessibilityHint={(quantities[item.id] || 0) >= item.quantity ? "Stock limit reached" : "Tap to increase quantity by 1"}
+                        >
+                          <Ionicons name="add" size={16} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                      
+                      {/* Add to Cart button */}
+                      <TouchableOpacity
+                        style={[
+                          styles.addToCartButton,
+                          (quantities[item.id] || 0) === 0 && styles.addToCartButtonDisabled
+                        ]}
+                        onPress={() => handleAddToCart(item, quantities[item.id] || 0)}
+                        disabled={(quantities[item.id] || 0) === 0}
+                        accessibilityLabel="Add to cart"
+                        accessibilityHint={(quantities[item.id] || 0) === 0 ? "Please select a quantity first" : `Add ${quantities[item.id]} ${item.name} to cart`}
+                      >
+                        <Ionicons name="cart" size={18} color="#fff" />
+                        <Text style={styles.addToCartText}>Add</Text>
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 )}
                 scrollEnabled={false}
                 nestedScrollEnabled={true}
@@ -499,13 +690,76 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
 
         {/* Selected Items Summary */}
         {selectedItems.length > 0 && (
-          <View style={styles.summarySection}>
-            <Text style={styles.summaryTitle}>
-              {selectedItems.length} item(s) added
-            </Text>
-            <Text style={styles.summaryTotal}>
-              Total: ${selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
-            </Text>
+          <View style={styles.cartSection}>
+            <View style={styles.cartHeader}>
+              <Text style={styles.cartTitle}>
+                Cart ({selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'})
+              </Text>
+            </View>
+            
+            <FlatList
+              data={selectedItems}
+              keyExtractor={item => item.productId.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.cartItem}>
+                  <View style={styles.cartItemInfo}>
+                    <Text style={styles.cartItemName}>{item.name}</Text>
+                    <Text style={styles.cartItemPrice}>
+                      ${item.price.toFixed(2)}
+                    </Text>
+                  </View>
+                  
+                  {/* Quantity controls */}
+                  <View style={styles.cartItemQuantity}>
+                    <TouchableOpacity 
+                      onPress={() => updateCartQuantity(item.productId, -1)}
+                      accessibilityLabel="Decrease cart quantity"
+                      accessibilityHint={`Tap to decrease quantity of ${item.name} by 1 or remove if at 1`}
+                    >
+                      <Ionicons name="remove-circle" size={24} color="#FF6B6B" />
+                    </TouchableOpacity>
+                    
+                    <Text style={styles.cartQuantityText}>{item.quantity}</Text>
+                    
+                    <TouchableOpacity 
+                      onPress={() => updateCartQuantity(item.productId, 1)}
+                      disabled={item.quantity >= getProductStock(item.productId)}
+                      accessibilityLabel="Increase cart quantity"
+                      accessibilityHint={item.quantity >= getProductStock(item.productId) ? "Stock limit reached" : `Tap to increase quantity of ${item.name} by 1`}
+                    >
+                      <Ionicons 
+                        name="add-circle" 
+                        size={24} 
+                        color={item.quantity >= getProductStock(item.productId) ? '#CCC' : '#4ECDC4'} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {/* Subtotal */}
+                  <Text style={styles.cartItemTotal}>
+                    ${(item.price * item.quantity).toFixed(2)}
+                  </Text>
+                  
+                  {/* Remove button */}
+                  <TouchableOpacity 
+                    onPress={() => removeFromCart(item.productId)}
+                    accessibilityLabel="Remove from cart"
+                    accessibilityHint={`Remove ${item.name} from your cart`}
+                  >
+                    <Ionicons name="trash" size={20} color="#FF6B6B" />
+                  </TouchableOpacity>
+                </View>
+              )}
+              scrollEnabled={false}
+              style={styles.cartList}
+            />
+            
+            <View style={styles.cartTotal}>
+              <Text style={styles.cartTotalLabel}>Total:</Text>
+              <Text style={styles.cartTotalAmount}>
+                ${selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
+              </Text>
+            </View>
           </View>
         )}
 
@@ -673,15 +927,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   productCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
   productInfo: {
     flex: 1,
+    marginBottom: 8,
   },
   productName: {
     fontSize: 16,
@@ -699,8 +952,133 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  quantityButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#4ECDC4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityInput: {
+    width: 60,
+    height: 36,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: 'bold',
+    backgroundColor: '#fff',
+  },
+  addToCartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4ECDC4',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  addToCartButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  addToCartText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
   addButton: {
     padding: 8,
+  },
+  cartSection: {
+    backgroundColor: '#FFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    maxHeight: 300,
+  },
+  cartHeader: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  cartTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  cartList: {
+    maxHeight: 200,
+  },
+  cartItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+    gap: 12,
+  },
+  cartItemInfo: {
+    flex: 1,
+  },
+  cartItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  cartItemPrice: {
+    fontSize: 12,
+    color: '#666',
+  },
+  cartItemQuantity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cartQuantityText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  cartItemTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#10B981',
+    minWidth: 60,
+    textAlign: 'right',
+  },
+  cartTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    backgroundColor: '#F9F9F9',
+  },
+  cartTotalLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  cartTotalAmount: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#10B981',
   },
   summarySection: {
     backgroundColor: '#FFF',
