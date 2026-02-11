@@ -692,7 +692,11 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                   
                   {/* Quantity controls */}
                   <View style={styles.cartItemQuantity}>
-                    <TouchableOpacity onPress={() => updateCartQuantity(item.productId, -1)}>
+                    <TouchableOpacity 
+                      onPress={() => updateCartQuantity(item.productId, -1)}
+                      accessibilityLabel="Decrease cart quantity"
+                      accessibilityHint={`Tap to decrease quantity of ${item.name} by 1 or remove if at 1`}
+                    >
                       <Ionicons name="remove-circle" size={24} color="#FF6B6B" />
                     </TouchableOpacity>
                     
@@ -701,6 +705,8 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                     <TouchableOpacity 
                       onPress={() => updateCartQuantity(item.productId, 1)}
                       disabled={item.quantity >= getProductStock(item.productId)}
+                      accessibilityLabel="Increase cart quantity"
+                      accessibilityHint={item.quantity >= getProductStock(item.productId) ? "Stock limit reached" : `Tap to increase quantity of ${item.name} by 1`}
                     >
                       <Ionicons 
                         name="add-circle" 
@@ -716,7 +722,11 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                   </Text>
                   
                   {/* Remove button */}
-                  <TouchableOpacity onPress={() => removeFromCart(item.productId)}>
+                  <TouchableOpacity 
+                    onPress={() => removeFromCart(item.productId)}
+                    accessibilityLabel="Remove from cart"
+                    accessibilityHint={`Remove ${item.name} from your cart`}
+                  >
                     <Ionicons name="trash" size={20} color="#FF6B6B" />
                   </TouchableOpacity>
                 </View>
