@@ -33,10 +33,6 @@ interface Product {
   sku?: string;
 }
 
-interface ProductWithCart extends Product {
-  cartQuantity?: number;
-}
-
 interface CartItem {
   productId: number;
   name: string;
@@ -298,9 +294,17 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
         const product = [...products, ...topSellers].find(p => p.id === productId);
         if (!product) return item;
         
-        const newQty = Math.max(1, Math.min(item.quantity + delta, product.quantity));
-        return { ...item, quantity: newQty };
-      }).filter(item => item.quantity > 0);
+        const newQty = item.quantity + delta;
+        
+        // Remove item if quantity would be 0 or less
+        if (newQty <= 0) {
+          return null;
+        }
+        
+        // Cap at available stock
+        const cappedQty = Math.min(newQty, product.quantity);
+        return { ...item, quantity: cappedQty };
+      }).filter((item): item is CartItem => item !== null);
     });
   };
 
@@ -603,6 +607,8 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                         style={styles.quantityButton}
                         onPress={() => handleQuantityChange(item.id, -1)}
                         disabled={(quantities[item.id] || 0) === 0}
+                        accessibilityLabel="Decrease quantity"
+                        accessibilityHint={(quantities[item.id] || 0) === 0 ? "Currently at minimum quantity" : "Tap to decrease quantity by 1"}
                       >
                         <Ionicons name="remove" size={16} color="#fff" />
                       </TouchableOpacity>
@@ -622,6 +628,8 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                         style={styles.quantityButton}
                         onPress={() => handleQuantityChange(item.id, 1)}
                         disabled={(quantities[item.id] || 0) >= item.quantity}
+                        accessibilityLabel="Increase quantity"
+                        accessibilityHint={(quantities[item.id] || 0) >= item.quantity ? "Stock limit reached" : "Tap to increase quantity by 1"}
                       >
                         <Ionicons name="add" size={16} color="#fff" />
                       </TouchableOpacity>
@@ -634,6 +642,8 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                         ]}
                         onPress={() => handleAddToCart(item, quantities[item.id] || 0)}
                         disabled={(quantities[item.id] || 0) === 0}
+                        accessibilityLabel="Add to cart"
+                        accessibilityHint={(quantities[item.id] || 0) === 0 ? "Please select a quantity first" : `Add ${quantities[item.id]} ${item.name} to cart`}
                       >
                         <Ionicons name="cart" size={18} color="#fff" />
                         <Text style={styles.addToCartText}>Add</Text>
