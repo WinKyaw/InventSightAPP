@@ -401,9 +401,13 @@ export default function ReceiptScreen() {
     
     // Check if receipt is already completed
     if (receipt.status === 'COMPLETED' || receipt.status === 'PAID') {
+      const paymentInfo = receipt.paymentMethod || 'CASH';
+      const completedBy = receipt.fulfilledByName ? ` by ${receipt.fulfilledByName}` : '';
+      const message = `This receipt was already completed with ${paymentInfo}${completedBy}.`;
+      
       Alert.alert(
         '✅ Already Paid',
-        `This receipt was already completed with ${receipt.paymentMethod || 'CASH'}${receipt.fulfilledByName ? ` by ${receipt.fulfilledByName}` : ''}.`,
+        message,
         [
           { 
             text: 'View Details', 

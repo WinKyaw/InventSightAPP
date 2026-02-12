@@ -153,7 +153,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <View style={styles.infoRow}>
                     <Ionicons name="time" size={20} color="#6B7280" />
                     <Text style={styles.infoText}>
-                      Completed at: {new Date(receipt.fulfilledAt).toLocaleString()}
+                      Completed at: {new Date(receipt.fulfilledAt).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </Text>
                   </View>
                 )}
@@ -172,7 +178,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     <ActivityIndicator color="#FFF" />
                   ) : (
                     <>
-                      <Ionicons name="bicycle" size={20} color="#FFF" />
+                      <Ionicons name="car" size={20} color="#FFF" />
                       <Text style={styles.actionButtonText}>Mark as Delivery</Text>
                     </>
                   )}
