@@ -398,6 +398,27 @@ export default function ReceiptScreen() {
   // Handle payment action
   const handlePayNow = (receipt: Receipt) => {
     console.log('💳 Opening payment modal for receipt:', receipt.id);
+    
+    // Check if receipt is already completed
+    if (receipt.status === 'COMPLETED' || receipt.status === 'PAID') {
+      Alert.alert(
+        '✅ Already Paid',
+        `This receipt was already completed with ${receipt.paymentMethod || 'CASH'}${receipt.fulfilledByName ? ` by ${receipt.fulfilledByName}` : ''}.`,
+        [
+          { 
+            text: 'View Details', 
+            onPress: () => {
+              setSelectedReceiptForPayment(receipt);
+              setShowPaymentModal(true);
+            }
+          },
+          { text: 'OK' }
+        ]
+      );
+      return;
+    }
+    
+    // Only open payment modal if status is PENDING
     setSelectedReceiptForPayment(receipt);
     setShowPaymentModal(true);
     setSelectedPendingReceipt(null); // Close action modal
