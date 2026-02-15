@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } fr
 import { Modal } from '../ui/Modal';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import apiClient from '../../services/api/apiClient';
+import { Receipt } from '../../types';
 
 interface FulfillReceiptModalProps {
   visible: boolean;
-  receipt: any;
+  receipt: Receipt | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -48,9 +49,14 @@ export const FulfillReceiptModal: React.FC<FulfillReceiptModalProps> = ({
       onSuccess();
       onClose();
       setSelectedType(null); // Reset selection
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Error fulfilling receipt:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to fulfill receipt');
+      let errorMessage = 'Failed to fulfill receipt';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        errorMessage = axiosError.response?.data?.message || errorMessage;
+      }
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
