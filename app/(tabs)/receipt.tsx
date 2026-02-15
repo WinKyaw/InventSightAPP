@@ -1270,12 +1270,12 @@ export default function ReceiptScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Tab Content */}
-      <ScrollView style={styles.content}>
+      {/* Tab Content - Use View instead of ScrollView */}
+      <View style={styles.content}>
         {activeTab === 'create' && renderCreateTab()}
         {activeTab === 'pending' && renderPendingTab()}
         {activeTab === 'history' && renderHistoryTab()}
-      </ScrollView>
+      </View>
 
       {/* Modals */}
       <TakeOrderModal
