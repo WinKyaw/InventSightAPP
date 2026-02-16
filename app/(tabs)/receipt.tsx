@@ -119,7 +119,7 @@ export default function ReceiptScreen() {
   // Pending receipts state
   const [pendingReceipts, setPendingReceipts] = useState<Receipt[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
-  const [pendingFilter, setPendingFilter] = useState<'all' | 'delivery' | 'pickup'>('all');
+  const [pendingFilter, setPendingFilter] = useState<'all' | 'delivery' | 'pickup' | 'hold'>('all');
 
   // Advanced filter state for History tab
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -511,6 +511,7 @@ export default function ReceiptScreen() {
   const pendingCount = pendingReceipts.length;
   const deliveryCount = pendingReceipts.filter(r => r.receiptType === 'DELIVERY').length;
   const pickupCount = pendingReceipts.filter(r => r.receiptType === 'PICKUP').length;
+  const holdCount = pendingReceipts.filter(r => r.receiptType === 'HOLD').length;
 
   // Handle filter application
   const handleApplyFilters = (filters: ReceiptFilters) => {
@@ -821,6 +822,16 @@ export default function ReceiptScreen() {
           <Ionicons name="cube" size={16} color={pendingFilter === 'pickup' ? '#E67E22' : '#666'} />
           <Text style={[styles.filterTabText, pendingFilter === 'pickup' && styles.filterTabTextActive]}>
             Pickup ({pickupCount})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterTab, pendingFilter === 'hold' && styles.filterTabActive]}
+          onPress={() => setPendingFilter('hold')}
+        >
+          <Ionicons name="pause-circle-outline" size={16} color={pendingFilter === 'hold' ? '#E67E22' : '#666'} />
+          <Text style={[styles.filterTabText, pendingFilter === 'hold' && styles.filterTabTextActive]}>
+            Hold ({holdCount})
           </Text>
         </TouchableOpacity>
       </View>
