@@ -117,7 +117,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7',
   },
   holdBadge: {
-    backgroundColor: '#FDE68A',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
     borderColor: '#F59E0B',
   },
   inStoreBadge: {
