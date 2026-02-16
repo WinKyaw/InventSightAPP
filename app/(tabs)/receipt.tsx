@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -514,7 +514,7 @@ export default function ReceiptScreen() {
   const holdCount = pendingReceipts.filter(r => r.receiptType === 'HOLD').length;
 
   // Filter pending receipts based on selected tab
-  const getFilteredPendingReceipts = () => {
+  const filteredPendingReceipts = useMemo(() => {
     if (pendingFilter === 'all') {
       return pendingReceipts;
     }
@@ -528,7 +528,7 @@ export default function ReceiptScreen() {
       return pendingReceipts.filter(r => r.receiptType === 'HOLD');
     }
     return pendingReceipts;
-  };
+  }, [pendingReceipts, pendingFilter]);
 
   // Handle filter application
   const handleApplyFilters = (filters: ReceiptFilters) => {
@@ -859,7 +859,7 @@ export default function ReceiptScreen() {
           <ActivityIndicator size="large" color="#F59E0B" />
           <Text style={styles.loadingText}>Loading pending receipts...</Text>
         </View>
-      ) : getFilteredPendingReceipts().length === 0 ? (
+      ) : filteredPendingReceipts.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="checkmark-done-circle" size={64} color="#10B981" />
           <Text style={styles.emptyText}>All Caught Up!</Text>
@@ -867,7 +867,7 @@ export default function ReceiptScreen() {
         </View>
       ) : (
         <FlatList
-          data={getFilteredPendingReceipts()}
+          data={filteredPendingReceipts}
           keyExtractor={(item) => item.id?.toString() || item.receiptNumber}
           renderItem={({ item }) => (
             <PendingReceiptCard 
