@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7',
   },
   holdBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FEF9C3',
     borderWidth: 1,
     borderColor: '#F59E0B',
   },
