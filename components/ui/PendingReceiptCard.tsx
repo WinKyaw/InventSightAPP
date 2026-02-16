@@ -43,6 +43,11 @@ export const PendingReceiptCard: React.FC<PendingReceiptCardProps> = ({
               <Text style={styles.badgeText}>📦 Pickup</Text>
             </View>
           )}
+          {receipt.receiptType === 'HOLD' && (
+            <View style={[styles.badgeContainer, styles.holdBadge]}>
+              <Text style={styles.badgeText}>⏸️ On Hold</Text>
+            </View>
+          )}
           {receipt.receiptType === 'IN_STORE' && (
             <View style={[styles.badgeContainer, styles.inStoreBadge]}>
               <Text style={styles.badgeText}>🏪 In-Store</Text>
@@ -110,6 +115,10 @@ const styles = StyleSheet.create({
   },
   pickupBadge: {
     backgroundColor: '#FEF3C7',
+  },
+  holdBadge: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
   },
   inStoreBadge: {
     backgroundColor: '#D1FAE5',

@@ -350,7 +350,7 @@ export class ReceiptService {
   /**
    * Get pending receipts (not completed)
    */
-  static async getPendingReceipts(filter?: 'all' | 'delivery' | 'pickup'): Promise<Receipt[]> {
+  static async getPendingReceipts(filter?: 'all' | 'delivery' | 'pickup' | 'hold'): Promise<Receipt[]> {
     try {
       const params = new URLSearchParams({
         status: 'PENDING',
@@ -381,6 +381,11 @@ export class ReceiptService {
         // Show READY_FOR_PICKUP in "Pickup" tab
         receipts = receipts.filter(r => 
           r.status === 'READY_FOR_PICKUP'
+        );
+      } else if (filter === 'hold') {
+        // Show receipts with type HOLD
+        receipts = receipts.filter(r => 
+          r.receiptType === 'HOLD'
         );
       }
       

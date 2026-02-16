@@ -86,7 +86,7 @@ export interface Receipt {
   notes?: string;
   
   // Receipt type and fulfillment fields
-  receiptType?: 'IN_STORE' | 'DELIVERY' | 'PICKUP';
+  receiptType?: 'IN_STORE' | 'DELIVERY' | 'PICKUP' | 'HOLD';
   fulfilledAt?: string;
   fulfilledById?: string;
   fulfilledByName?: string;

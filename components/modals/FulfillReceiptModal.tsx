@@ -18,12 +18,12 @@ export const FulfillReceiptModal: React.FC<FulfillReceiptModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [selectedType, setSelectedType] = useState<'PICKUP' | 'DELIVERY' | null>(null);
+  const [selectedType, setSelectedType] = useState<'PICKUP' | 'DELIVERY' | 'HOLD' | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleFulfill = async () => {
     if (!selectedType) {
-      Alert.alert('Selection Required', 'Please select Pickup or Delivery');
+      Alert.alert('Selection Required', 'Please select Pickup, Delivery, or Hold');
       return;
     }
 
@@ -43,7 +43,11 @@ export const FulfillReceiptModal: React.FC<FulfillReceiptModalProps> = ({
 
       Alert.alert(
         'Success', 
-        `Receipt marked as ${selectedType === 'PICKUP' ? 'Ready for Pickup' : 'Out for Delivery'}`
+        selectedType === 'PICKUP' 
+          ? 'Receipt marked as Ready for Pickup'
+          : selectedType === 'DELIVERY'
+          ? 'Receipt marked as Out for Delivery'
+          : 'Receipt put on hold'
       );
       
       onSuccess();
@@ -127,6 +131,33 @@ export const FulfillReceiptModal: React.FC<FulfillReceiptModalProps> = ({
               Send to customer
             </Text>
           </TouchableOpacity>
+
+          {/* HOLD Option */}
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              selectedType === 'HOLD' && styles.typeButtonActive,
+            ]}
+            onPress={() => setSelectedType('HOLD')}
+            disabled={loading}
+          >
+            <Ionicons
+              name="pause-circle-outline"
+              size={40}
+              color={selectedType === 'HOLD' ? '#F97316' : '#6B7280'}
+            />
+            <Text
+              style={[
+                styles.typeText,
+                selectedType === 'HOLD' && styles.typeTextActive,
+              ]}
+            >
+              Hold
+            </Text>
+            <Text style={styles.typeDescription}>
+              Put on hold
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Fulfill Button */}
@@ -192,9 +223,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 24,
+    flexWrap: 'wrap',
   },
   typeButton: {
     flex: 1,
+    minWidth: '30%',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
