@@ -513,6 +513,23 @@ export default function ReceiptScreen() {
   const pickupCount = pendingReceipts.filter(r => r.receiptType === 'PICKUP').length;
   const holdCount = pendingReceipts.filter(r => r.receiptType === 'HOLD').length;
 
+  // Filter pending receipts based on selected tab
+  const getFilteredPendingReceipts = () => {
+    if (pendingFilter === 'all') {
+      return pendingReceipts;
+    }
+    if (pendingFilter === 'delivery') {
+      return pendingReceipts.filter(r => r.receiptType === 'DELIVERY');
+    }
+    if (pendingFilter === 'pickup') {
+      return pendingReceipts.filter(r => r.receiptType === 'PICKUP');
+    }
+    if (pendingFilter === 'hold') {
+      return pendingReceipts.filter(r => r.receiptType === 'HOLD');
+    }
+    return pendingReceipts;
+  };
+
   // Handle filter application
   const handleApplyFilters = (filters: ReceiptFilters) => {
     setActiveFilters(filters);
@@ -842,7 +859,7 @@ export default function ReceiptScreen() {
           <ActivityIndicator size="large" color="#F59E0B" />
           <Text style={styles.loadingText}>Loading pending receipts...</Text>
         </View>
-      ) : pendingReceipts.length === 0 ? (
+      ) : getFilteredPendingReceipts().length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="checkmark-done-circle" size={64} color="#10B981" />
           <Text style={styles.emptyText}>All Caught Up!</Text>
@@ -850,7 +867,7 @@ export default function ReceiptScreen() {
         </View>
       ) : (
         <FlatList
-          data={pendingReceipts}
+          data={getFilteredPendingReceipts()}
           keyExtractor={(item) => item.id?.toString() || item.receiptNumber}
           renderItem={({ item }) => (
             <PendingReceiptCard 
