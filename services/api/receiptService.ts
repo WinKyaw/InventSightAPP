@@ -366,11 +366,22 @@ export class ReceiptService {
       // Handle different response formats using shared helper
       let receipts = this.extractReceiptsFromResponse(response);
       
-      // Client-side filtering by receiptType if needed
-      if (filter === 'delivery') {
-        receipts = receipts.filter(r => r.receiptType === 'DELIVERY');
+      // Client-side filtering by status
+      if (filter === 'all') {
+        // Show PENDING and PAID receipts in "All Pending"
+        receipts = receipts.filter(r => 
+          r.status === 'PENDING' || r.status === 'PAID'
+        );
+      } else if (filter === 'delivery') {
+        // Show OUT_FOR_DELIVERY in "Delivery" tab
+        receipts = receipts.filter(r => 
+          r.status === 'OUT_FOR_DELIVERY'
+        );
       } else if (filter === 'pickup') {
-        receipts = receipts.filter(r => r.receiptType === 'PICKUP');
+        // Show READY_FOR_PICKUP in "Pickup" tab
+        receipts = receipts.filter(r => 
+          r.status === 'READY_FOR_PICKUP'
+        );
       }
       
       console.log(`✅ Loaded ${receipts.length} pending receipts (filter: ${filter || 'all'})`);

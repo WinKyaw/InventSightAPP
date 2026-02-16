@@ -23,6 +23,7 @@ import { Button } from "../../components/ui/Button";
 import AddItemToReceiptModal from "../../components/modals/AddItemToReceiptModal";
 import { ReceiptDetailsModal } from "../../components/modals/ReceiptDetailsModal";
 import { PaymentModal } from "../../components/receipt/PaymentModal";
+import { FulfillReceiptModal } from "../../components/modals/FulfillReceiptModal";
 import SmartScanner from "../../components/ui/SmartScanner";
 import { OCRScanner } from "../../components/ui/OCRScanner";
 import { PendingReceiptCard } from "../../components/ui/PendingReceiptCard";
@@ -94,6 +95,8 @@ export default function ReceiptScreen() {
   const [showReceiptDetails, setShowReceiptDetails] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedReceiptForPayment, setSelectedReceiptForPayment] = useState<Receipt | null>(null);
+  const [showFulfillModal, setShowFulfillModal] = useState(false);
+  const [selectedReceiptForFulfill, setSelectedReceiptForFulfill] = useState<Receipt | null>(null);
 
   // Receipt listing state
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -1354,6 +1357,21 @@ export default function ReceiptScreen() {
         }}
       />
 
+      {/* Fulfill Modal */}
+      <FulfillReceiptModal
+        visible={showFulfillModal}
+        receipt={selectedReceiptForFulfill}
+        onClose={() => {
+          setShowFulfillModal(false);
+          setSelectedReceiptForFulfill(null);
+        }}
+        onSuccess={() => {
+          refreshReceiptLists();
+          setShowFulfillModal(false);
+          setSelectedReceiptForFulfill(null);
+        }}
+      />
+
       {/* Pending Receipt Action Modal */}
       <Modal
         visible={selectedPendingReceipt !== null}
@@ -1471,17 +1489,18 @@ export default function ReceiptScreen() {
                   </TouchableOpacity>
                 )}
 
-                {/* Mark as Fulfilled - only show if not fulfilled */}
-                {!selectedPendingReceipt.fulfilledAt && (
+                {/* Mark as Fulfilled - only show if paid and not fulfilled */}
+                {selectedPendingReceipt.paymentMethod && !selectedPendingReceipt.fulfilledAt && (
                   <TouchableOpacity
                     style={[styles.actionBtn, styles.fulfillBtn]}
                     onPress={() => {
-                      setSelectedPendingReceipt(null);
-                      handleFulfill(selectedPendingReceipt.id);
+                      setSelectedReceiptForFulfill(selectedPendingReceipt);
+                      setShowFulfillModal(true);
+                      setSelectedPendingReceipt(null); // Close action modal
                     }}
                   >
                     <Ionicons name="checkmark-circle" size={20} color="#FFF" />
-                    <Text style={styles.actionBtnText}>Mark as Fulfilled</Text>
+                    <Text style={styles.actionBtnText}>Fulfill</Text>
                   </TouchableOpacity>
                 )}
               </View>
