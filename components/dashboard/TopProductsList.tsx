@@ -56,7 +56,7 @@ export const TopProductsList: React.FC<TopProductsListProps> = ({ products }) =>
       <FlatList
         data={products}
         renderItem={renderProduct}
-        keyExtractor={(item, index) => `${item.name}-${index}`}
+        keyExtractor={(item, index) => `product-${index}`}
         scrollEnabled={false}
       />
     </View>
