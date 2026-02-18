@@ -55,12 +55,14 @@ interface ReceiptContextType {
   receiptItems: ReceiptItem[];
   customerName: string;
   paymentMethod: string;
+  receiptType: 'IN_STORE' | 'PICKUP' | 'DELIVERY' | 'HOLD';
   receipts: Receipt[];
   loading: boolean;
   error: string | null;
   submitting: boolean;
   setCustomerName: (name: string) => void;
   setPaymentMethod: (method: string) => void;
+  setReceiptType: (type: 'IN_STORE' | 'PICKUP' | 'DELIVERY' | 'HOLD') => void;
   addItemToReceipt: (item: Item, quantity?: number) => void;
   removeItemFromReceipt: (itemId: number) => void;
   updateReceiptItemQuantity: (itemId: number, quantity: number) => void;
@@ -84,6 +86,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [receiptType, setReceiptType] = useState<'IN_STORE' | 'PICKUP' | 'DELIVERY' | 'HOLD'>('IN_STORE');
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [useApiIntegration, setUseApiIntegration] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -326,6 +329,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     setReceiptItems([]);
     setCustomerName('');
     setPaymentMethod('CASH');
+    setReceiptType('IN_STORE');
   }, []);
 
   const handleSubmitReceipt = useCallback(async (): Promise<void> => {
@@ -352,6 +356,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       paymentMethod: paymentMethod || 'CASH',
       customerName: customerName || undefined,  // Optional field, send undefined if empty
       storeId: user?.activeStoreId,  // ✅ Include user's active store ID if available
+      receiptType: receiptType,  // ✅ Include receipt type
     };
 
     if (__DEV__) {
@@ -460,7 +465,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     } finally {
       setSubmitting(false);
     }
-  }, [receiptItems, items, calculateTotal, calculateTax, generateReceiptNumber, customerName, paymentMethod, useApiIntegration, canMakeApiCalls, setItems, clearReceipt, user?.activeStoreId]);
+  }, [receiptItems, items, calculateTotal, calculateTax, generateReceiptNumber, customerName, paymentMethod, receiptType, useApiIntegration, canMakeApiCalls, setItems, clearReceipt, user?.activeStoreId]);
 
   const refreshReceipts = useCallback(async (): Promise<void> => {
     if (useApiIntegration && canMakeApiCalls) {
@@ -522,12 +527,14 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
       receiptItems,
       customerName,
       paymentMethod,
+      receiptType,
       receipts,
       loading,
       error,
       submitting,
       setCustomerName,
       setPaymentMethod,
+      setReceiptType,
       addItemToReceipt,
       removeItemFromReceipt,
       updateReceiptItemQuantity,

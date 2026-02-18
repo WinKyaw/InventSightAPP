@@ -39,6 +39,7 @@ export interface CreateReceiptRequest {
   customerName?: string;        // Optional: Customer name (omit for walk-in customers)
   storeId?: string;             // Optional: Store ID (backend may require this or derive from user context)
   status?: string;              // Optional: Receipt status (default: 'COMPLETED', can be 'PENDING' for save-and-pay-later)
+  receiptType?: 'IN_STORE' | 'PICKUP' | 'DELIVERY' | 'HOLD';  // Optional: Receipt type
 }
 
 // Legacy interface for local storage (includes calculated fields)

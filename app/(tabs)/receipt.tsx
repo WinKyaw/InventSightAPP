@@ -65,11 +65,13 @@ export default function ReceiptScreen() {
     receiptItems,
     customerName,
     paymentMethod,
+    receiptType,
     loading,
     error,
     submitting,
     setCustomerName,
     setPaymentMethod,
+    setReceiptType,
     updateReceiptItemQuantity,
     removeItemFromReceipt,
     calculateTotal,
@@ -805,6 +807,162 @@ export default function ReceiptScreen() {
           <Text style={styles.quickActionText}>Browse Items</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Show cart and receipt type selector if there are items */}
+      {receiptItems.length > 0 && (
+        <View style={styles.cartSection}>
+          {/* Receipt Type Selector */}
+          <View style={styles.receiptTypeSection}>
+            <Text style={styles.sectionLabel}>Receipt Type</Text>
+            <View style={styles.typeButtonsContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  receiptType === 'IN_STORE' && styles.typeButtonActive
+                ]}
+                onPress={() => setReceiptType('IN_STORE')}
+              >
+                <Ionicons 
+                  name="storefront-outline" 
+                  size={24} 
+                  color={receiptType === 'IN_STORE' ? '#F97316' : '#6B7280'} 
+                />
+                <Text style={[
+                  styles.typeButtonText,
+                  receiptType === 'IN_STORE' && styles.typeButtonTextActive
+                ]}>
+                  In-Store
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  receiptType === 'PICKUP' && styles.typeButtonActive
+                ]}
+                onPress={() => setReceiptType('PICKUP')}
+              >
+                <Ionicons 
+                  name="cube-outline" 
+                  size={24} 
+                  color={receiptType === 'PICKUP' ? '#F97316' : '#6B7280'} 
+                />
+                <Text style={[
+                  styles.typeButtonText,
+                  receiptType === 'PICKUP' && styles.typeButtonTextActive
+                ]}>
+                  Pickup
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  receiptType === 'DELIVERY' && styles.typeButtonActive
+                ]}
+                onPress={() => setReceiptType('DELIVERY')}
+              >
+                <Ionicons 
+                  name="bicycle-outline" 
+                  size={24} 
+                  color={receiptType === 'DELIVERY' ? '#F97316' : '#6B7280'} 
+                />
+                <Text style={[
+                  styles.typeButtonText,
+                  receiptType === 'DELIVERY' && styles.typeButtonTextActive
+                ]}>
+                  Delivery
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  receiptType === 'HOLD' && styles.typeButtonActive
+                ]}
+                onPress={() => setReceiptType('HOLD')}
+              >
+                <Ionicons 
+                  name="pause-circle-outline" 
+                  size={24} 
+                  color={receiptType === 'HOLD' ? '#F97316' : '#6B7280'} 
+                />
+                <Text style={[
+                  styles.typeButtonText,
+                  receiptType === 'HOLD' && styles.typeButtonTextActive
+                ]}>
+                  Hold
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Cart Items */}
+          <View style={styles.cartItemsSection}>
+            <Text style={styles.sectionLabel}>Cart Items ({receiptItems.length})</Text>
+            {receiptItems.map((item) => (
+              <View key={item.id} style={styles.cartItem}>
+                <View style={styles.cartItemInfo}>
+                  <Text style={styles.cartItemName}>{item.name}</Text>
+                  <Text style={styles.cartItemPrice}>${item.price.toFixed(2)} × {item.quantity}</Text>
+                </View>
+                <Text style={styles.cartItemTotal}>${item.total.toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Totals */}
+          <View style={styles.totalsSection}>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Subtotal:</Text>
+              <Text style={styles.totalValue}>${calculateTotal().toFixed(2)}</Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Tax:</Text>
+              <Text style={styles.totalValue}>${calculateTax(calculateTotal()).toFixed(2)}</Text>
+            </View>
+            <View style={[styles.totalRow, styles.grandTotalRow]}>
+              <Text style={styles.grandTotalLabel}>Total:</Text>
+              <Text style={styles.grandTotalValue}>${(calculateTotal() + calculateTax(calculateTotal())).toFixed(2)}</Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.cartActions}>
+            <TouchableOpacity
+              style={styles.clearCartButton}
+              onPress={() => {
+                Alert.alert(
+                  'Clear Cart',
+                  'Are you sure you want to clear all items?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Clear', style: 'destructive', onPress: clearReceipt }
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              <Text style={styles.clearCartText}>Clear</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.submitCartButton}
+              onPress={handleSubmitReceipt}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                  <Text style={styles.submitCartText}>Create Receipt</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 
@@ -2584,5 +2742,156 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Cart Section Styles
+  cartSection: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  receiptTypeSection: {
+    marginBottom: 4,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  typeButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  typeButton: {
+    flex: 1,
+    minWidth: '22%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFF',
+    gap: 4,
+  },
+  typeButtonActive: {
+    borderColor: '#F97316',
+    backgroundColor: '#FFF7ED',
+  },
+  typeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  typeButtonTextActive: {
+    color: '#F97316',
+  },
+  cartItemsSection: {
+    gap: 8,
+  },
+  cartItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  cartItemInfo: {
+    flex: 1,
+  },
+  cartItemName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  cartItemPrice: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  cartItemTotal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  totalsSection: {
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 2,
+    borderTopColor: '#E5E7EB',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  totalValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  grandTotalRow: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  grandTotalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  grandTotalValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F97316',
+  },
+  cartActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  clearCartButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#EF4444',
+    backgroundColor: '#FFF',
+  },
+  clearCartText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  submitCartButton: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: '#F97316',
+  },
+  submitCartText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFF',
   },
 });
