@@ -119,6 +119,7 @@ export default function ReceiptScreen() {
   const [showOCRScanner, setShowOCRScanner] = useState(false);
 
   // Pending receipts state
+  const [allReceipts, setAllReceipts] = useState<Receipt[]>([]); // All receipts regardless of status
   const [pendingReceipts, setPendingReceipts] = useState<Receipt[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [pendingFilter, setPendingFilter] = useState<'all' | 'delivery' | 'pickup' | 'hold'>('all');
@@ -240,8 +241,20 @@ export default function ReceiptScreen() {
   const loadPendingReceipts = async () => {
     try {
       setLoadingPending(true);
-      const pending = await ReceiptService.getPendingReceipts(pendingFilter);
+      
+      // Fetch all receipts from the API without status filtering
+      const response = await ReceiptService.getAllReceipts(0, 100);
+      const allReceiptsList = response.receipts;
+      
+      // Store all receipts
+      setAllReceipts(allReceiptsList);
+      
+      // Filter for pending receipts (for "All Pending" tab)
+      const pending = allReceiptsList.filter(r => 
+        r.status === 'PENDING' || r.status === 'PAID'
+      );
       setPendingReceipts(pending);
+      
     } catch (error: any) {
       console.error('Failed to load pending receipts:', error);
       Alert.alert('Error', 'Failed to load pending receipts');
@@ -250,12 +263,12 @@ export default function ReceiptScreen() {
     }
   };
 
-  // Effect to load pending receipts when tab changes or filter changes
+  // Effect to load pending receipts when tab changes
   useEffect(() => {
     if (activeTab === 'pending') {
       loadPendingReceipts();
     }
-  }, [activeTab, pendingFilter]);
+  }, [activeTab]);
 
   // Load customers for autocomplete
   useEffect(() => {
@@ -511,26 +524,52 @@ export default function ReceiptScreen() {
 
   // Get pending counts for tabs
   const pendingCount = pendingReceipts.length;
-  const deliveryCount = pendingReceipts.filter(r => r.receiptType === 'DELIVERY').length;
-  const pickupCount = pendingReceipts.filter(r => r.receiptType === 'PICKUP').length;
-  const holdCount = pendingReceipts.filter(r => r.receiptType === 'HOLD').length;
+  const deliveryCount = allReceipts.filter(r => 
+    r.receiptType === 'DELIVERY' && 
+    !['COMPLETED', 'CANCELLED', 'DELIVERED'].includes(r.status)
+  ).length;
+  const pickupCount = allReceipts.filter(r => 
+    r.receiptType === 'PICKUP' && 
+    !['COMPLETED', 'CANCELLED'].includes(r.status)
+  ).length;
+  const holdCount = allReceipts.filter(r => 
+    r.receiptType === 'HOLD' && 
+    !['COMPLETED', 'CANCELLED'].includes(r.status)
+  ).length;
 
   // Filter pending receipts based on selected tab
   const filteredPendingReceipts = useMemo(() => {
     if (pendingFilter === 'all') {
+      // Show only PENDING and PAID receipts
       return pendingReceipts;
     }
+    
     if (pendingFilter === 'delivery') {
-      return pendingReceipts.filter(r => r.receiptType === 'DELIVERY');
+      // ✅ FIXED - Filter from all receipts by type, exclude completed/cancelled/delivered
+      return allReceipts.filter(r => 
+        r.receiptType === 'DELIVERY' && 
+        !['COMPLETED', 'CANCELLED', 'DELIVERED'].includes(r.status)
+      );
     }
+    
     if (pendingFilter === 'pickup') {
-      return pendingReceipts.filter(r => r.receiptType === 'PICKUP');
+      // ✅ FIXED - Filter from all receipts by type, exclude completed/cancelled
+      return allReceipts.filter(r => 
+        r.receiptType === 'PICKUP' && 
+        !['COMPLETED', 'CANCELLED'].includes(r.status)
+      );
     }
+    
     if (pendingFilter === 'hold') {
-      return pendingReceipts.filter(r => r.receiptType === 'HOLD');
+      // ✅ FIXED - Filter from all receipts by type, exclude completed/cancelled
+      return allReceipts.filter(r => 
+        r.receiptType === 'HOLD' && 
+        !['COMPLETED', 'CANCELLED'].includes(r.status)
+      );
     }
+    
     return pendingReceipts;
-  }, [pendingReceipts, pendingFilter]);
+  }, [pendingReceipts, allReceipts, pendingFilter]);
 
   // Handle filter application
   const handleApplyFilters = (filters: ReceiptFilters) => {
