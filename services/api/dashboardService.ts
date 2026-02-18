@@ -37,6 +37,19 @@ export interface ComprehensiveDashboardData {
   // Metadata
   lastUpdated: string;
   isEmpty: boolean; // True when database has no data
+  
+  // New fields for charts and visualization
+  dailySales?: Array<{
+    date: string;
+    revenue: number;
+    orders: number;
+  }>;
+  topSellingItems?: Array<{
+    name: string;
+    quantity: number;
+    revenue: number;
+    category: string;
+  }>;
 }
 
 /**

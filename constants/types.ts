@@ -272,22 +272,3 @@ export interface TopSellingProduct {
   revenue: number;
   category: string;
 }
-
-export interface ComprehensiveDashboardData {
-  totalProducts: number;
-  lowStockItems: any[];
-  lowStockCount: number;
-  totalCategories: number;
-  recentActivities: any[];
-  totalRevenue: number;
-  totalOrders: number;
-  avgOrderValue: number;
-  inventoryValue: number;
-  revenueGrowth: number;
-  orderGrowth: number;
-  customerSatisfaction: number;
-  lastUpdated: string;
-  isEmpty: boolean;
-  dailySales?: DailySalesData[];
-  topSellingItems?: TopSellingProduct[];
-}
