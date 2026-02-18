@@ -118,7 +118,10 @@ export class DashboardService {
         lastUpdated: dashboardSummary.lastUpdated,
         isEmpty: dashboardSummary.totalProducts === 0 && 
                 dashboardSummary.totalCategories === 0 && 
-                dashboardSummary.totalRevenue === 0
+                dashboardSummary.totalRevenue === 0,
+        // Map new fields from backend
+        dailySales: dashboardSummary.dailySales || [],
+        topSellingItems: dashboardSummary.topSellingItems || [],
       };
       
       // Cache successful response

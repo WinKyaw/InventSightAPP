@@ -8,6 +8,9 @@ import { useEmployees } from '../../context/EmployeesContext';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { useAuth } from '../../context/AuthContext';
 import { Header } from '../../components/shared/Header';
+import { SalesChart } from '../../components/dashboard/SalesChart';
+import { TopProductsList } from '../../components/dashboard/TopProductsList';
+import { GrowthIndicator } from '../../components/dashboard/GrowthIndicator';
 import { styles } from '../../constants/Styles';
 
 export default function DashboardScreen() {
@@ -278,17 +281,13 @@ export default function DashboardScreen() {
               <View style={styles.kpiCard}>
                 <Text style={styles.kpiLabel}>{t('dashboard.revenue')}</Text>
                 <Text style={styles.kpiValue}>${getDisplayValue(dashboardData?.totalRevenue)}</Text>
-                <Text style={[styles.kpiTrend, { color: parseFloat(getRevenueGrowth()) >= 0 ? '#10B981' : '#EF4444' }]}>
-                  {parseFloat(getRevenueGrowth()) >= 0 ? '↗' : '↘'} {Math.abs(parseFloat(getRevenueGrowth()))}%
-                </Text>
+                <GrowthIndicator value={parseFloat(getRevenueGrowth())} />
               </View>
               
               <View style={styles.kpiCard}>
                 <Text style={styles.kpiLabel}>{t('dashboard.orders')}</Text>
                 <Text style={[styles.kpiValue, { color: '#3B82F6' }]}>{getDisplayValue(dashboardData?.totalOrders)}</Text>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${Math.min(85, 100)}%` }]} />
-                </View>
+                <GrowthIndicator value={parseFloat(getOrderGrowth())} />
               </View>
             </View>
 
@@ -314,6 +313,16 @@ export default function DashboardScreen() {
               </Text>
             </View>
           </View>
+
+          {/* Sales Chart - NEW */}
+          {dashboardData?.dailySales && dashboardData.dailySales.length > 0 && (
+            <SalesChart dailySales={dashboardData.dailySales} />
+          )}
+
+          {/* Top Products List - NEW */}
+          {dashboardData?.topSellingItems && dashboardData.topSellingItems.length > 0 && (
+            <TopProductsList products={dashboardData.topSellingItems} />
+          )}
 
           <View style={styles.performanceCard}>
             <Text style={styles.performanceTitle}>📈 {t('dashboard.bestPerformer')}</Text>

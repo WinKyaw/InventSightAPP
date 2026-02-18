@@ -258,3 +258,36 @@ export interface ScreenProps {
   navigation?: any;
   route?: any;
 }
+
+// Dashboard specific types
+export interface DailySalesData {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface TopSellingProduct {
+  name: string;
+  quantity: number;
+  revenue: number;
+  category: string;
+}
+
+export interface ComprehensiveDashboardData {
+  totalProducts: number;
+  lowStockItems: any[];
+  lowStockCount: number;
+  totalCategories: number;
+  recentActivities: any[];
+  totalRevenue: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  inventoryValue: number;
+  revenueGrowth: number;
+  orderGrowth: number;
+  customerSatisfaction: number;
+  lastUpdated: string;
+  isEmpty: boolean;
+  dailySales?: DailySalesData[];
+  topSellingItems?: TopSellingProduct[];
+}
