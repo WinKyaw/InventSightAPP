@@ -413,6 +413,20 @@ export interface DashboardSummary {
   customerSatisfaction: number;
   lowStockCount: number;
   recentActivities: ActivityItem[];
+  totalProducts: number;
+  totalCategories: number;
+  lastUpdated: string;
+  dailySales?: Array<{
+    date: string;
+    revenue: number;
+    orders: number;
+  }>;
+  topSellingItems?: Array<{
+    name: string;
+    quantity: number;
+    revenue: number;
+    category: string;
+  }>;
 }
 
 /**

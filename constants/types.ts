@@ -258,3 +258,17 @@ export interface ScreenProps {
   navigation?: any;
   route?: any;
 }
+
+// Dashboard specific types
+export interface DailySalesData {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface TopSellingProduct {
+  name: string;
+  quantity: number;
+  revenue: number;
+  category: string;
+}
