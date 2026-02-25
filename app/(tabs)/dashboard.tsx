@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert, ActivityInd
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { useReports } from '../../context/ReportsContext';
 import { useEmployees } from '../../context/EmployeesContext';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
@@ -12,6 +13,7 @@ import { SalesChart } from '../../components/dashboard/SalesChart';
 import { TopProductsList } from '../../components/dashboard/TopProductsList';
 import { GrowthIndicator } from '../../components/dashboard/GrowthIndicator';
 import { styles } from '../../constants/Styles';
+import { responseCache } from '../../services/api/cache';
 
 export default function DashboardScreen() {
   const { t } = useTranslation();
@@ -62,6 +64,13 @@ export default function DashboardScreen() {
     useCallback(() => {
       const now = Date.now();
       
+      // Allow reload if the cache was cleared after the last load (e.g. after receipt creation)
+      const cacheClearedAt = responseCache.getLastClearedAt();
+      if (loadedRef.current && cacheClearedAt > lastLoadTime.current) {
+        console.log('🔄 Dashboard: Cache invalidated since last load - scheduling refresh');
+        loadedRef.current = false;
+      }
+
       // Prevent loading with multiple guard conditions
       // Check each condition and log specific reason for skipping
       if (loadedRef.current) {
@@ -212,6 +221,15 @@ export default function DashboardScreen() {
         subtitle="Live Data from InventSight API"
         backgroundColor="#3B82F6"
         showProfileButton={true}
+        rightComponent={
+          <TouchableOpacity
+            onPress={handleRefresh}
+            disabled={refreshing || reportsLoading}
+            style={{ padding: 4 }}
+          >
+            <Ionicons name="refresh" size={24} color="white" />
+          </TouchableOpacity>
+        }
       />
       
       <ScrollView 

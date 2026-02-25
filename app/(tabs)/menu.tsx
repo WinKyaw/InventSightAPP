@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 32, // Extra padding for comfortable scrolling
+    paddingBottom: 100, // Extra padding to ensure last items are accessible
   },
   section: {
     backgroundColor: '#FFF',
@@ -282,6 +282,6 @@ const styles = StyleSheet.create({
     color: '#CCC',
   },
   bottomPadding: {
-    height: 32, // Extra space at bottom for comfortable scrolling
+    height: 50, // Extra space at bottom for comfortable scrolling
   },
 });
