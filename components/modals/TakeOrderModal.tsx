@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import apiClient from '../../services/api/apiClient';
 import { useStore } from '../../context/StoreContext';
+import { FloatingCartBadge } from '../pos/FloatingCartBadge';
+import { CartBottomSheet } from '../pos/CartBottomSheet';
 
 type OrderType = 'delivery' | 'pickup' | 'hold';
 
@@ -64,6 +66,10 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [cartVisible, setCartVisible] = useState(false);
+
+  const total = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const itemCount = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
 
   // Memoize combined product list for efficient lookups
   const productLookup = React.useMemo(() => {
@@ -302,6 +308,21 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
     );
   };
 
+  // Helper to update cart item to an absolute quantity (used by CartBottomSheet)
+  const handleUpdateQuantity = (productId: number, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+    } else {
+      setSelectedItems(prev =>
+        prev.map(item =>
+          item.productId === productId
+            ? { ...item, quantity: Math.min(newQuantity, getProductStock(productId)) }
+            : item
+        )
+      );
+    }
+  };
+
   // Helper to update cart quantity
   const updateCartQuantity = (productId: number, delta: number) => {
     setSelectedItems(prev => {
@@ -397,6 +418,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
       setSelectedItems([]);
       setOrderType('hold');
       setSearchQuery('');
+      setCartVisible(false);
       
       // Call success callback to refresh parent
       onSuccess?.();
@@ -617,57 +639,16 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                       <Text style={styles.productPrice}>${item.sellingPrice.toFixed(2)}</Text>
                       <Text style={styles.productStock}>Available: {item.quantity} units</Text>
                     </View>
-                    
-                    <View style={styles.quantityContainer}>
-                      <View style={styles.quantityControls}>
-                        {/* Minus button */}
-                        <TouchableOpacity
-                          style={styles.quantityButton}
-                          onPress={() => handleQuantityChange(item.id, -1)}
-                          disabled={(quantities[item.id] || 0) === 0}
-                          accessibilityLabel="Decrease quantity"
-                          accessibilityHint={(quantities[item.id] || 0) === 0 ? "Currently at minimum quantity" : "Tap to decrease quantity by 1"}
-                        >
-                          <Ionicons name="remove" size={16} color="#fff" />
-                        </TouchableOpacity>
-                        
-                        {/* Quantity input field */}
-                        <TextInput
-                          style={styles.quantityInput}
-                          value={(quantities[item.id] || 0).toString()}
-                          onChangeText={(text) => handleQuantityInput(item.id, text)}
-                          keyboardType="numeric"
-                          selectTextOnFocus
-                          maxLength={4}
-                        />
-                        
-                        {/* Plus button */}
-                        <TouchableOpacity
-                          style={styles.quantityButton}
-                          onPress={() => handleQuantityChange(item.id, 1)}
-                          disabled={(quantities[item.id] || 0) >= item.quantity}
-                          accessibilityLabel="Increase quantity"
-                          accessibilityHint={(quantities[item.id] || 0) >= item.quantity ? "Stock limit reached" : "Tap to increase quantity by 1"}
-                        >
-                          <Ionicons name="add" size={16} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                      
-                      {/* Add to Cart button */}
-                      <TouchableOpacity
-                        style={[
-                          styles.addToCartButton,
-                          (quantities[item.id] || 0) === 0 && styles.addToCartButtonDisabled
-                        ]}
-                        onPress={() => handleAddToCart(item, quantities[item.id] || 0)}
-                        disabled={(quantities[item.id] || 0) === 0}
-                        accessibilityLabel="Add to cart"
-                        accessibilityHint={(quantities[item.id] || 0) === 0 ? "Please select a quantity first" : `Add ${quantities[item.id]} ${item.name} to cart`}
-                      >
-                        <Ionicons name="cart" size={18} color="#fff" />
-                        <Text style={styles.addToCartText}>Add</Text>
-                      </TouchableOpacity>
-                    </View>
+
+                    {/* Quick Add Button */}
+                    <TouchableOpacity
+                      style={styles.quickAddButton}
+                      onPress={() => handleAddItem(item)}
+                      accessibilityLabel={`Add ${item.name} to cart`}
+                      accessibilityHint="Tap to add one unit to cart"
+                    >
+                      <Ionicons name="add-circle" size={36} color="#10B981" />
+                    </TouchableOpacity>
                   </View>
                 )}
                 scrollEnabled={false}
@@ -676,7 +657,7 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
                   <View style={styles.emptyItems}>
                     <Ionicons name="cube-outline" size={48} color="#CCC" />
                     <Text style={styles.emptyItemsText}>
-                      {searchQuery 
+                      {searchQuery
                         ? `No items match "${searchQuery}"`
                         : 'No items available in this store'
                       }
@@ -688,96 +669,24 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
           </View>
         </ScrollView>
 
-        {/* Selected Items Summary */}
-        {selectedItems.length > 0 && (
-          <View style={styles.cartSection}>
-            <View style={styles.cartHeader}>
-              <Text style={styles.cartTitle}>
-                Cart ({selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'})
-              </Text>
-            </View>
-            
-            <FlatList
-              data={selectedItems}
-              keyExtractor={item => item.productId.toString()}
-              renderItem={({ item }) => (
-                <View style={styles.cartItem}>
-                  <View style={styles.cartItemInfo}>
-                    <Text style={styles.cartItemName}>{item.name}</Text>
-                    <Text style={styles.cartItemPrice}>
-                      ${item.price.toFixed(2)}
-                    </Text>
-                  </View>
-                  
-                  {/* Quantity controls */}
-                  <View style={styles.cartItemQuantity}>
-                    <TouchableOpacity 
-                      onPress={() => updateCartQuantity(item.productId, -1)}
-                      accessibilityLabel="Decrease cart quantity"
-                      accessibilityHint={`Tap to decrease quantity of ${item.name} by 1 or remove if at 1`}
-                    >
-                      <Ionicons name="remove-circle" size={24} color="#FF6B6B" />
-                    </TouchableOpacity>
-                    
-                    <Text style={styles.cartQuantityText}>{item.quantity}</Text>
-                    
-                    <TouchableOpacity 
-                      onPress={() => updateCartQuantity(item.productId, 1)}
-                      disabled={item.quantity >= getProductStock(item.productId)}
-                      accessibilityLabel="Increase cart quantity"
-                      accessibilityHint={item.quantity >= getProductStock(item.productId) ? "Stock limit reached" : `Tap to increase quantity of ${item.name} by 1`}
-                    >
-                      <Ionicons 
-                        name="add-circle" 
-                        size={24} 
-                        color={item.quantity >= getProductStock(item.productId) ? '#CCC' : '#4ECDC4'} 
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {/* Subtotal */}
-                  <Text style={styles.cartItemTotal}>
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </Text>
-                  
-                  {/* Remove button */}
-                  <TouchableOpacity 
-                    onPress={() => removeFromCart(item.productId)}
-                    accessibilityLabel="Remove from cart"
-                    accessibilityHint={`Remove ${item.name} from your cart`}
-                  >
-                    <Ionicons name="trash" size={20} color="#FF6B6B" />
-                  </TouchableOpacity>
-                </View>
-              )}
-              scrollEnabled={false}
-              style={styles.cartList}
-            />
-            
-            <View style={styles.cartTotal}>
-              <Text style={styles.cartTotalLabel}>Total:</Text>
-              <Text style={styles.cartTotalAmount}>
-                ${selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
-              </Text>
-            </View>
-          </View>
-        )}
+        {/* ✅ FLOATING CART BADGE - Only shows when items > 0 */}
+        <FloatingCartBadge
+          itemCount={itemCount}
+          total={total}
+          onPress={() => setCartVisible(true)}
+        />
 
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-          onPress={handleSubmitOrder}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={24} color="#FFF" />
-              <Text style={styles.submitButtonText}>Create Order</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {/* ✅ EXPANDABLE CART BOTTOM SHEET */}
+        <CartBottomSheet
+          visible={cartVisible}
+          items={selectedItems}
+          total={total}
+          isSubmitting={isSubmitting}
+          onClose={() => setCartVisible(false)}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemove={removeFromCart}
+          onCheckout={handleSubmitOrder}
+        />
       </SafeAreaView>
     </Modal>
   );
@@ -919,7 +828,7 @@ const styles = StyleSheet.create({
   itemsSection: {
     backgroundColor: '#FFF',
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 100, // Space for floating cart badge
   },
   itemsCount: {
     fontSize: 14,
@@ -927,14 +836,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   productCard: {
-    flexDirection: 'column',
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
   productInfo: {
     flex: 1,
-    marginBottom: 8,
+    marginBottom: 0,
   },
   productName: {
     fontSize: 16,
@@ -951,6 +861,9 @@ const styles = StyleSheet.create({
   productStock: {
     fontSize: 12,
     color: '#666',
+  },
+  quickAddButton: {
+    padding: 4,
   },
   quantityContainer: {
     flexDirection: 'row',
