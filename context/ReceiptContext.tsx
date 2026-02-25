@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 import { Receipt, ReceiptItem, Item } from '../types';
 import { ReceiptService, CreateReceiptRequest, CashierStats } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
+import { responseCache } from '../services/api/cache';
 
 // API response types for better type safety
 interface ApiReceiptItem {
@@ -387,6 +388,9 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
           console.log('✅ Receipt created successfully:', receipt);
           console.log(`✅ Receipt created: ${receipt.receiptNumber}`);
         }
+        // ✅ Invalidate dashboard cache so it re-fetches on next focus
+        console.log('🗑️  Clearing dashboard cache after receipt creation');
+        responseCache.clear();
         setReceipts(prev => [receipt, ...prev]);
       } else {
         // Create receipt locally
