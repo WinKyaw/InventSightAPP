@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Modal } from '../ui/Modal';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import apiClient from '../../services/api/apiClient';
@@ -41,14 +42,19 @@ export const FulfillReceiptModal: React.FC<FulfillReceiptModalProps> = ({
         receiptType: selectedType,
       });
 
-      Alert.alert(
-        'Success', 
-        selectedType === 'PICKUP' 
-          ? 'Receipt marked as Ready for Pickup'
-          : selectedType === 'DELIVERY'
-          ? 'Receipt marked as Out for Delivery'
-          : 'Receipt put on hold'
-      );
+      const message = selectedType === 'PICKUP' 
+        ? 'Receipt marked as Ready for Pickup'
+        : selectedType === 'DELIVERY'
+        ? 'Receipt marked as Out for Delivery'
+        : 'Receipt put on hold';
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: message,
+        position: 'top',
+        visibilityTime: 2000,
+      });
       
       onSuccess();
       onClose();

@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Modal,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -395,7 +396,13 @@ export default function ReceiptScreen() {
   const handleFulfill = async (receiptId: number) => {
     try {
       await ReceiptService.fulfillReceipt(receiptId);
-      Alert.alert('Success', 'Receipt marked as fulfilled');
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Receipt marked as fulfilled',
+        position: 'top',
+        visibilityTime: 2000,
+      });
       refreshReceiptLists();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to fulfill receipt');
@@ -406,7 +413,13 @@ export default function ReceiptScreen() {
   const handleMarkDelivered = async (receiptId: number) => {
     try {
       await ReceiptService.markAsDelivered(receiptId);
-      Alert.alert('Success', 'Receipt marked as delivered');
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Receipt marked as delivered',
+        position: 'top',
+        visibilityTime: 2000,
+      });
       refreshReceiptLists();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to mark as delivered');
@@ -450,7 +463,13 @@ export default function ReceiptScreen() {
   const handleReadyForPickup = async (receipt: Receipt) => {
     try {
       await apiClient.put(`/api/receipts/${receipt.id}/ready-for-pickup`);
-      Alert.alert('Success', 'Customer notified - order ready for pickup');
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Customer notified - order ready for pickup',
+        position: 'top',
+        visibilityTime: 2000,
+      });
       setSelectedPendingReceipt(null);
       loadPendingReceipts();
     } catch (error) {

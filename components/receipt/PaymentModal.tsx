@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import apiClient from '../../services/api/apiClient';
 
@@ -51,7 +52,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         status: 'PAID', // ✅ Mark as PAID, not FULFILLED
       });
 
-      Alert.alert('Success', 'Payment completed - receipt marked as PAID');
+      Toast.show({
+        type: 'success',
+        text1: 'Payment Completed',
+        text2: 'Receipt marked as PAID',
+        position: 'top',
+        visibilityTime: 2000,
+      });
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -76,7 +83,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         receiptType: 'DELIVERY',
       });
 
-      Alert.alert('Success', 'Receipt marked as delivery');
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Receipt marked as delivery',
+        position: 'top',
+        visibilityTime: 2000,
+      });
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -101,7 +114,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         receiptType: 'PICKUP',
       });
 
-      Alert.alert('Success', 'Receipt marked as pickup');
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Receipt marked as pickup',
+        position: 'top',
+        visibilityTime: 2000,
+      });
       onSuccess();
       onClose();
     } catch (error: any) {

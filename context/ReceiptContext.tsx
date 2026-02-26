@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Alert } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useItems } from './ItemsContext';
 import { useAuth } from './AuthContext';
 import { Receipt, ReceiptItem, Item } from '../types';
@@ -210,7 +211,13 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
         console.log(`✅ Added new item:`, newItem);
       }
     }
-    Alert.alert('Success', `${item.name} added to receipt!`);
+    Toast.show({
+      type: 'success',
+      text1: 'Success',
+      text2: `${item.name} added to receipt!`,
+      position: 'top',
+      visibilityTime: 2000,
+    });
   }, [receiptItems]);
 
   const removeItemFromReceipt = useCallback((itemId: number) => {
