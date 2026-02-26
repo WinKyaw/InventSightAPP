@@ -1,5 +1,6 @@
 import '../constants/translations/i18n.config';
 import { Stack } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { AuthProvider } from '../context/AuthContext';
 import { StoreProvider } from '../context/StoreContext';
 import { ItemsApiProvider } from '../context/ItemsApiContext';
@@ -47,6 +48,7 @@ export default function RootLayout() {
           </StoreProvider>
         </AuthProvider>
       </AuthErrorBoundary>
+      <Toast />
     </ErrorBoundary>
   );
 }
