@@ -2,6 +2,7 @@ import React, { createContext, useContext, ReactNode, useCallback, useMemo, useR
 import { ReportService, DashboardService, BusinessIntelligenceData, DailyReportData, WeeklyReportData, InventoryReportData } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 import type { ComprehensiveDashboardData } from '../services/api/dashboardService';
+import { CacheManager } from '../utils/cacheManager';
 
 interface ReportsContextType {
   // Comprehensive dashboard data (always from API)
@@ -112,6 +113,10 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
       console.log('⚠️ Dashboard: Already loading');
       throw new Error('Dashboard is already loading');
     }
+
+    // ✅ Clear dashboard cache to force fresh data
+    console.log('🗑️ Clearing dashboard cache to ensure fresh data...');
+    CacheManager.invalidateDashboard();
 
     setCustomError(null);
 

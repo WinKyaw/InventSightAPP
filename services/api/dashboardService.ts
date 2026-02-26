@@ -69,13 +69,19 @@ export class DashboardService {
   /**
    * Get comprehensive dashboard summary (single API call) with caching
    */
-  static async getDashboardSummary(): Promise<DashboardSummary> {
+  static async getDashboardSummary(bypassCache: boolean = false): Promise<DashboardSummary> {
     const cacheKey = 'dashboard:summary';
     
-    // Check cache first
-    const cached = responseCache.get<DashboardSummary>(cacheKey);
-    if (cached !== null) {
-      return cached;
+    // Check cache first (unless explicitly bypassed)
+    if (!bypassCache) {
+      const cached = responseCache.get<DashboardSummary>(cacheKey);
+      if (cached !== null) {
+        console.log('✅ Using cached dashboard summary');
+        return cached;
+      }
+    } else {
+      console.log('⚡ Bypassing cache - fetching fresh dashboard data');
+      responseCache.invalidate(cacheKey);
     }
 
     // Verify authentication before making the call
@@ -101,13 +107,19 @@ export class DashboardService {
    * Get comprehensive dashboard data with caching
    * Note: In a proper backend implementation, this would be a single endpoint
    */
-  static async getComprehensiveDashboardData(): Promise<ComprehensiveDashboardData> {
+  static async getComprehensiveDashboardData(bypassCache: boolean = false): Promise<ComprehensiveDashboardData> {
     const cacheKey = 'dashboard:comprehensive';
     
-    // Check cache first
-    const cached = responseCache.get<ComprehensiveDashboardData>(cacheKey);
-    if (cached !== null) {
-      return cached;
+    // Check cache first (unless explicitly bypassed)
+    if (!bypassCache) {
+      const cached = responseCache.get<ComprehensiveDashboardData>(cacheKey);
+      if (cached !== null) {
+        console.log('✅ Using cached comprehensive dashboard data');
+        return cached;
+      }
+    } else {
+      console.log('⚡ Bypassing cache - fetching fresh comprehensive data');
+      responseCache.invalidate(cacheKey);
     }
 
     // Deduplicate concurrent requests
