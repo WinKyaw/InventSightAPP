@@ -398,12 +398,38 @@ export default function DashboardScreen() {
               </Text>
             </View>
             
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>Inventory Value</Text>
-              <Text style={[styles.kpiValue, { color: '#10B981' }]}>
-                ${getDisplayValue(dashboardData?.inventoryValue)}
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                marginHorizontal: 8,
+                padding: 20,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 100,
+                backgroundColor: '#8B5CF6',
+                shadowColor: '#8B5CF6',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6,
+              }}
+              onPress={() => {
+                Alert.alert(
+                  'AI Assistant',
+                  'AI chat feature coming soon! This will provide intelligent insights about your inventory and sales.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            >
+              <Ionicons name="sparkles" size={32} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFF' }}>
+                Ask AI
               </Text>
-            </View>
+              <Text style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.8)', marginTop: 4 }}>
+                Get Insights
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Data Source Info */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -65,6 +65,8 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [cartVisible, setCartVisible] = useState(false);
 
@@ -104,6 +106,14 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
     setFilteredCustomers(filtered);
     setShowCustomerDropdown(filtered.length > 0);
   }, [customerQuery, customers]);
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, []);
 
   const loadCustomers = async () => {
     if (!currentStore?.id) {
@@ -410,20 +420,21 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
 
       await apiClient.post('/api/receipts', orderData);
       
-      Alert.alert('Success', 'Order created successfully');
+      setShowSuccessModal(true);
       
-      // Reset form
-      setCustomerQuery('');
-      setSelectedCustomer(null);
-      setSelectedItems([]);
-      setOrderType('hold');
-      setSearchQuery('');
-      setCartVisible(false);
-      
-      // Call success callback to refresh parent
-      onSuccess?.();
-      
-      onClose();
+      // Reset form after short delay
+      successTimerRef.current = setTimeout(() => {
+        setCustomerQuery('');
+        setSelectedCustomer(null);
+        setSelectedItems([]);
+        setOrderType('hold');
+        setSearchQuery('');
+        setCartVisible(false);
+        
+        onSuccess?.();
+        setShowSuccessModal(false);
+        onClose();
+      }, 1500);
       
     } catch (error: any) {
       console.error('Error creating order:', error);
@@ -687,6 +698,61 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
           onRemove={removeFromCart}
           onCheckout={handleSubmitOrder}
         />
+
+        {/* Success Overlay */}
+        {showSuccessModal && (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+          }}>
+            <View style={{
+              backgroundColor: '#FFF',
+              borderRadius: 16,
+              padding: 32,
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+              minWidth: 280,
+            }}>
+              <View style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: '#10B981',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 16,
+              }}>
+                <Ionicons name="checkmark" size={40} color="#FFF" />
+              </View>
+              <Text style={{
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: '#1F2937',
+                marginBottom: 8,
+              }}>
+                Success!
+              </Text>
+              <Text style={{
+                fontSize: 16,
+                color: '#6B7280',
+                textAlign: 'center',
+              }}>
+                Order created successfully
+              </Text>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </Modal>
   );
