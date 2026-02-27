@@ -4,6 +4,7 @@ import {
   API_CONFIG,
   API_ENDPOINTS, 
   DashboardSummary,
+  DashboardApiEnvelope,
   ActivityItem,
   LowStockProduct
 } from './config';
@@ -93,7 +94,13 @@ export class DashboardService {
       return retryWithBackoff(async () => {
         var testURL = API_ENDPOINTS.DASHBOARD.SUMMARY;
         console.log("URL: " + testURL);
-        const response = await apiClient.get<DashboardSummary>(API_ENDPOINTS.DASHBOARD.SUMMARY);
+        // Backend wraps response in { summary: {...}, message, timestamp }
+        const rawResponse = await apiClient.get<DashboardApiEnvelope>(API_ENDPOINTS.DASHBOARD.SUMMARY);
+        
+        // Extract .summary if wrapped, otherwise use response directly
+        const response: DashboardSummary = rawResponse?.summary || (rawResponse as unknown as DashboardSummary);
+        
+        console.log('📊 Dashboard API response fields:', Object.keys(response || {}));
         
         // Cache successful response
         responseCache.set(cacheKey, response, CACHE_TTL);
@@ -127,23 +134,35 @@ export class DashboardService {
       // getDashboardSummary already has retry logic, so we don't nest it here
       const dashboardSummary = await this.getDashboardSummary();
       
+      // Map recentOrders from backend if recentActivities not present
+      const recentActivities = dashboardSummary.recentActivities ||
+        (dashboardSummary.recentOrders?.map((order: any) => ({
+          id: order.id,
+          type: 'sale',
+          description: `Order #${order.receiptNumber || order.id}`,
+          timestamp: order.createdAt || order.dateTime,
+          productName: order.customerName || 'Walk-in Customer',
+          quantity: order.items?.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0) || 1,
+          totalValue: order.totalAmount || order.total || 0,
+        })) ?? []);
+
       const data = {
-        totalProducts: dashboardSummary.totalProducts,
-        lowStockItems: [], // Not available in summary, would need separate endpoint
-        lowStockCount: dashboardSummary.lowStockCount,
-        totalCategories: dashboardSummary.totalCategories,
-        recentActivities: dashboardSummary.recentActivities,
-        totalRevenue: dashboardSummary.totalRevenue,
-        totalOrders: dashboardSummary.totalOrders,
-        avgOrderValue: dashboardSummary.avgOrderValue,
-        inventoryValue: dashboardSummary.inventoryValue,
-        revenueGrowth: dashboardSummary.revenueGrowth,
-        orderGrowth: dashboardSummary.orderGrowth,
+        totalProducts: dashboardSummary.totalProducts ?? 0,
+        lowStockItems: dashboardSummary.lowStockItems || [],
+        lowStockCount: dashboardSummary.lowStockCount ?? (dashboardSummary.lowStockItems?.length ?? 0),
+        totalCategories: dashboardSummary.totalCategories ?? 0,
+        recentActivities,
+        totalRevenue: dashboardSummary.totalRevenue ?? 0,
+        totalOrders: dashboardSummary.totalOrders ?? 0,
+        avgOrderValue: dashboardSummary.avgOrderValue ?? 0,
+        inventoryValue: dashboardSummary.inventoryValue ?? 0,
+        revenueGrowth: dashboardSummary.revenueGrowth ?? 0,
+        orderGrowth: dashboardSummary.orderGrowth ?? 0,
         customerSatisfaction: 0, // Not available in summary
-        lastUpdated: dashboardSummary.lastUpdated,
-        isEmpty: dashboardSummary.totalProducts === 0 && 
-                dashboardSummary.totalCategories === 0 && 
-                dashboardSummary.totalRevenue === 0,
+        lastUpdated: dashboardSummary.lastUpdated || new Date().toISOString(),
+        isEmpty: (dashboardSummary.totalProducts ?? 0) === 0 &&
+                (dashboardSummary.totalCategories ?? 0) === 0 &&
+                (dashboardSummary.totalOrders ?? 0) === 0,
         // Map new fields from backend
         dailySales: dashboardSummary.dailySales || [],
         topSellingItems: dashboardSummary.topSellingItems || [],
