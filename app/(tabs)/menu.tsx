@@ -3,16 +3,18 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { NavigationSettingsModal } from '../../components/modals/NavigationSettingsModal';
+import { ProfileModal } from '../../components/shared/ProfileModal';
 
 export default function MenuScreen() {
   const { user, logout } = useAuth();
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* User Profile Header - Fixed at top */}
       <View style={styles.header}>
-        <View style={styles.profileSection}>
+        <TouchableOpacity style={styles.profileSection} onPress={() => setShowProfile(true)}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {user?.name?.charAt(0) || 'U'}
@@ -23,7 +25,7 @@ export default function MenuScreen() {
             <Text style={styles.userEmail}>{user?.email || ''}</Text>
             <Text style={styles.userStatus}>Active User</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* ✅ CRITICAL FIX: Wrap navigation items in ScrollView */}
@@ -143,6 +145,12 @@ export default function MenuScreen() {
       <NavigationSettingsModal
         visible={showCustomizeModal}
         onClose={() => setShowCustomizeModal(false)}
+      />
+
+      {/* ✅ Profile Modal */}
+      <ProfileModal
+        visible={showProfile}
+        onClose={() => setShowProfile(false)}
       />
     </SafeAreaView>
   );
