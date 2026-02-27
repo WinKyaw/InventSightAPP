@@ -296,6 +296,16 @@ export interface ApiResponse<T> {
 }
 
 /**
+ * Dashboard API envelope — backend wraps the summary in this shape
+ */
+export interface DashboardApiEnvelope {
+  summary: DashboardSummary;
+  message: string;
+  timestamp: string;
+  system?: string;
+}
+
+/**
  * Activity Item
  */
 export interface ActivityItem {
@@ -412,7 +422,9 @@ export interface DashboardSummary {
   orderGrowth: number;
   customerSatisfaction: number;
   lowStockCount: number;
-  recentActivities: ActivityItem[];
+  lowStockItems?: LowStockProduct[];
+  recentActivities?: ActivityItem[];
+  recentOrders?: any[];
   totalProducts: number;
   totalCategories: number;
   lastUpdated: string;
