@@ -425,6 +425,7 @@ export interface DashboardSummary {
   lowStockItems?: LowStockProduct[];
   recentActivities?: ActivityItem[];
   recentOrders?: any[];
+  bestPerformer?: any;
   totalProducts: number;
   totalCategories: number;
   lastUpdated: string;

@@ -51,6 +51,8 @@ export interface ComprehensiveDashboardData {
     revenue: number;
     category: string;
   }>;
+  bestPerformer?: any;
+  recentOrders?: any[];
 }
 
 /**
@@ -149,7 +151,10 @@ export class DashboardService {
       const data = {
         totalProducts: dashboardSummary.totalProducts ?? 0,
         lowStockItems: dashboardSummary.lowStockItems || [],
-        lowStockCount: dashboardSummary.lowStockCount ?? (dashboardSummary.lowStockItems?.length ?? 0),
+        // BUG FIX: backend sends 'lowStockItems' as a number (count), not 'lowStockCount'
+        lowStockCount: (dashboardSummary as any).lowStockItems != null && typeof (dashboardSummary as any).lowStockItems === 'number'
+          ? (dashboardSummary as any).lowStockItems
+          : dashboardSummary.lowStockCount ?? 0,
         totalCategories: dashboardSummary.totalCategories ?? 0,
         recentActivities,
         totalRevenue: dashboardSummary.totalRevenue ?? 0,
@@ -166,6 +171,9 @@ export class DashboardService {
         // Map new fields from backend
         dailySales: dashboardSummary.dailySales || [],
         topSellingItems: dashboardSummary.topSellingItems || [],
+        // BUG FIX: map bestPerformer and recentOrders from backend
+        bestPerformer: dashboardSummary.bestPerformer ?? null,
+        recentOrders: dashboardSummary.recentOrders ?? [],
       };
       
       // Cache successful response
