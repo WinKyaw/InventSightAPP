@@ -115,6 +115,17 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
     };
   }, []);
 
+  // Reset all state when modal is closed to prevent stale state on next open
+  useEffect(() => {
+    if (!visible) {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
+      resetFormState();
+    }
+  }, [visible]);
+
   const loadCustomers = async () => {
     if (!currentStore?.id) {
       console.warn('⚠️ No store selected, cannot load customers');
@@ -391,6 +402,26 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
     }
   };
 
+  const resetFormState = () => {
+    setCustomerQuery('');
+    setSelectedCustomer(null);
+    setSelectedItems([]);
+    setOrderType('hold');
+    setSearchQuery('');
+    setQuantities({});
+    setCartVisible(false);
+    setShowSuccessModal(false);
+  };
+
+  const handleClose = () => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
+    setShowSuccessModal(false);
+    onClose();
+  };
+
   const handleSubmitOrder = async () => {
     if (selectedItems.length === 0) {
       Alert.alert('Error', 'Please add at least one item');
@@ -422,26 +453,14 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
       
       setShowSuccessModal(true);
       
-      // Reset form after short delay
+      // Reset form after short delay, then notify parent and close
       successTimerRef.current = setTimeout(() => {
-        // 1. Hide the success overlay FIRST to prevent black screen flash
-        setShowSuccessModal(false);
-        setCartVisible(false);
+        resetFormState();
 
-        // 2. Reset form state while modal is still mounted
-        setCustomerQuery('');
-        setSelectedCustomer(null);
-        setSelectedItems([]);
-        setOrderType('hold');
-        setSearchQuery('');
-        setQuantities({});
-
-        // 3. Close the modal
-        onClose();
-
-        // 4. Notify parent AFTER modal is dismissed
+        // Notify parent and close
         onSuccess?.();
-      }, 1500);
+        onClose();
+      }, 800); // Reduced from 1500ms to avoid black screen
       
     } catch (error: any) {
       console.error('Error creating order:', error);
@@ -463,13 +482,13 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <SafeAreaView style={styles.modalContainer}>
         {/* Header */}
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Take Order</Text>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity onPress={handleClose}>
             <Ionicons name="close" size={28} color="#333" />
           </TouchableOpacity>
         </View>
