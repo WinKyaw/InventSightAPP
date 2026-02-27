@@ -424,16 +424,23 @@ export default function TakeOrderModal({ visible, onClose, onSuccess }: TakeOrde
       
       // Reset form after short delay
       successTimerRef.current = setTimeout(() => {
+        // 1. Hide the success overlay FIRST to prevent black screen flash
+        setShowSuccessModal(false);
+        setCartVisible(false);
+
+        // 2. Reset form state while modal is still mounted
         setCustomerQuery('');
         setSelectedCustomer(null);
         setSelectedItems([]);
         setOrderType('hold');
         setSearchQuery('');
-        setCartVisible(false);
-        
-        onSuccess?.();
-        setShowSuccessModal(false);
+        setQuantities({});
+
+        // 3. Close the modal
         onClose();
+
+        // 4. Notify parent AFTER modal is dismissed
+        onSuccess?.();
       }, 1500);
       
     } catch (error: any) {
