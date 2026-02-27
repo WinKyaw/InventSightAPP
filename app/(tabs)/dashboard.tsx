@@ -14,6 +14,7 @@ import { TopProductsList } from '../../components/dashboard/TopProductsList';
 import { GrowthIndicator } from '../../components/dashboard/GrowthIndicator';
 import { styles } from '../../constants/Styles';
 import { responseCache } from '../../services/api/cache';
+import { CacheManager } from '../../utils/cacheManager';
 
 export default function DashboardScreen() {
   const { t } = useTranslation();
@@ -27,6 +28,12 @@ export default function DashboardScreen() {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, isInitialized, router]);
+
+  useEffect(() => {
+    // Clear dashboard cache on component mount to ensure fresh data
+    console.log('🗑️ Dashboard mounted - clearing cache...');
+    CacheManager.invalidateDashboard();
+  }, []);
 
   // Early return if not authenticated
   if (!isAuthenticated) {
