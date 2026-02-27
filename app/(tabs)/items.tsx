@@ -77,7 +77,7 @@ export default function ItemsScreen() {
   });
 
   // Store management state - Use shared context for currentStore
-  const { currentStore, setCurrentStore } = useStore();
+  const { currentStore, setCurrentStore, selectStore, loadPersistedStore } = useStore();
   const [stores, setStores] = useState<Store[]>([]);
   const [showStoreSelector, setShowStoreSelector] = useState(false);
   const [showAddStoreModal, setShowAddStoreModal] = useState(false);
@@ -157,17 +157,15 @@ export default function ItemsScreen() {
       console.log('✅ Stores loaded:', userStores.length);
       setStores(userStores);
       
-      // Auto-select first store if available
-      // This logic runs when loadStores is called (which happens once on mount via useEffect)
+      // Auto-select persisted store if available, fallback to first
       if (userStores.length > 0) {
-        console.log('📍 Auto-selecting first store:', userStores[0].storeName);
-        setCurrentStore(userStores[0]);
+        await loadPersistedStore(userStores);
       }
     } catch (error) {
       console.error('❌ Failed to load stores:', error);
       setStores([]);
     }
-  }, []); // Empty deps - function is stable across renders
+  }, [loadPersistedStore]); // loadPersistedStore is stable (useCallback in context)
 
   // Load stores on mount
   useEffect(() => {
@@ -1192,8 +1190,8 @@ export default function ItemsScreen() {
                     itemsStyles.storeOption,
                     currentStore?.id === store.id && itemsStyles.storeOptionSelected,
                   ]}
-                  onPress={() => {
-                    setCurrentStore(store);
+                  onPress={async () => {
+                    await selectStore(store);
                     setShowStoreSelector(false);
                   }}
                 >
