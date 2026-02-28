@@ -8,6 +8,7 @@ import { useReports } from '../../context/ReportsContext';
 import { useEmployees } from '../../context/EmployeesContext';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
 import { useAuth } from '../../context/AuthContext';
+import { useStore } from '../../context/StoreContext';
 import { Header } from '../../components/shared/Header';
 import { SalesChart } from '../../components/dashboard/SalesChart';
 import { TopProductsList } from '../../components/dashboard/TopProductsList';
@@ -15,6 +16,8 @@ import { GrowthIndicator } from '../../components/dashboard/GrowthIndicator';
 import { styles } from '../../constants/Styles';
 import { responseCache } from '../../services/api/cache';
 import { CacheManager } from '../../utils/cacheManager';
+import { StoreService, Store } from '../../services/api/storeService';
+import { Colors } from '../../constants/Colors';
 
 export default function DashboardScreen() {
   const { t } = useTranslation();
@@ -42,6 +45,10 @@ export default function DashboardScreen() {
     loading: employeesLoading
   } = useEmployees();
 
+  const { currentStore, selectStore, loadPersistedStore } = useStore();
+  const [stores, setStores] = useState<Store[]>([]);
+  const [showStoreSelector, setShowStoreSelector] = useState(false);
+
   const [refreshing, setRefreshing] = useState(false);
   const [detailModal, setDetailModal] = useState<string | null>(null);
 
@@ -56,6 +63,56 @@ export default function DashboardScreen() {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, isInitialized, router]);
+
+  // Load stores on mount and restore the persisted selection
+  useEffect(() => {
+    (async () => {
+      try {
+        const userStores = await StoreService.getUserStores();
+        setStores(userStores);
+        if (userStores.length > 0) {
+          await loadPersistedStore(userStores);
+        }
+      } catch (error) {
+        console.error('❌ Dashboard: Failed to load stores:', error);
+      }
+    })();
+  }, [loadPersistedStore]);
+
+  // Core logic: activate a store in the backend and refresh dashboard data
+  const activateStoreAndRefresh = useCallback(async (storeId: string) => {
+    await StoreService.activateStore(storeId);
+    CacheManager.invalidateDashboard();
+    loadedRef.current = false;
+    lastLoadTime.current = 0;
+    await refreshDashboardData();
+  }, [refreshDashboardData]);
+
+  // Handle switching to a different store
+  const handleStoreChange = useCallback(async (store: Store) => {
+    try {
+      await selectStore(store);
+      await activateStoreAndRefresh(store.id);
+    } catch (error) {
+      console.error('❌ Dashboard: Failed to switch store:', error);
+      Alert.alert('Error', 'Failed to switch stores. Please try again.');
+    }
+  }, [selectStore, activateStoreAndRefresh]);
+
+  // Sync dashboard when store changes from another tab (e.g. Items)
+  useEffect(() => {
+    if (!loadedRef.current) {
+      return;
+    }
+    if (!currentStore?.id || !canMakeApiCalls) {
+      return;
+    }
+    console.log('🏪 Dashboard: store changed to', currentStore.storeName, '— reloading data');
+    activateStoreAndRefresh(currentStore.id).catch((error) => {
+      console.error('❌ Dashboard: Failed to reload after store change:', error);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStore?.id]);
 
   useEffect(() => {
     // Clear dashboard cache on component mount to ensure fresh data
@@ -211,17 +268,29 @@ export default function DashboardScreen() {
       <StatusBar backgroundColor="#3B82F6" barStyle="light-content" />
       <Header
         title={t('dashboard.title')}
-        subtitle="Live Data from InventSight API"
+        subtitle={`Live Data · ${currentStore?.storeName || currentStore?.name || 'InventSight API'}`}
         backgroundColor="#3B82F6"
         showProfileButton={true}
         rightComponent={
-          <TouchableOpacity
-            onPress={handleRefresh}
-            disabled={refreshing || reportsLoading}
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="refresh" size={24} color="white" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => setShowStoreSelector(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8 }}
+            >
+              <Ionicons name="storefront-outline" size={18} color="white" />
+              <Text style={{ color: 'white', fontSize: 13, fontWeight: '600', maxWidth: 90 }} numberOfLines={1}>
+                {currentStore?.storeName || currentStore?.name || 'Store'}
+              </Text>
+              <Ionicons name="swap-horizontal" size={16} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleRefresh}
+              disabled={refreshing || reportsLoading}
+              style={{ padding: 4 }}
+            >
+              <Ionicons name="refresh" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -461,6 +530,51 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Store Selector Modal */}
+      <Modal
+        visible={showStoreSelector}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowStoreSelector(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%', paddingBottom: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: Colors.text }}>Select Store</Text>
+              <TouchableOpacity onPress={() => setShowStoreSelector(false)}>
+                <Ionicons name="close" size={28} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 16 }}>
+              {stores.map((store) => (
+                <TouchableOpacity
+                  key={store.id}
+                  style={[
+                    { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 8, backgroundColor: Colors.background, marginBottom: 8 },
+                    currentStore?.id === store.id && { backgroundColor: Colors.secondaryLight, borderWidth: 2, borderColor: Colors.secondary },
+                  ]}
+                  onPress={async () => {
+                    await handleStoreChange(store);
+                    setShowStoreSelector(false);
+                  }}
+                >
+                  <Ionicons name="storefront-outline" size={24} color={currentStore?.id === store.id ? Colors.primary : Colors.textSecondary} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.text }}>{store.storeName}</Text>
+                    {store.city && (
+                      <Text style={{ fontSize: 14, color: Colors.textSecondary, marginTop: 2 }}>{store.city}{store.state ? `, ${store.state}` : ''}</Text>
+                    )}
+                  </View>
+                  {currentStore?.id === store.id && (
+                    <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Detail Modal */}
       <Modal
