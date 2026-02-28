@@ -71,10 +71,11 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
   const [customData, setCustomData] = useState<ComprehensiveDashboardData | null>(null);
   
   // Memoize the API function to prevent it from changing on every render
+  // bypassCache=true ensures store switches always fetch fresh data
   const dashboardApiFunction = useCallback(() => {
     console.log('📊 Loading dashboard from backend API...');
     console.log('   Expected: Orders, Revenue, Products, Low Stock');
-    return DashboardService.getComprehensiveDashboardData();
+    return DashboardService.getComprehensiveDashboardData(true);
   }, []);
   
   // Use comprehensive dashboard data API with authentication guard
