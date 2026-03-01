@@ -150,10 +150,10 @@ export class DashboardService {
 
       const data = {
         totalProducts: dashboardSummary.totalProducts ?? 0,
-        lowStockItems: dashboardSummary.lowStockItems || [],
+        lowStockItems: Array.isArray(dashboardSummary.lowStockItems) ? dashboardSummary.lowStockItems : [],
         // BUG FIX: backend sends 'lowStockItems' as a number (count), not 'lowStockCount'
-        lowStockCount: (dashboardSummary as any).lowStockItems != null && typeof (dashboardSummary as any).lowStockItems === 'number'
-          ? (dashboardSummary as any).lowStockItems
+        lowStockCount: typeof dashboardSummary.lowStockItems === 'number'
+          ? dashboardSummary.lowStockItems
           : dashboardSummary.lowStockCount ?? 0,
         totalCategories: dashboardSummary.totalCategories ?? 0,
         recentActivities,

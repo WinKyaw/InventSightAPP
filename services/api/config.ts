@@ -422,7 +422,7 @@ export interface DashboardSummary {
   orderGrowth: number;
   customerSatisfaction: number;
   lowStockCount: number;
-  lowStockItems?: LowStockProduct[];
+  lowStockItems?: LowStockProduct[] | number;
   recentActivities?: ActivityItem[];
   recentOrders?: any[];
   bestPerformer?: any;
