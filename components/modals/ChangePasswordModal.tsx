@@ -97,7 +97,7 @@ export function ChangePasswordModal({ visible, onClose, onSuccess }: ChangePassw
               onChangeText={setCurrentPassword}
               secureTextEntry={!showCurrent}
               placeholder="Enter current password"
-              style={styles.passwordInput}
+              containerStyle={styles.passwordInputContainer}
             />
             <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)} style={styles.eyeButton}>
               <Ionicons name={showCurrent ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
@@ -114,7 +114,7 @@ export function ChangePasswordModal({ visible, onClose, onSuccess }: ChangePassw
               onChangeText={setNewPassword}
               secureTextEntry={!showNew}
               placeholder="Enter new password (min 8 chars)"
-              style={styles.passwordInput}
+              containerStyle={styles.passwordInputContainer}
             />
             <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.eyeButton}>
               <Ionicons name={showNew ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
@@ -139,7 +139,7 @@ export function ChangePasswordModal({ visible, onClose, onSuccess }: ChangePassw
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirm}
               placeholder="Confirm new password"
-              style={styles.passwordInput}
+              containerStyle={styles.passwordInputContainer}
             />
             <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeButton}>
               <Ionicons name={showConfirm ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   fieldGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 6 },
   passwordRow: { flexDirection: 'row', alignItems: 'center' },
-  passwordInput: { flex: 1 },
+  passwordInputContainer: { flex: 1, marginBottom: 0 },
   eyeButton: { padding: 10, marginLeft: 4 },
   strengthContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 },
   strengthBar: { flex: 1, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, overflow: 'hidden' },
