@@ -244,6 +244,25 @@ export const styles = StyleSheet.create({
     color: Colors.text,
   },
 
+  // Inventory Health Card Styles
+  inventoryTile: {
+    flex: 1,
+    minWidth: '45%' as any,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+  },
+  inventoryTileLabel: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  inventoryTileValue: {
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#374151',
+  },
+
   // Items Screen Styles
   itemsList: {
     flex: 1,
