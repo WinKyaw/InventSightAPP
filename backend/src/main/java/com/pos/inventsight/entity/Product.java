@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
 /**
  * Example Product entity to demonstrate exception handling
  * with various database constraints (unique, not-null, etc.)
@@ -56,6 +55,10 @@ public class Product {
     // Foreign key to demonstrate FK constraint violations
     @Column(name = "category_id")
     private Long categoryId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
 
     @PrePersist
     protected void onCreate() {
@@ -157,6 +160,14 @@ public class Product {
 
     public void setCategoryId(Long categoryId) {
         this.categoryId = categoryId;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
     }
 
     @Override
