@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Repository for Product entity operations
@@ -19,4 +20,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     boolean existsBySku(String sku);
     
     boolean existsByBarcode(String barcode);
+
+    long countByStoreId(UUID storeId);
+
+    long countByStoreIdAndStockQuantityLessThan(UUID storeId, int quantity);
+
+    long countByStockQuantityLessThan(int quantity);
 }

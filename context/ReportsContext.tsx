@@ -1,8 +1,9 @@
-import React, { createContext, useContext, ReactNode, useCallback, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { ReportService, DashboardService, BusinessIntelligenceData, DailyReportData, WeeklyReportData, InventoryReportData } from '../services';
 import { useAuthenticatedAPI, useApiReadiness } from '../hooks';
 import type { ComprehensiveDashboardData } from '../services/api/dashboardService';
 import { CacheManager } from '../utils/cacheManager';
+import { useStore } from './StoreContext';
 
 interface ReportsContextType {
   // Comprehensive dashboard data (always from API)
@@ -61,6 +62,7 @@ function getEmptyDashboardData(): ComprehensiveDashboardData {
 
 export function ReportsProvider({ children }: { children: ReactNode }) {
   const { canMakeApiCalls } = useApiReadiness();
+  const { currentStore } = useStore();
   
   // ✅ RETRY LOGIC: Track retry attempts
   const retryCountRef = useRef(0);
@@ -70,13 +72,22 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
   const [customError, setCustomError] = useState<string | null>(null);
   const [customData, setCustomData] = useState<ComprehensiveDashboardData | null>(null);
   
+  // Invalidate dashboard cache and reset retries when store changes
+  useEffect(() => {
+    if (currentStore?.id) {
+      console.log('🏪 ReportsContext: Store changed to', currentStore.id, '— invalidating dashboard cache');
+      CacheManager.invalidateDashboard();
+      retryCountRef.current = 0;
+    }
+  }, [currentStore?.id]);
+
   // Memoize the API function to prevent it from changing on every render
   // bypassCache=true ensures store switches always fetch fresh data
   const dashboardApiFunction = useCallback(() => {
     console.log('📊 Loading dashboard from backend API...');
     console.log('   Expected: Orders, Revenue, Products, Low Stock');
-    return DashboardService.getComprehensiveDashboardData(true);
-  }, []);
+    return DashboardService.getComprehensiveDashboardData(true, currentStore?.id);
+  }, [currentStore?.id]);
   
   // Use comprehensive dashboard data API with authentication guard
   const {

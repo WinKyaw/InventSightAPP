@@ -72,19 +72,14 @@ export class DashboardService {
   /**
    * Get comprehensive dashboard summary (single API call) with caching
    */
-  static async getDashboardSummary(bypassCache: boolean = false): Promise<DashboardSummary> {
-    const cacheKey = 'dashboard:summary';
+  static async getDashboardSummary(storeId?: string): Promise<DashboardSummary> {
+    const cacheKey = `dashboard:summary:${storeId || 'default'}`;
     
-    // Check cache first (unless explicitly bypassed)
-    if (!bypassCache) {
-      const cached = responseCache.get<DashboardSummary>(cacheKey);
-      if (cached !== null) {
-        console.log('✅ Using cached dashboard summary');
-        return cached;
-      }
-    } else {
-      console.log('⚡ Bypassing cache - fetching fresh dashboard data');
-      responseCache.invalidate(cacheKey);
+    // Check cache first
+    const cached = responseCache.get<DashboardSummary>(cacheKey);
+    if (cached !== null) {
+      console.log('✅ Using cached dashboard summary');
+      return cached;
     }
 
     // Verify authentication before making the call
@@ -94,10 +89,12 @@ export class DashboardService {
     return requestDeduplicator.execute(cacheKey, async () => {
       // Retry with exponential backoff on rate limit
       return retryWithBackoff(async () => {
-        var testURL = API_ENDPOINTS.DASHBOARD.SUMMARY;
-        console.log("URL: " + testURL);
+        const url = storeId
+          ? `${API_ENDPOINTS.DASHBOARD.SUMMARY}?storeId=${storeId}`
+          : API_ENDPOINTS.DASHBOARD.SUMMARY;
+        console.log("URL: " + url);
         // Backend wraps response in { summary: {...}, message, timestamp }
-        const rawResponse = await apiClient.get<DashboardApiEnvelope>(API_ENDPOINTS.DASHBOARD.SUMMARY);
+        const rawResponse = await apiClient.get<DashboardApiEnvelope>(url);
         
         // Extract .summary if wrapped, otherwise use response directly
         const response: DashboardSummary = rawResponse?.summary || (rawResponse as unknown as DashboardSummary);
@@ -116,8 +113,8 @@ export class DashboardService {
    * Get comprehensive dashboard data with caching
    * Note: In a proper backend implementation, this would be a single endpoint
    */
-  static async getComprehensiveDashboardData(bypassCache: boolean = false): Promise<ComprehensiveDashboardData> {
-    const cacheKey = 'dashboard:comprehensive';
+  static async getComprehensiveDashboardData(bypassCache: boolean = false, storeId?: string): Promise<ComprehensiveDashboardData> {
+    const cacheKey = `dashboard:comprehensive:${storeId || 'default'}`;
     
     // Check cache first (unless explicitly bypassed)
     if (!bypassCache) {
@@ -134,7 +131,7 @@ export class DashboardService {
     // Deduplicate concurrent requests
     return requestDeduplicator.execute(cacheKey, async () => {
       // getDashboardSummary already has retry logic, so we don't nest it here
-      const dashboardSummary = await this.getDashboardSummary();
+      const dashboardSummary = await this.getDashboardSummary(storeId);
       
       // Map recentOrders from backend if recentActivities not present
       const recentActivities = dashboardSummary.recentActivities ||
