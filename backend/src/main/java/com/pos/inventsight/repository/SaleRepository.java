@@ -39,4 +39,10 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     
     // Find by user, store, and status
     List<Sale> findByProcessedByIdAndStoreIdAndStatus(UUID userId, UUID storeId, String status);
+
+    // Most recent 10 sales across all stores
+    List<Sale> findTop10ByOrderByCreatedAtDesc();
+
+    // Most recent 10 sales for a specific store
+    List<Sale> findTop10ByStoreIdOrderByCreatedAtDesc(UUID storeId);
 }
