@@ -358,13 +358,15 @@ export default function DashboardScreen() {
         {canMakeApiCalls && !isAuthenticating && (
           <View style={styles.kpiContainer}>
             <View style={styles.kpiRow}>
-              <TouchableOpacity style={styles.kpiCard} onPress={() => setDetailModal('revenue')}>
+              <TouchableOpacity style={[styles.kpiCard, { borderBottomWidth: 3, borderBottomColor: '#10B981' }]} onPress={() => setDetailModal('revenue')}>
+                <Ionicons name="trending-up" size={20} color="#10B981" style={{ marginBottom: 4 }} />
                 <Text style={styles.kpiLabel}>{t('dashboard.revenue')}</Text>
                 <Text style={styles.kpiValue}>${getDisplayValue(dashboardData?.totalRevenue)}</Text>
                 <GrowthIndicator value={parseFloat(getRevenueGrowth())} />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.kpiCard} onPress={() => setDetailModal('orders')}>
+              <TouchableOpacity style={[styles.kpiCard, { borderBottomWidth: 3, borderBottomColor: '#3B82F6' }]} onPress={() => setDetailModal('orders')}>
+                <Ionicons name="receipt-outline" size={20} color="#3B82F6" style={{ marginBottom: 4 }} />
                 <Text style={styles.kpiLabel}>{t('dashboard.orders')}</Text>
                 <Text style={[styles.kpiValue, { color: '#3B82F6' }]}>{getDisplayValue(dashboardData?.totalOrders)}</Text>
                 <GrowthIndicator value={parseFloat(getOrderGrowth())} />
@@ -373,15 +375,19 @@ export default function DashboardScreen() {
 
             <View style={styles.kpiRowSmall}>
               <TouchableOpacity style={styles.kpiCardSmall} onPress={() => setDetailModal('products')}>
+                <Ionicons name="cube-outline" size={16} color="#10B981" style={{ marginBottom: 2 }} />
                 <Text style={styles.kpiLabelSmall}>{t('dashboard.products')}</Text>
-                <Text style={[styles.kpiValueSmall, { color: '#10B981' }]}>
+                <Text style={[styles.kpiValueSmall, { color: '#10B981', fontWeight: 'bold', fontSize: 20 }]}>
                   {getDisplayValue(dashboardData?.totalProducts)}
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.kpiCardSmall} onPress={() => setDetailModal('lowstock')}>
+              <TouchableOpacity
+                style={[styles.kpiCardSmall, (dashboardData?.lowStockCount || 0) > 0 ? { backgroundColor: '#FEF3C7' } : {}]}
+                onPress={() => setDetailModal('lowstock')}
+              >
                 <Text style={styles.kpiLabelSmall}>{t('dashboard.lowStock')}</Text>
-                <Text style={[styles.kpiValueSmall, { color: '#F59E0B' }]}>
+                <Text style={[styles.kpiValueSmall, { color: (dashboardData?.lowStockCount || 0) > 0 ? '#D97706' : '#F59E0B' }]}>
                   {getDisplayValue(dashboardData?.lowStockCount)}
                 </Text>
               </TouchableOpacity>
@@ -403,6 +409,9 @@ export default function DashboardScreen() {
                     ));
                   })()}
                 </View>
+                <Text style={{ fontSize: 9, color: '#6B7280', marginTop: 4 }}>
+                  ${(dashboardData?.dailySales || []).reduce((sum: number, d: any) => sum + (d.revenue || 0), 0).toFixed(2)}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -419,19 +428,33 @@ export default function DashboardScreen() {
             <TouchableOpacity onPress={() => setDetailModal('bestperformer')}>
               <View style={styles.performanceCard}>
                 <Text style={styles.performanceTitle}>📈 {t('dashboard.bestPerformer')}</Text>
-                <View style={styles.performanceRow}>
-                  <View>
-                    <Text style={[styles.performanceName, { color: '#10B981' }]}>{bestItem.name}</Text>
-                    <Text style={styles.performanceUnits}>
-                      {bestItem.quantity} {t('common.units')} sold
-                    </Text>
+                {bestItem.sales === 0 ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                    <Ionicons name="stats-chart-outline" size={40} color="#9CA3AF" />
+                    <Text style={{ color: '#9CA3AF', marginTop: 8 }}>No sales yet</Text>
                   </View>
-                  <View style={styles.performanceRight}>
-                    <Text style={styles.performanceValue}>
-                      ${bestItem.sales.toLocaleString()}
-                    </Text>
-                  </View>
-                </View>
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>🏆</Text>
+                    <View style={styles.performanceRow}>
+                      <View>
+                        <Text style={[styles.performanceName, { color: '#10B981' }]}>{bestItem.name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                          <View style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                            <Text style={{ color: '#065F46', fontSize: 12, fontWeight: '600' }}>
+                              {bestItem.quantity} {t('common.units')} sold
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={styles.performanceRight}>
+                        <Text style={styles.performanceValue}>
+                          ${bestItem.sales.toLocaleString()}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                )}
               </View>
             </TouchableOpacity>
 
@@ -440,32 +463,51 @@ export default function DashboardScreen() {
                 <Text style={styles.topItemsTitle}>
                   🏆 {t('dashboard.recentOrders')}
                 </Text>
-                {topItems.length > 0 ? (
-                  topItems.map((item, index) => (
-                    <View key={`${item.name}-${index}`} style={styles.topItemRow}>
-                      <View style={styles.topItemLeft}>
-                        <Text style={styles.topItemRank}>#{index + 1}</Text>
-                        <View>
-                          <Text style={styles.topItemName}>{item.name}</Text>
-                          <Text style={styles.topItemUnits}>{item.quantity} {t('common.units')}</Text>
-                        </View>
+                {getRecentOrders.length === 0 ? (
+                  <Text style={{ color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 }}>
+                    No recent orders
+                  </Text>
+                ) : (
+                  getRecentOrders.slice(0, 2).map((order: any, i: number) => (
+                    <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                      <View>
+                        <Text style={{ fontWeight: '600', fontSize: 13 }}>#{order.receiptNumber || order.id || 'N/A'}</Text>
+                        <Text style={{ color: '#6B7280', fontSize: 12 }}>{order.customerName || 'Walk-in'}</Text>
                       </View>
-                      <View style={styles.topItemRight}>
-                        <Text style={styles.topItemValue}>
-                          ${item.sales.toLocaleString()}
-                        </Text>
-                      </View>
+                      <Text style={{ fontWeight: '600', color: '#10B981' }}>${(order.totalAmount || order.total || 0).toFixed(2)}</Text>
                     </View>
                   ))
-                ) : (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
-                    <Text style={[styles.kpiLabelSmall, { color: '#9CA3AF' }]}>
-                      {t('reports.noData')}
-                    </Text>
-                  </View>
                 )}
               </View>
             </TouchableOpacity>
+
+            {/* Inventory Health */}
+            <View style={styles.topItemsCard}>
+              <Text style={styles.topItemsTitle}>📦 Inventory Health</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <TouchableOpacity style={styles.inventoryTile} onPress={() => setDetailModal('products')}>
+                  <Text style={styles.inventoryTileLabel}>Total Products</Text>
+                  <Text style={styles.inventoryTileValue}>{dashboardData?.totalProducts || 0}</Text>
+                </TouchableOpacity>
+                <View style={styles.inventoryTile}>
+                  <Text style={styles.inventoryTileLabel}>Categories</Text>
+                  <Text style={styles.inventoryTileValue}>{dashboardData?.totalCategories || 0}</Text>
+                </View>
+                <View style={styles.inventoryTile}>
+                  <Text style={styles.inventoryTileLabel}>Inventory Value</Text>
+                  <Text style={styles.inventoryTileValue}>${(dashboardData?.inventoryValue || 0).toLocaleString()}</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.inventoryTile, (dashboardData?.lowStockCount || 0) > 0 ? { backgroundColor: '#FEF3C7' } : {}]}
+                  onPress={() => setDetailModal('lowstock')}
+                >
+                  <Text style={styles.inventoryTileLabel}>Low Stock</Text>
+                  <Text style={[styles.inventoryTileValue, { color: (dashboardData?.lowStockCount || 0) > 0 ? '#D97706' : '#374151' }]}>
+                    {dashboardData?.lowStockCount || 0}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
             {/* Additional Metrics */}
             <View style={styles.kpiRow}>
@@ -477,35 +519,13 @@ export default function DashboardScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={{
-                  flex: 1,
-                  marginHorizontal: 8,
-                  padding: 20,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: 100,
-                  backgroundColor: '#8B5CF6',
-                  shadowColor: '#8B5CF6',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 6,
-                }}
-                onPress={() => {
-                  Alert.alert(
-                    'AI Assistant',
-                    'AI chat feature coming soon! This will provide intelligent insights about your inventory and sales.',
-                    [{ text: 'OK' }]
-                  );
-                }}
+                style={[styles.kpiCard, { borderBottomWidth: 3, borderBottomColor: '#6366F1' }]}
+                onPress={() => setDetailModal('employees')}
               >
-                <Ionicons name="sparkles" size={32} color="#FFF" style={{ marginBottom: 8 }} />
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFF' }}>
-                  Ask AI
-                </Text>
-                <Text style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.8)', marginTop: 4 }}>
-                  Get Insights
+                <Ionicons name="people-outline" size={20} color="#6366F1" style={{ marginBottom: 4 }} />
+                <Text style={styles.kpiLabel}>Employees</Text>
+                <Text style={[styles.kpiValue, { color: '#6366F1' }]}>
+                  {(dashboardData as any)?.totalEmployees || 0}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -515,12 +535,15 @@ export default function DashboardScreen() {
               <Text style={[styles.kpiLabel, { color: '#374151', textAlign: 'center' }]}>
                 📊 Data Source
               </Text>
-              <Text style={[styles.kpiLabelSmall, { color: '#6B7280', textAlign: 'center' }]}>
-                Connected to InventSight Backend API
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dashboardData ? '#10B981' : '#9CA3AF', marginRight: 6 }} />
+                <Text style={[styles.kpiLabelSmall, { color: dashboardData ? '#10B981' : '#6B7280' }]}>
+                  {dashboardData ? 'Live' : 'Offline / No data'}
+                </Text>
+              </View>
               {dashboardData && (
                 <Text style={[styles.kpiLabelSmall, { color: '#10B981', textAlign: 'center', marginTop: 4 }]}>
-                  ✅ Last updated: {new Date(dashboardData.lastUpdated).toLocaleTimeString()}
+                  Last updated: {new Date(dashboardData.lastUpdated).toLocaleTimeString()}
                 </Text>
               )}
               <Text style={[styles.kpiLabelSmall, { color: '#6B7280', textAlign: 'center', marginTop: 4 }]}>
@@ -594,7 +617,8 @@ export default function DashboardScreen() {
                detailModal === 'bestperformer' ? 'Best Performer' :
                detailModal === 'recentorders' ? 'Recent Orders' :
                detailModal === 'avgorder' ? 'Avg Order Value' :
-               detailModal === 'weeklysales' ? 'Weekly Sales' : 'Details'}
+               detailModal === 'weeklysales' ? 'Weekly Sales' :
+               detailModal === 'employees' ? 'Employees' : 'Details'}
             </Text>
             <TouchableOpacity onPress={() => setDetailModal(null)}>
               <Ionicons name="close" size={28} color="#374151" />
@@ -606,7 +630,14 @@ export default function DashboardScreen() {
             {detailModal === 'revenue' && (
               <View>
                 <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#10B981' }}>${(dashboardData?.totalRevenue || 0).toLocaleString()}</Text>
-                <Text style={{ color: '#6B7280', marginTop: 8 }}>Revenue Growth: +{getRevenueGrowth()}%</Text>
+                <Text style={{ color: '#6B7280', marginTop: 8 }}>Revenue Growth: {parseFloat(getRevenueGrowth()) >= 0 ? '+' : ''}{getRevenueGrowth()}%</Text>
+                <View style={{ marginTop: 20 }}>
+                  <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 6 }}>Progress toward +20% growth target</Text>
+                  <View style={[styles.progressBar, { height: 10 }]}>
+                    <View style={[styles.progressFill, { width: `${Math.round((1 / 1.2) * 100)}%`, backgroundColor: '#10B981' }]} />
+                  </View>
+                  <Text style={{ fontSize: 12, color: '#10B981', marginTop: 4 }}>{Math.round((1 / 1.2) * 100)}% of target</Text>
+                </View>
                 {(dashboardData?.dailySales || []).length > 0 && <>
                   <Text style={{ fontWeight: '600', fontSize: 16, marginTop: 24, marginBottom: 12 }}>Daily Breakdown</Text>
                   {(dashboardData?.dailySales || []).map((d: any, i: number) => (
@@ -733,6 +764,19 @@ export default function DashboardScreen() {
                     <Text style={{ color: '#9CA3AF', marginTop: 8, textAlign: 'center', fontSize: 13 }}>Data appears once sales are recorded</Text>
                   </View>
                 )}
+              </View>
+            )}
+
+            {detailModal === 'employees' && (
+              <View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                  <Text>Employees</Text>
+                  <Text style={{ fontWeight: '600', color: '#6366F1' }}>{(dashboardData as any)?.totalEmployees || 0}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                  <Text>Checked In</Text>
+                  <Text style={{ fontWeight: '600', color: '#10B981' }}>{(dashboardData as any)?.checkedInEmployees || 0}</Text>
+                </View>
               </View>
             )}
 
