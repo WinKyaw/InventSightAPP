@@ -15,7 +15,7 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ visible, onClose }: ProfileModalProps) {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -67,11 +67,14 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
     try {
       setSaving(true);
-      await ProfileService.updateProfile({
+      const result = await ProfileService.updateProfile({
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim(),
       });
-      await refreshUser();
+      // Update local profile state from response to avoid hitting /api/auth/profile
+      if (result?.user) {
+        setProfileData(result.user);
+      }
       setIsEditing(false);
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error: any) {
@@ -206,7 +209,11 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
               <TouchableOpacity
                 style={styles.actionItem}
-                onPress={() => setShowPasswordModal(true)}
+                onPress={() => {
+                  // Close ProfileModal first to avoid React Native modal stacking issues
+                  onClose();
+                  setShowPasswordModal(true);
+                }}
               >
                 <View style={styles.actionIcon}>
                   <Ionicons name="shield-checkmark-outline" size={22} color={Colors.primary} />

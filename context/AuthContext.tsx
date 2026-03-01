@@ -11,6 +11,7 @@ import { tokenManager } from '../utils/tokenManager';
 import { responseCache } from '../utils/responseCache';
 import { requestDeduplicator } from '../utils/requestDeduplicator';
 import { navigationService } from '../services/api/navigationService';
+import { ProfileService } from '../services/api/profileService';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -356,12 +357,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('User not authenticated');
       }
 
-      const updatedUser = await authService.getCurrentUser();
-      
+      // Use /api/users/me (ProfileService) instead of /api/auth/profile (authService)
+      // to avoid CompanyTenantFilter blocking the auth endpoint
+      const profile = await ProfileService.getMyProfile();
+
       if (isMountedRef.current) {
         setAuthState(prev => ({
           ...prev,
-          user: updatedUser,
+          user: prev.user ? {
+            ...prev.user,
+            email: profile.email,
+            name: [profile.firstName, profile.lastName].filter(Boolean).join(' ') || profile.username,
+            role: profile.role,
+          } : prev.user,
         }));
       }
     } catch (error: any) {
