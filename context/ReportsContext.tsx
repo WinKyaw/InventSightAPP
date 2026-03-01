@@ -67,6 +67,9 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
   // ✅ RETRY LOGIC: Track retry attempts
   const retryCountRef = useRef(0);
   const MAX_RETRIES = 2;
+
+  // ✅ DEDUPLICATION: Track the in-flight promise to avoid duplicate concurrent requests
+  const loadingPromiseRef = useRef<Promise<ComprehensiveDashboardData> | null>(null);
   
   // Custom state for enhanced error handling
   const [customError, setCustomError] = useState<string | null>(null);
@@ -121,9 +124,10 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
       throw new Error('Authentication required to load dashboard');
     }
 
-    if (loading) {
-      console.log('⚠️ Dashboard: Already loading');
-      throw new Error('Dashboard is already loading');
+    // If already loading, return the in-flight promise instead of throwing
+    if (loading && loadingPromiseRef.current) {
+      console.log('⚠️ Dashboard: Already loading - waiting for existing request');
+      return loadingPromiseRef.current;
     }
 
     // ✅ Clear dashboard cache to force fresh data
@@ -132,53 +136,60 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
 
     setCustomError(null);
 
-    try {
-      console.log(`📊 Loading dashboard data (attempt ${retryCountRef.current + 1}/${MAX_RETRIES + 1})`);
-      
-      const result = await executeApi();
-      
-      // Success path is handled in onSuccess callback
-      return result;
-      
-    } catch (err: any) {
-      const status = err.response?.status;
-      const errorMessage = err.message || 'Failed to load dashboard';
-      
-      console.error(`❌ Dashboard load failed (${status}):`, errorMessage);
-      
-      // Handle different error types
-      if (status === 429) {
-        const errorMsg = 'Too many requests. Please wait a moment.';
-        setCustomError(errorMsg);
-        console.warn('⏸️  Rate limited - stopping retries');
-        retryCountRef.current = MAX_RETRIES; // Stop retrying on rate limit
-        throw new Error(errorMsg);
-      } else if (status === 404) {
-        const errorMsg = 'Dashboard endpoint not found. API may not be implemented yet.';
-        setCustomError(errorMsg);
-        console.warn('🚧 Dashboard API not implemented - using empty data');
-        const emptyData = getEmptyDashboardData();
-        setCustomData(emptyData);
-        retryCountRef.current = MAX_RETRIES; // Stop retrying
-        return emptyData;
-      } else if (retryCountRef.current < MAX_RETRIES) {
-        retryCountRef.current++;
-        const errorMsg = `Failed to load dashboard. Retry ${retryCountRef.current}/${MAX_RETRIES}`;
-        console.log(`🔄 Will retry on next load (${retryCountRef.current}/${MAX_RETRIES})`);
-        setCustomError(errorMsg);
-        // Note: Manual retry only - caller must invoke refreshDashboardData() again
-        // The dashboard screen's error button will reset load guards and call this again
-        throw new Error(errorMsg);
-      } else {
-        const errorMsg = 'Failed to load dashboard after multiple attempts.';
-        setCustomError(errorMsg);
-        console.error('❌ Max retries reached - giving up');
-        // Use empty data for new stores
-        const emptyData = getEmptyDashboardData();
-        setCustomData(emptyData);
-        throw new Error(errorMsg);
+    const promise = (async () => {
+      try {
+        console.log(`📊 Loading dashboard data (attempt ${retryCountRef.current + 1}/${MAX_RETRIES + 1})`);
+
+        const result = await executeApi();
+
+        // Success path is handled in onSuccess callback
+        return result;
+
+      } catch (err: any) {
+        const status = err.response?.status;
+        const errorMessage = err.message || 'Failed to load dashboard';
+
+        console.error(`❌ Dashboard load failed (${status}):`, errorMessage);
+
+        // Handle different error types
+        if (status === 429) {
+          const errorMsg = 'Too many requests. Please wait a moment.';
+          setCustomError(errorMsg);
+          console.warn('⏸️  Rate limited - stopping retries');
+          retryCountRef.current = MAX_RETRIES; // Stop retrying on rate limit
+          throw new Error(errorMsg);
+        } else if (status === 404) {
+          const errorMsg = 'Dashboard endpoint not found. API may not be implemented yet.';
+          setCustomError(errorMsg);
+          console.warn('🚧 Dashboard API not implemented - using empty data');
+          const emptyData = getEmptyDashboardData();
+          setCustomData(emptyData);
+          retryCountRef.current = MAX_RETRIES; // Stop retrying
+          return emptyData;
+        } else if (retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current++;
+          const errorMsg = `Failed to load dashboard. Retry ${retryCountRef.current}/${MAX_RETRIES}`;
+          console.log(`🔄 Will retry on next load (${retryCountRef.current}/${MAX_RETRIES})`);
+          setCustomError(errorMsg);
+          // Note: Manual retry only - caller must invoke refreshDashboardData() again
+          // The dashboard screen's error button will reset load guards and call this again
+          throw new Error(errorMsg);
+        } else {
+          const errorMsg = 'Failed to load dashboard after multiple attempts.';
+          setCustomError(errorMsg);
+          console.error('❌ Max retries reached - giving up');
+          // Use empty data for new stores
+          const emptyData = getEmptyDashboardData();
+          setCustomData(emptyData);
+          throw new Error(errorMsg);
+        }
+      } finally {
+        loadingPromiseRef.current = null;
       }
-    }
+    })();
+
+    loadingPromiseRef.current = promise;
+    return promise;
   }, [canMakeApiCalls, loading, executeApi]);
 
   // Individual report methods (for backward compatibility with authentication guards)
