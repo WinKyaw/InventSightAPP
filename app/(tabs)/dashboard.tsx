@@ -268,29 +268,19 @@ export default function DashboardScreen() {
       <StatusBar backgroundColor="#3B82F6" barStyle="light-content" />
       <Header
         title={t('dashboard.title')}
-        subtitle={`Live Data · ${currentStore?.storeName || currentStore?.name || 'InventSight API'}`}
         backgroundColor="#3B82F6"
         showProfileButton={true}
         rightComponent={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TouchableOpacity
-              onPress={() => setShowStoreSelector(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8 }}
-            >
-              <Ionicons name="storefront-outline" size={18} color="white" />
-              <Text style={{ color: 'white', fontSize: 13, fontWeight: '600', maxWidth: 90 }} numberOfLines={1}>
-                {currentStore?.storeName || currentStore?.name || 'Store'}
-              </Text>
-              <Ionicons name="swap-horizontal" size={16} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleRefresh}
-              disabled={refreshing || reportsLoading}
-              style={{ padding: 4 }}
-            >
-              <Ionicons name="refresh" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => setShowStoreSelector(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8 }}
+          >
+            <Ionicons name="storefront-outline" size={18} color="white" />
+            <Text style={{ color: 'white', fontSize: 13, fontWeight: '600', maxWidth: 90 }} numberOfLines={1}>
+              {currentStore?.storeName || currentStore?.name || 'Store'}
+            </Text>
+            <Ionicons name="swap-horizontal" size={16} color="white" />
+          </TouchableOpacity>
         }
       />
 
@@ -566,26 +556,6 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Data Source Info */}
-            <View style={[styles.kpiCard, { marginTop: 16, backgroundColor: '#F3F4F6' }]}>
-              <Text style={[styles.kpiLabel, { color: '#374151', textAlign: 'center' }]}>
-                📊 Data Source
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dashboardData ? '#10B981' : '#9CA3AF', marginRight: 6 }} />
-                <Text style={[styles.kpiLabelSmall, { color: dashboardData ? '#10B981' : '#6B7280' }]}>
-                  {dashboardData ? 'Live' : 'Offline / No data'}
-                </Text>
-              </View>
-              {dashboardData && (
-                <Text style={[styles.kpiLabelSmall, { color: '#10B981', textAlign: 'center', marginTop: 4 }]}>
-                  Last updated: {new Date(dashboardData.lastUpdated).toLocaleTimeString()}
-                </Text>
-              )}
-              <Text style={[styles.kpiLabelSmall, { color: '#6B7280', textAlign: 'center', marginTop: 4 }]}>
-                Pull down to refresh
-              </Text>
-            </View>
           </View>
         )}
       </ScrollView>
