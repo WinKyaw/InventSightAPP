@@ -73,7 +73,7 @@ export class DashboardService {
    * Get comprehensive dashboard summary (single API call) with caching
    */
   static async getDashboardSummary(storeId?: string): Promise<DashboardSummary> {
-    const cacheKey = `dashboard:summary:${storeId || 'default'}`;
+    const cacheKey = `dashboard:summary:${storeId ?? 'all'}`;
     
     // Check cache first
     const cached = responseCache.get<DashboardSummary>(cacheKey);
@@ -114,7 +114,7 @@ export class DashboardService {
    * Note: In a proper backend implementation, this would be a single endpoint
    */
   static async getComprehensiveDashboardData(bypassCache: boolean = false, storeId?: string): Promise<ComprehensiveDashboardData> {
-    const cacheKey = `dashboard:comprehensive:${storeId || 'default'}`;
+    const cacheKey = `dashboard:comprehensive:${storeId ?? 'all'}`;
     
     // Check cache first (unless explicitly bypassed)
     if (!bypassCache) {
