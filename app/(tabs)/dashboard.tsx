@@ -56,6 +56,9 @@ export default function DashboardScreen() {
   const loadedRef = useRef(false);
   const lastLoadTime = useRef(0);
   const MIN_LOAD_INTERVAL = 5000; // 5 seconds minimum between loads
+  // Tracks whether a store change was initiated by THIS screen so the reactive
+  // useEffect([currentStore?.id]) can skip firing a duplicate activateStoreAndRefresh.
+  const storeChangedByThisScreen = useRef(false);
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
@@ -81,11 +84,19 @@ export default function DashboardScreen() {
 
   // Core logic: activate a store in the backend and refresh dashboard data
   const activateStoreAndRefresh = useCallback(async (storeId: string) => {
-    await StoreService.activateStore(storeId);
-    CacheManager.invalidateDashboard();
-    loadedRef.current = false;
-    lastLoadTime.current = 0;
-    await refreshDashboardData();
+    storeChangedByThisScreen.current = true;
+    try {
+      await StoreService.activateStore(storeId);
+      CacheManager.invalidateDashboard();
+      loadedRef.current = false;
+      lastLoadTime.current = 0;
+      await refreshDashboardData();
+    } catch (err) {
+      // Reset flag on error so subsequent store changes from other tabs
+      // are not incorrectly skipped by the reactive useEffect.
+      storeChangedByThisScreen.current = false;
+      throw err;
+    }
   }, [refreshDashboardData]);
 
   // Handle switching to a different store
@@ -101,13 +112,19 @@ export default function DashboardScreen() {
 
   // Sync dashboard when store changes from another tab (e.g. Items)
   useEffect(() => {
+    // Skip if the store change was triggered by this screen — it already called
+    // activateStoreAndRefresh directly and we don't want a duplicate request.
+    if (storeChangedByThisScreen.current) {
+      storeChangedByThisScreen.current = false;
+      return;
+    }
     if (!loadedRef.current) {
       return;
     }
     if (!currentStore?.id || !canMakeApiCalls) {
       return;
     }
-    console.log('🏪 Dashboard: store changed to', currentStore.storeName, '— reloading data');
+    console.log('🏪 Dashboard: store changed from another tab — reloading data');
     activateStoreAndRefresh(currentStore.id).catch((error) => {
       console.error('❌ Dashboard: Failed to reload after store change:', error);
     });

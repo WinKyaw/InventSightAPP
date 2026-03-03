@@ -124,8 +124,10 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
       throw new Error('Authentication required to load dashboard');
     }
 
-    // If already loading, return the in-flight promise instead of throwing
-    if (loading && loadingPromiseRef.current) {
+    // If already loading, return the in-flight promise instead of throwing.
+    // Use the ref (not the React state) because state may not have re-rendered yet
+    // when a second concurrent call arrives in the same tick.
+    if (loadingPromiseRef.current) {
       console.log('⚠️ Dashboard: Already loading - waiting for existing request');
       return loadingPromiseRef.current;
     }
@@ -190,7 +192,7 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
 
     loadingPromiseRef.current = promise;
     return promise;
-  }, [canMakeApiCalls, loading, executeApi]);
+  }, [canMakeApiCalls, executeApi]);
 
   // Individual report methods (for backward compatibility with authentication guards)
   const getDailyReport = useCallback(async (date?: string): Promise<DailyReportData> => {
