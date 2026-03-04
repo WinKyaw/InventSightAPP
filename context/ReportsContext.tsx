@@ -158,6 +158,15 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
           console.warn('⏸️  Rate limited - stopping retries');
           retryCountRef.current = MAX_RETRIES; // Stop retrying on rate limit
           throw new Error(errorMsg);
+        } else if (status === 403) {
+          // User does not have permission to view dashboard (below GM level)
+          // Do NOT retry - this is a permanent access denial for this user
+          console.warn('🔒 Dashboard: Access denied (403) - user does not have GM+ permissions');
+          retryCountRef.current = MAX_RETRIES; // Stop retrying
+          const emptyData = getEmptyDashboardData();
+          setCustomData(emptyData);
+          setCustomError('access_denied'); // Use a special sentinel value so the UI can show a proper message
+          return emptyData;
         } else if (status === 404) {
           const errorMsg = 'Dashboard endpoint not found. API may not be implemented yet.';
           setCustomError(errorMsg);
