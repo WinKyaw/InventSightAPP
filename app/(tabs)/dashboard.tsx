@@ -22,7 +22,7 @@ import { Colors } from '../../constants/Colors';
 export default function DashboardScreen() {
   const { t } = useTranslation();
   // ✅ SECURITY FIX: Add authentication check
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated, isInitialized, user } = useAuth();
   const router = useRouter();
 
   // ✅ ALL hooks must be declared before any conditional returns (React hooks rules)
@@ -120,6 +120,15 @@ export default function DashboardScreen() {
     CacheManager.invalidateDashboard();
   }, []);
 
+  const isGMPlus = useMemo(() => {
+    const role = user?.role?.toUpperCase();
+    return role === 'OWNER' ||
+           role === 'FOUNDER' ||
+           role === 'CEO' ||
+           role === 'GENERAL_MANAGER' ||
+           role === 'ADMIN';
+  }, [user?.role]);
+
   // ✅ LAZY LOADING: Load data only when Dashboard screen is focused
   useFocusEffect(
     useCallback(() => {
@@ -154,6 +163,11 @@ export default function DashboardScreen() {
         return;
       }
 
+      if (!isGMPlus) {
+        console.log('⏭️  Dashboard: Skipping load - user is not GM+');
+        return;
+      }
+
       console.log('📊 Dashboard screen focused - loading dashboard data');
       lastLoadTime.current = now;
       loadedRef.current = true;
@@ -169,7 +183,7 @@ export default function DashboardScreen() {
       return () => {
         console.log('📊 Dashboard screen unfocused');
       };
-    }, [canMakeApiCalls, refreshDashboardData, reportsLoading])
+    }, [canMakeApiCalls, isGMPlus, refreshDashboardData, reportsLoading])
   );
 
   const handleRefresh = useCallback(async () => {
@@ -259,9 +273,33 @@ export default function DashboardScreen() {
     return null;
   }
 
+  // Show access-denied screen for non-GM users
+  if (!isGMPlus) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar backgroundColor="#3B82F6" barStyle="light-content" />
+        <Header
+          title={t('dashboard.title')}
+          backgroundColor="#3B82F6"
+          showProfileButton={true}
+        />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Ionicons name="lock-closed-outline" size={64} color="#9CA3AF" />
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#374151', marginTop: 16, textAlign: 'center' }}>
+            Access Restricted
+          </Text>
+          <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+            The dashboard is only available to General Manager and above. Please contact your manager for access.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   // Use memoized values instead of calling functions
   const bestItem = getBestPerformer;
   const topItems = getTopPerformers;
+  const shouldShowError = reportsError !== 'access_denied' && !!reportsError && canMakeApiCalls;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -313,7 +351,7 @@ export default function DashboardScreen() {
         )}
 
         {/* Error Display */}
-        {reportsError && canMakeApiCalls && (
+        {shouldShowError && (
           <View style={[styles.kpiCard, { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }]}>
             <Text style={[styles.kpiLabel, { color: '#EF4444' }]}>⚠️ API Error</Text>
             <Text style={[styles.kpiLabelSmall, { color: '#EF4444' }]}>{reportsError}</Text>
