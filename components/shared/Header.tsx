@@ -100,9 +100,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
+    flexShrink: 1,
   },
   headerSubtitle: {
     fontSize: 16,

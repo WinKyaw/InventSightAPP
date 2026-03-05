@@ -163,11 +163,6 @@ export default function DashboardScreen() {
         return;
       }
 
-      if (!isGMPlus) {
-        console.log('⏭️  Dashboard: Skipping load - user is not GM+');
-        return;
-      }
-
       console.log('📊 Dashboard screen focused - loading dashboard data');
       lastLoadTime.current = now;
       loadedRef.current = true;
@@ -183,7 +178,7 @@ export default function DashboardScreen() {
       return () => {
         console.log('📊 Dashboard screen unfocused');
       };
-    }, [canMakeApiCalls, isGMPlus, refreshDashboardData, reportsLoading])
+    }, [canMakeApiCalls, refreshDashboardData, reportsLoading])
   );
 
   const handleRefresh = useCallback(async () => {
@@ -282,16 +277,150 @@ export default function DashboardScreen() {
           title={t('dashboard.title')}
           backgroundColor="#3B82F6"
           showProfileButton={true}
+          rightComponent={
+            <TouchableOpacity
+              onPress={() => setShowStoreSelector(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8 }}
+            >
+              <Ionicons name="storefront-outline" size={18} color="white" />
+              <Text style={{ color: 'white', fontSize: 13, fontWeight: '600', maxWidth: 90 }} numberOfLines={1}>
+                {currentStore?.storeName || currentStore?.name || 'Store'}
+              </Text>
+            </TouchableOpacity>
+          }
         />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-          <Ionicons name="lock-closed-outline" size={64} color="#9CA3AF" />
-          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#374151', marginTop: 16, textAlign: 'center' }}>
-            Access Restricted
-          </Text>
-          <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
-            The dashboard is only available to General Manager and above. Please contact your manager for access.
-          </Text>
-        </View>
+
+        <ScrollView style={styles.dashboardContainer} showsVerticalScrollIndicator={false}>
+          {/* Info banner */}
+          <View style={{ margin: 16, padding: 16, backgroundColor: '#EFF6FF', borderRadius: 12, borderWidth: 1, borderColor: '#BFDBFE', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Ionicons name="information-circle-outline" size={24} color="#3B82F6" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E40AF' }}>Limited Dashboard View</Text>
+              <Text style={{ fontSize: 12, color: '#3B82F6', marginTop: 2, lineHeight: 18 }}>
+                Full analytics available to General Manager and above.
+              </Text>
+            </View>
+          </View>
+
+          {/* Recent Orders card */}
+          <View style={[styles.topItemsCard, { marginHorizontal: 16, marginBottom: 16, marginTop: 0 }]}>
+            <Text style={styles.topItemsTitle}>🧾 Recent Orders</Text>
+            {reportsLoading ? (
+              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <Text style={{ color: '#6B7280', marginTop: 8, fontSize: 13 }}>Loading orders...</Text>
+              </View>
+            ) : getRecentOrders.length === 0 ? (
+              <Text style={{ color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>
+                No recent orders for this store
+              </Text>
+            ) : (
+              getRecentOrders.slice(0, 5).map((order: any, i: number) => (
+                <View
+                  key={order.id || order.receiptNumber || i}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingVertical: 10,
+                    borderBottomWidth: i < Math.min(getRecentOrders.length, 5) - 1 ? 1 : 0,
+                    borderBottomColor: '#F3F4F6',
+                  }}
+                >
+                  <View>
+                    <Text style={{ fontWeight: '600', fontSize: 13 }}>#{order.receiptNumber || order.id || 'N/A'}</Text>
+                    <Text style={{ color: '#6B7280', fontSize: 12 }}>{order.customerName || 'Walk-in'}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontWeight: '600', color: '#10B981', fontSize: 14 }}>
+                      ${(order.totalAmount || order.total || 0).toFixed(2)}
+                    </Text>
+                    {order.status ? (
+                      <Text style={{ color: '#9CA3AF', fontSize: 11 }}>{order.status}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+
+          {/* Ask AI button */}
+          <View style={{ marginHorizontal: 16, marginBottom: 24 }}>
+            <TouchableOpacity
+              style={{
+                padding: 20,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 100,
+                backgroundColor: '#8B5CF6',
+                shadowColor: '#8B5CF6',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6,
+              }}
+              onPress={() => {
+                Alert.alert(
+                  'AI Assistant',
+                  'AI Chat feature coming soon! This will provide intelligent insights about your inventory and sales.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            >
+              <Ionicons name="sparkles" size={32} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFF' }}>Ask AI</Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.8)', marginTop: 4 }}>Get Insights</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* Store Selector Modal */}
+        <Modal
+          visible={showStoreSelector}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowStoreSelector(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%', paddingBottom: 20 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1F2937' }}>Select Store</Text>
+                <TouchableOpacity onPress={() => setShowStoreSelector(false)}>
+                  <Ionicons name="close" size={28} color="#374151" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={{ padding: 16 }}>
+                {stores.map((store) => (
+                  <TouchableOpacity
+                    key={store.id}
+                    style={[
+                      { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 8, backgroundColor: '#F9FAFB', marginBottom: 8 },
+                      currentStore?.id === store.id && { backgroundColor: '#EFF6FF', borderWidth: 2, borderColor: '#3B82F6' },
+                    ]}
+                    onPress={async () => {
+                      await handleStoreChange(store);
+                      setShowStoreSelector(false);
+                    }}
+                  >
+                    <Ionicons name="storefront-outline" size={24} color={currentStore?.id === store.id ? '#3B82F6' : '#6B7280'} />
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{store.storeName}</Text>
+                      {store.city && (
+                        <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 2 }}>
+                          {store.city}{store.state ? `, ${store.state}` : ''}
+                        </Text>
+                      )}
+                    </View>
+                    {currentStore?.id === store.id && (
+                      <Ionicons name="checkmark-circle" size={24} color="#3B82F6" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }
