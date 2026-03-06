@@ -1,61 +1,41 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { NavigationSettingsModal } from '../../components/modals/NavigationSettingsModal';
 import { ProfileModal } from '../../components/shared/ProfileModal';
+import { Header } from '../../components/shared/Header';
 
 export default function MenuScreen() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {/* User Profile Header - Fixed at top */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.profileSection} onPress={() => setShowProfile(true)}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.name?.charAt(0) || 'U'}
-            </Text>
-          </View>
-          <View>
-            <Text style={styles.userName}>{user?.name || 'User'}</Text>
-            <Text style={styles.userEmail}>{user?.email || ''}</Text>
-            <Text style={styles.userStatus}>Active User</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar backgroundColor="#10B981" barStyle="light-content" />
+      <Header title="Menu" backgroundColor="#10B981" showProfileButton={false} />
 
-      {/* ✅ CRITICAL FIX: Wrap navigation items in ScrollView */}
       <ScrollView 
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
         bounces={true}
       >
-        {/* System Information Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SYSTEM INFORMATION</Text>
-          
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Current DateTime (UTC)</Text>
-            <Text style={styles.infoValue}>
-              {new Date().toLocaleString()}
+        {/* User Profile Card */}
+        <TouchableOpacity style={styles.profileCard} onPress={() => setShowProfile(true)}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user?.name?.charAt(0) || 'U'}
             </Text>
           </View>
-          
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Current User</Text>
-            <Text style={styles.infoValue}>{user?.name || 'User'}</Text>
+          <View style={styles.profileInfo}>
+            <Text style={styles.userName}>{user?.name || 'User'}</Text>
+            <Text style={styles.userEmail}>{user?.email || ''}</Text>
+            <Text style={styles.userStatus}>Active User</Text>
           </View>
-          
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Navigation Bar</Text>
-            <Text style={styles.infoValue}>Dashboard | Items | Receipt | Menu</Text>
-          </View>
-        </View>
+          <Text style={styles.navArrow}>›</Text>
+        </TouchableOpacity>
 
         {/* Navigation Section */}
         <View style={styles.section}>
@@ -63,28 +43,15 @@ export default function MenuScreen() {
             <Text style={styles.sectionTitle}>NAVIGATION</Text>
             <TouchableOpacity 
               style={styles.customizeButton}
-              onPress={() => {
-                console.log('📱 Opening Customize Navigation modal...');
-                setShowCustomizeModal(true);
-              }}
+              onPress={() => setShowCustomizeModal(true)}
             >
               <Text style={styles.customizeButtonText}>⚙️ Customize</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Navigation Items */}
           <TouchableOpacity style={styles.navItem}>
             <Text style={styles.navIcon}>📊</Text>
             <Text style={styles.navLabel}>Sales Dashboard</Text>
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>In Nav</Text>
-            </View>
-            <Text style={styles.navArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navIcon}>📦</Text>
-            <Text style={styles.navLabel}>Inventory Items</Text>
             <View style={styles.navBadge}>
               <Text style={styles.navBadgeText}>In Nav</Text>
             </View>
@@ -137,17 +104,14 @@ export default function MenuScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Add extra padding at bottom for easier scrolling */}
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* ✅ Customize Navigation Modal */}
       <NavigationSettingsModal
         visible={showCustomizeModal}
         onClose={() => setShowCustomizeModal(false)}
       />
 
-      {/* ✅ Profile Modal */}
       <ProfileModal
         visible={showProfile}
         onClose={() => setShowProfile(false)}
@@ -161,16 +125,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  header: {
-    backgroundColor: '#FFF',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  profileSection: {
+  profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFF',
+    padding: 16,
+    marginTop: 16,
+    marginHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
     gap: 12,
+  },
+  profileInfo: {
+    flex: 1,
   },
   avatar: {
     width: 60,
@@ -200,12 +167,11 @@ const styles = StyleSheet.create({
     color: '#34C759',
     fontWeight: '500',
   },
-  // ✅ CRITICAL: ScrollView container must have flex: 1
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Extra padding to ensure last items are accessible
+    paddingBottom: 100,
   },
   section: {
     backgroundColor: '#FFF',
@@ -238,22 +204,6 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '500',
   },
-  infoItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '500',
-  },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -261,7 +211,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    minHeight: 56, // Ensure touch target is large enough
+    minHeight: 56,
   },
   navIcon: {
     fontSize: 20,
@@ -290,6 +240,6 @@ const styles = StyleSheet.create({
     color: '#CCC',
   },
   bottomPadding: {
-    height: 50, // Extra space at bottom for comfortable scrolling
+    height: 50,
   },
 });

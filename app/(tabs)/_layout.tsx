@@ -181,24 +181,8 @@ export default function TabsLayout() {
           name="menu"
           options={{
             title: t('tabs.menu'),
-            tabBarButton: (props) => (
-              <TouchableOpacity
-                onPress={() => setShowHamburgerMenu(true)}
-                style={[
-                  props.style, 
-                  { 
-                    flex: 1, 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    paddingVertical: 4 
-                  }
-                ]}
-              >
-                <Ionicons name="menu" size={20} color={Colors.gray} />
-                <Text style={{ fontSize: 9, marginTop: 2, color: Colors.gray }}>
-                  {t('tabs.menu')}
-                </Text>
-              </TouchableOpacity>
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="menu" size={size} color={color} />
             ),
           }}
         />

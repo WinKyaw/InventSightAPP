@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
@@ -8,6 +9,7 @@ import { Button } from '../ui/Button';
 import { Colors } from '../../constants/Colors';
 import { ProfileService } from '../../services/api/profileService';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
+import { NavigationSettingsModal } from '../modals/NavigationSettingsModal';
 
 interface ProfileModalProps {
   visible: boolean;
@@ -18,6 +20,7 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showNavSettings, setShowNavSettings] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -225,6 +228,59 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
+            {/* App Settings */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>App Settings</Text>
+
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => setShowNavSettings(true)}
+              >
+                <View style={styles.actionIcon}>
+                  <Ionicons name="navigate-outline" size={22} color={Colors.primary} />
+                </View>
+                <View style={styles.actionText}>
+                  <Text style={styles.actionTitle}>Customize Navigation</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => {
+                  onClose();
+                  router.push('/(tabs)/setting');
+                }}
+              >
+                <View style={styles.actionIcon}>
+                  <Ionicons name="settings-outline" size={22} color={Colors.primary} />
+                </View>
+                <View style={styles.actionText}>
+                  <Text style={styles.actionTitle}>App Settings</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionItem}>
+                <View style={styles.actionIcon}>
+                  <Ionicons name="help-circle-outline" size={22} color={Colors.primary} />
+                </View>
+                <View style={styles.actionText}>
+                  <Text style={styles.actionTitle}>Help & Support</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionItem}>
+                <View style={styles.actionIcon}>
+                  <Ionicons name="information-circle-outline" size={22} color={Colors.primary} />
+                </View>
+                <View style={styles.actionText}>
+                  <Text style={styles.actionTitle}>About POS App</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         )}
       </Modal>
@@ -235,6 +291,11 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
         onSuccess={() => {
           Alert.alert('Security Update', 'Your password has been changed. Please log in again next time with your new password.');
         }}
+      />
+
+      <NavigationSettingsModal
+        visible={showNavSettings}
+        onClose={() => setShowNavSettings(false)}
       />
     </>
   );

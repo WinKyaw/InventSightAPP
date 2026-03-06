@@ -269,23 +269,6 @@ export function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) {
 
                 <View style={styles.divider} />
 
-                {/* Application Options */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>APPLICATION</Text>
-                  
-                  {appOptions.map((item, index) => (
-                    <TouchableOpacity 
-                      key={index}
-                      style={styles.menuItem}
-                      onPress={item.action}
-                    >
-                      <Ionicons name={item.icon as any} size={20} color={item.color || Colors.textSecondary} />
-                      <Text style={styles.menuItemText}>{item.title}</Text>
-                      <Ionicons name="chevron-forward" size={16} color={Colors.lightGray} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
                 {/* Sign Out Button */}
                 <TouchableOpacity
                   style={styles.signOutButton}
