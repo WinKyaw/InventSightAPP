@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "react";
 import {
   View,
   Text,
@@ -21,17 +21,32 @@ import SearchBar from "../../components/ui/SearchBar";
 import DatePicker from "../../components/ui/DatePicker";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
-import AddItemToReceiptModal from "../../components/modals/AddItemToReceiptModal";
-import { ReceiptDetailsModal } from "../../components/modals/ReceiptDetailsModal";
-import { PaymentModal } from "../../components/receipt/PaymentModal";
-import { FulfillReceiptModal } from "../../components/modals/FulfillReceiptModal";
-import SmartScanner from "../../components/ui/SmartScanner";
-import { OCRScanner } from "../../components/ui/OCRScanner";
 import { PendingReceiptCard } from "../../components/ui/PendingReceiptCard";
 import { Chip } from "../../components/ui/Chip";
-import { ReceiptFilterModal, ReceiptFilters } from "../../components/modals/ReceiptFilterModal";
-import { EmployeePickerModal, Employee } from "../../components/modals/EmployeePickerModal";
-import TakeOrderModal from "../../components/modals/TakeOrderModal";
+import type { ReceiptFilters } from "../../components/modals/ReceiptFilterModal";
+import type { Employee } from "../../components/modals/EmployeePickerModal";
+
+const AddItemToReceiptModal = React.lazy(() => import("../../components/modals/AddItemToReceiptModal"));
+const ReceiptDetailsModal = React.lazy(() =>
+  import("../../components/modals/ReceiptDetailsModal").then(m => ({ default: m.ReceiptDetailsModal }))
+);
+const PaymentModal = React.lazy(() =>
+  import("../../components/receipt/PaymentModal").then(m => ({ default: m.PaymentModal }))
+);
+const FulfillReceiptModal = React.lazy(() =>
+  import("../../components/modals/FulfillReceiptModal").then(m => ({ default: m.FulfillReceiptModal }))
+);
+const SmartScanner = React.lazy(() => import("../../components/ui/SmartScanner"));
+const OCRScanner = React.lazy(() =>
+  import("../../components/ui/OCRScanner").then(m => ({ default: m.OCRScanner }))
+);
+const ReceiptFilterModal = React.lazy(() =>
+  import("../../components/modals/ReceiptFilterModal").then(m => ({ default: m.ReceiptFilterModal }))
+);
+const EmployeePickerModal = React.lazy(() =>
+  import("../../components/modals/EmployeePickerModal").then(m => ({ default: m.EmployeePickerModal }))
+);
+const TakeOrderModal = React.lazy(() => import("../../components/modals/TakeOrderModal"));
 
 import { useReceipt } from "../../context/ReceiptContext";
 import { useItems } from "../../context/ItemsContext";
@@ -1525,96 +1540,114 @@ export default function ReceiptScreen() {
       </View>
 
       {/* Modals */}
-      <TakeOrderModal
-        visible={showTakeOrderModal}
-        onClose={() => setShowTakeOrderModal(false)}
-        onSuccess={() => {
-          loadPendingReceipts();
-          setActiveTab('pending'); // Switch to pending tab after order creation
-        }}
-      />
+      <Suspense fallback={null}>
+        <TakeOrderModal
+          visible={showTakeOrderModal}
+          onClose={() => setShowTakeOrderModal(false)}
+          onSuccess={() => {
+            loadPendingReceipts();
+            setActiveTab('pending'); // Switch to pending tab after order creation
+          }}
+        />
+      </Suspense>
 
-      <AddItemToReceiptModal
-        visible={showAddToReceipt}
-        onClose={() => setShowAddToReceipt(false)}
-      />
+      <Suspense fallback={null}>
+        <AddItemToReceiptModal
+          visible={showAddToReceipt}
+          onClose={() => setShowAddToReceipt(false)}
+        />
+      </Suspense>
 
-      <SmartScanner
-        visible={showSmartScanner}
-        onClose={() => setShowSmartScanner(false)}
-        onBarcodeDetected={handleSmartBarcodeDetected}
-        onOcrDetected={handleSmartOcrDetected}
-      />
+      <Suspense fallback={null}>
+        <SmartScanner
+          visible={showSmartScanner}
+          onClose={() => setShowSmartScanner(false)}
+          onBarcodeDetected={handleSmartBarcodeDetected}
+          onOcrDetected={handleSmartOcrDetected}
+        />
+      </Suspense>
 
-      <OCRScanner
-        visible={showOCRScanner}
-        onClose={() => setShowOCRScanner(false)}
-        onOCRResult={handleOCRResult}
-      />
+      <Suspense fallback={null}>
+        <OCRScanner
+          visible={showOCRScanner}
+          onClose={() => setShowOCRScanner(false)}
+          onOCRResult={handleOCRResult}
+        />
+      </Suspense>
 
-      <ReceiptDetailsModal
-        visible={showReceiptDetails}
-        onClose={() => {
-          setShowReceiptDetails(false);
-          setSelectedReceipt(null);
-        }}
-        receipt={selectedReceipt}
-        onUpdate={(updatedReceipt) => {
-          setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
-        }}
-      />
+      <Suspense fallback={null}>
+        <ReceiptDetailsModal
+          visible={showReceiptDetails}
+          onClose={() => {
+            setShowReceiptDetails(false);
+            setSelectedReceipt(null);
+          }}
+          receipt={selectedReceipt}
+          onUpdate={(updatedReceipt) => {
+            setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
+          }}
+        />
+      </Suspense>
 
-      <ReceiptFilterModal
-        visible={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        filters={activeFilters}
-        onApply={handleApplyFilters}
-        onClear={handleClearFilters}
-        onOpenEmployeePicker={handleOpenEmployeePicker}
-      />
+      <Suspense fallback={null}>
+        <ReceiptFilterModal
+          visible={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          filters={activeFilters}
+          onApply={handleApplyFilters}
+          onClear={handleClearFilters}
+          onOpenEmployeePicker={handleOpenEmployeePicker}
+        />
+      </Suspense>
 
-      <EmployeePickerModal
-        visible={showEmployeePicker}
-        onClose={() => {
-          setShowEmployeePicker(false);
-          setShowFilterModal(true);
-        }}
-        onSelect={handleSelectEmployee}
-        title={
-          employeePickerType === 'createdBy' ? 'Select Creator' :
-          employeePickerType === 'fulfilledBy' ? 'Select Fulfiller' :
-          'Select Delivery Person'
-        }
-        employees={employees}
-        selectedEmployeeId={activeFilters[employeePickerType]?.id}
-      />
+      <Suspense fallback={null}>
+        <EmployeePickerModal
+          visible={showEmployeePicker}
+          onClose={() => {
+            setShowEmployeePicker(false);
+            setShowFilterModal(true);
+          }}
+          onSelect={handleSelectEmployee}
+          title={
+            employeePickerType === 'createdBy' ? 'Select Creator' :
+            employeePickerType === 'fulfilledBy' ? 'Select Fulfiller' :
+            'Select Delivery Person'
+          }
+          employees={employees}
+          selectedEmployeeId={activeFilters[employeePickerType]?.id}
+        />
+      </Suspense>
 
-      <PaymentModal
-        visible={showPaymentModal}
-        receipt={selectedReceiptForPayment}
-        onClose={() => {
-          setShowPaymentModal(false);
-          setSelectedReceiptForPayment(null);
-        }}
-        onSuccess={() => {
-          refreshReceiptLists();
-        }}
-      />
+      <Suspense fallback={null}>
+        <PaymentModal
+          visible={showPaymentModal}
+          receipt={selectedReceiptForPayment}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedReceiptForPayment(null);
+          }}
+          onSuccess={() => {
+            refreshReceiptLists();
+          }}
+        />
+      </Suspense>
 
       {/* Fulfill Modal */}
-      <FulfillReceiptModal
-        visible={showFulfillModal}
-        receipt={selectedReceiptForFulfill}
-        onClose={() => {
-          setShowFulfillModal(false);
-          setSelectedReceiptForFulfill(null);
-        }}
-        onSuccess={() => {
-          refreshReceiptLists();
-          setShowFulfillModal(false);
-          setSelectedReceiptForFulfill(null);
-        }}
-      />
+      <Suspense fallback={null}>
+        <FulfillReceiptModal
+          visible={showFulfillModal}
+          receipt={selectedReceiptForFulfill}
+          onClose={() => {
+            setShowFulfillModal(false);
+            setSelectedReceiptForFulfill(null);
+          }}
+          onSuccess={() => {
+            refreshReceiptLists();
+            setShowFulfillModal(false);
+            setSelectedReceiptForFulfill(null);
+          }}
+        />
+      </Suspense>
 
       {/* Pending Receipt Action Modal */}
       <Modal

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, Suspense } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -7,8 +7,12 @@ import { useEmployees } from '../../context/EmployeesContext';
 import { useAuth } from '../../context/AuthContext';
 import { Header } from '../../components/shared/Header';
 import { SearchBar } from '../../components/shared/SearchBar';
-import { AddEmployeeModal } from '../../components/modals/AddEmployeeModal';
-import { EditEmployeeModal } from '../../components/modals/EditEmployeeModal';
+const AddEmployeeModal = React.lazy(() =>
+  import('../../components/modals/AddEmployeeModal').then(m => ({ default: m.AddEmployeeModal }))
+);
+const EditEmployeeModal = React.lazy(() =>
+  import('../../components/modals/EditEmployeeModal').then(m => ({ default: m.EditEmployeeModal }))
+);
 import { Employee } from '../../types';
 import { styles } from '../../constants/Styles';
 import { PermissionService } from '../../services/api/permissionService';
@@ -509,27 +513,31 @@ export default function EmployeesScreen() {
         </View>
       </ScrollView>
 
-      <AddEmployeeModal 
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-      />
+      <Suspense fallback={null}>
+        <AddEmployeeModal 
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+        />
+      </Suspense>
       
-      <EditEmployeeModal 
-        visible={showEditModal}
-        employee={editingEmployee}
-        onClose={() => {
-          setShowEditModal(false);
-          setEditingEmployee(null);
-        }}
-        onSave={(updatedEmployee) => {
-          if (editingEmployee) {
-            updateEmployee(editingEmployee.id, updatedEmployee);
+      <Suspense fallback={null}>
+        <EditEmployeeModal 
+          visible={showEditModal}
+          employee={editingEmployee}
+          onClose={() => {
             setShowEditModal(false);
             setEditingEmployee(null);
-            Alert.alert('Success', 'Employee updated successfully');
-          }
-        }}
-      />
+          }}
+          onSave={(updatedEmployee) => {
+            if (editingEmployee) {
+              updateEmployee(editingEmployee.id, updatedEmployee);
+              setShowEditModal(false);
+              setEditingEmployee(null);
+              Alert.alert('Success', 'Employee updated successfully');
+            }
+          }}
+        />
+      </Suspense>
 
       {/* Warehouse Assignment Modal */}
       <Modal

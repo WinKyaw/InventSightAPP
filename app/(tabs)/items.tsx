@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect, Suspense } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Modal, TextInput, FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -7,12 +7,23 @@ import { useItemsApi } from '../../context/ItemsApiContext';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
 import { Header } from '../../components/shared/Header';
-import { AddItemModal } from '../../components/modals/AddItemModal';
-import { EditItemModal } from '../../components/modals/EditItemModal';
-import { StockManagementModal } from '../../components/modals/StockManagementModal';
-import { FilterSortModal } from '../../components/modals/FilterSortModal';
-import { RestockProductCard } from '../../components/items/RestockProductCard';
 import { productToItem } from '../../utils/productUtils';
+
+const AddItemModal = React.lazy(() =>
+  import('../../components/modals/AddItemModal').then(m => ({ default: m.AddItemModal }))
+);
+const EditItemModal = React.lazy(() =>
+  import('../../components/modals/EditItemModal').then(m => ({ default: m.EditItemModal }))
+);
+const StockManagementModal = React.lazy(() =>
+  import('../../components/modals/StockManagementModal').then(m => ({ default: m.StockManagementModal }))
+);
+const FilterSortModal = React.lazy(() =>
+  import('../../components/modals/FilterSortModal').then(m => ({ default: m.FilterSortModal }))
+);
+const RestockProductCard = React.lazy(() =>
+  import('../../components/items/RestockProductCard').then(m => ({ default: m.RestockProductCard }))
+);
 import { Product } from '../../services/api/config';
 import { styles } from '../../constants/Styles';
 import { PermissionService } from '../../services/api/permissionService';
@@ -1064,20 +1075,22 @@ export default function ItemsScreen() {
               </View>
             ) : (
               <ScrollView style={itemsStyles.productListContainer} nestedScrollEnabled>
-                {filteredRestockProducts.map((product) => {
-                  const selectedProduct = selectedProducts.find(p => p.productId === product.id);
-                  const quantity = selectedProduct?.quantity || '';
-                  
-                  return (
-                    <RestockProductCard
-                      key={product.id}
-                      product={product}
-                      quantity={quantity}
-                      onQuantityChange={(qty) => updateProductQuantity(product.id, qty)}
-                      searchQuery={restockSearchQuery}
-                    />
-                  );
-                })}
+                <Suspense fallback={null}>
+                  {filteredRestockProducts.map((product) => {
+                    const selectedProduct = selectedProducts.find(p => p.productId === product.id);
+                    const quantity = selectedProduct?.quantity || '';
+                    
+                    return (
+                      <RestockProductCard
+                        key={product.id}
+                        product={product}
+                        quantity={quantity}
+                        onQuantityChange={(qty) => updateProductQuantity(product.id, qty)}
+                        searchQuery={restockSearchQuery}
+                      />
+                    );
+                  })}
+                </Suspense>
               </ScrollView>
             )}
 
@@ -1131,40 +1144,48 @@ export default function ItemsScreen() {
       </SafeAreaView>
     </Modal>
 
-      <AddItemModal 
-        visible={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
-      />
+      <Suspense fallback={null}>
+        <AddItemModal 
+          visible={showAddModal} 
+          onClose={() => setShowAddModal(false)} 
+        />
+      </Suspense>
 
-      <EditItemModal
-        visible={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setEditingProduct(null);
-        }}
-        product={editingProduct}
-      />
+      <Suspense fallback={null}>
+        <EditItemModal
+          visible={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingProduct(null);
+          }}
+          product={editingProduct}
+        />
+      </Suspense>
 
-      <StockManagementModal
-        visible={showStockModal}
-        onClose={() => {
-          setShowStockModal(false);
-          setStockManagementProduct(null);
-        }}
-        product={stockManagementProduct}
-      />
+      <Suspense fallback={null}>
+        <StockManagementModal
+          visible={showStockModal}
+          onClose={() => {
+            setShowStockModal(false);
+            setStockManagementProduct(null);
+          }}
+          product={stockManagementProduct}
+        />
+      </Suspense>
       
-      <FilterSortModal
-        visible={showFilterSortModal}
-        onClose={() => setShowFilterSortModal(false)}
-        selectedCategory={selectedCategoryName}
-        onSelectCategory={handleCategorySelect}
-        categories={categoryNames}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onSelectSort={handleSortPress}
-        onToggleSortOrder={handleToggleSortOrder}
-      />
+      <Suspense fallback={null}>
+        <FilterSortModal
+          visible={showFilterSortModal}
+          onClose={() => setShowFilterSortModal(false)}
+          selectedCategory={selectedCategoryName}
+          onSelectCategory={handleCategorySelect}
+          categories={categoryNames}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSelectSort={handleSortPress}
+          onToggleSortOrder={handleToggleSortOrder}
+        />
+      </Suspense>
 
       {/* ✅ NEW: Store Selector Modal (like Warehouse selector) */}
       <Modal

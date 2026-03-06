@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { 
   View, 
   Text, 
@@ -18,8 +18,12 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/shared/Header';
-import { WarehouseInventoryList } from '../../components/warehouse/WarehouseInventoryList';
-import { AddWarehouseModal } from '../../components/modals/AddWarehouseModal';
+const WarehouseInventoryList = React.lazy(() =>
+  import('../../components/warehouse/WarehouseInventoryList').then(m => ({ default: m.WarehouseInventoryList }))
+);
+const AddWarehouseModal = React.lazy(() =>
+  import('../../components/modals/AddWarehouseModal').then(m => ({ default: m.AddWarehouseModal }))
+);
 import { WarehouseSummary, WarehouseInventoryRow, WarehouseRestock, WarehouseSale } from '../../types/warehouse';
 import WarehouseService, { WarehouseAdditionTransactionType, WarehouseWithdrawalTransactionType } from '../../services/api/warehouse';
 import { useApiReadiness } from '../../hooks/useAuthenticatedAPI';
@@ -1227,11 +1231,13 @@ export default function WarehouseScreen() {
         </View>
         
         {/* Add Warehouse Modal */}
-        <AddWarehouseModal 
-          visible={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onWarehouseAdded={handleRefresh}
-        />
+        <Suspense fallback={null}>
+          <AddWarehouseModal 
+            visible={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            onWarehouseAdded={handleRefresh}
+          />
+        </Suspense>
       </SafeAreaView>
     );
   }
@@ -1401,16 +1407,18 @@ export default function WarehouseScreen() {
                   )}
                 </View>
               )}
-              <WarehouseInventoryList 
-                inventory={filteredInventory}
-                hasMore={inventoryHasMore}
-                onLoadMore={handleLoadMoreInventory}
-                loadingMore={loadingMore}
-                totalItems={inventoryTotalItems}
-                loading={tabLoading}
-                refreshing={refreshing}
-                onRefresh={handleRefreshInventory}
-              />
+              <Suspense fallback={null}>
+                <WarehouseInventoryList 
+                  inventory={filteredInventory}
+                  hasMore={inventoryHasMore}
+                  onLoadMore={handleLoadMoreInventory}
+                  loadingMore={loadingMore}
+                  totalItems={inventoryTotalItems}
+                  loading={tabLoading}
+                  refreshing={refreshing}
+                  onRefresh={handleRefreshInventory}
+                />
+              </Suspense>
             </>
           )}
           {activeTab === 'restocks' && (
@@ -1560,11 +1568,13 @@ export default function WarehouseScreen() {
       </Modal>
 
       {/* Add Warehouse Modal */}
-      <AddWarehouseModal 
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onWarehouseAdded={handleRefresh}
-      />
+      <Suspense fallback={null}>
+        <AddWarehouseModal 
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onWarehouseAdded={handleRefresh}
+        />
+      </Suspense>
 
       {/* Add Inventory Modal */}
       <Modal
