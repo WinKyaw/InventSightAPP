@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { NavigationSettingsModal } from '../../components/modals/NavigationSettingsModal';
 import { ProfileModal } from '../../components/shared/ProfileModal';
 import { Header } from '../../components/shared/Header';
 
 export default function MenuScreen() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isInitialized, logout } = useAuth();
+  const router = useRouter();
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      console.log('🔐 Menu: Unauthorized access blocked, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isInitialized, router]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', style: 'destructive', onPress: () => logout() },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -49,16 +73,7 @@ export default function MenuScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navIcon}>📊</Text>
-            <Text style={styles.navLabel}>Sales Dashboard</Text>
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>In Nav</Text>
-            </View>
-            <Text style={styles.navArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/items')}>
             <Text style={styles.navIcon}>📦</Text>
             <Text style={styles.navLabel}>Items</Text>
             <View style={styles.navBadge}>
@@ -67,7 +82,7 @@ export default function MenuScreen() {
             <Text style={styles.navArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/receipt')}>
             <Text style={styles.navIcon}>🧾</Text>
             <Text style={styles.navLabel}>Receipt</Text>
             <View style={styles.navBadge}>
@@ -76,7 +91,7 @@ export default function MenuScreen() {
             <Text style={styles.navArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/calendar')}>
             <Text style={styles.navIcon}>📅</Text>
             <Text style={styles.navLabel}>Calendar</Text>
             <View style={styles.navBadge}>
@@ -85,24 +100,30 @@ export default function MenuScreen() {
             <Text style={styles.navArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/reports')}>
             <Text style={styles.navIcon}>📈</Text>
             <Text style={styles.navLabel}>Reports</Text>
             <Text style={styles.navArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/warehouse')}>
             <Text style={styles.navIcon}>🏭</Text>
             <Text style={styles.navLabel}>Warehouse</Text>
             <Text style={styles.navArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/setting')}>
             <Text style={styles.navIcon}>⚙️</Text>
             <Text style={styles.navLabel}>Settings</Text>
             <Text style={styles.navArrow}>›</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.navIcon}>🚪</Text>
+          <Text style={[styles.navLabel, styles.logoutText]}>Logout</Text>
+          <Text style={[styles.navArrow, styles.logoutText]}>›</Text>
+        </TouchableOpacity>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -241,5 +262,20 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 50,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#F0F0F0',
+    minHeight: 56,
+  },
+  logoutText: {
+    color: '#EF4444',
   },
 });
