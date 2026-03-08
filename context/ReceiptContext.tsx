@@ -102,9 +102,11 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   // Check if user is GM+ (case-insensitive)
   const userRoleUpper = user?.role?.toUpperCase();
   const isGMPlus = userRoleUpper === 'OWNER' ||
-                   userRoleUpper === 'GENERAL_MANAGER' || 
-                   userRoleUpper === 'CEO' || 
                    userRoleUpper === 'FOUNDER' ||
+                   userRoleUpper === 'CEO' ||
+                   userRoleUpper === 'CO_OWNER' ||
+                   userRoleUpper === 'MANAGER' ||
+                   userRoleUpper === 'GENERAL_MANAGER' || 
                    userRoleUpper === 'ADMIN';
 
   // Authentication readiness check

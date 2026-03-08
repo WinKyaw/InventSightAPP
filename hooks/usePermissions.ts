@@ -4,10 +4,17 @@ import { useAuth } from '../context/AuthContext';
 // Define role hierarchy
 export enum Role {
   STAFF = 'staff',
+  EMPLOYEE = 'employee',
   CASHIER = 'cashier',
   SHIFT_MANAGER = 'shift_manager',
   ASSISTANT_MANAGER = 'assistant_manager',
+  STORE_MANAGER = 'store_manager',
+  MANAGER = 'manager',
   GENERAL_MANAGER = 'general_manager',
+  CO_OWNER = 'co_owner',
+  FOUNDER = 'founder',
+  CEO = 'ceo',
+  OWNER = 'owner',
   ADMIN = 'admin',
 }
 
@@ -32,11 +39,18 @@ export enum Permission {
 // Role hierarchy levels (higher number = more privileges)
 const roleHierarchy: Record<string, number> = {
   [Role.STAFF]: 1,
-  [Role.CASHIER]: 2,
-  [Role.SHIFT_MANAGER]: 3,
-  [Role.ASSISTANT_MANAGER]: 4,
-  [Role.GENERAL_MANAGER]: 5,
-  [Role.ADMIN]: 6,
+  [Role.EMPLOYEE]: 1,
+  [Role.CASHIER]: 1,
+  [Role.SHIFT_MANAGER]: 2,
+  [Role.ASSISTANT_MANAGER]: 3,
+  [Role.STORE_MANAGER]: 3,
+  [Role.MANAGER]: 4,
+  [Role.GENERAL_MANAGER]: 4,
+  [Role.CO_OWNER]: 5,
+  [Role.FOUNDER]: 5,
+  [Role.CEO]: 5,
+  [Role.OWNER]: 5,
+  [Role.ADMIN]: 5,
 };
 
 // Permission mappings for each role
@@ -91,6 +105,26 @@ const rolePermissions: Record<string, Permission[]> = {
     Permission.VIEW_REPORTS,
     Permission.EXPORT_DATA,
   ],
+  [Role.MANAGER]: [
+    Permission.VIEW_DASHBOARD,
+    Permission.VIEW_INVENTORY,
+    Permission.ADD_ITEM,
+    Permission.EDIT_ITEM,
+    Permission.DELETE_ITEM,
+    Permission.VIEW_RECEIPTS,
+    Permission.CREATE_RECEIPT,
+    Permission.VIEW_EMPLOYEES,
+    Permission.ADD_EMPLOYEE,
+    Permission.EDIT_EMPLOYEE,
+    Permission.DELETE_EMPLOYEE,
+    Permission.MANAGE_PERMISSIONS,
+    Permission.VIEW_REPORTS,
+    Permission.EXPORT_DATA,
+  ],
+  [Role.CO_OWNER]: Object.values(Permission),
+  [Role.FOUNDER]: Object.values(Permission),
+  [Role.CEO]: Object.values(Permission),
+  [Role.OWNER]: Object.values(Permission),
   [Role.ADMIN]: Object.values(Permission), // Admin has all permissions
 };
 
